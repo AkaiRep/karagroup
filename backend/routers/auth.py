@@ -25,6 +25,8 @@ def get_me(current_user: models.User = Depends(auth_utils.get_current_user)):
 
 
 class TelegramAuthData(BaseModel):
+    model_config = {"extra": "allow"}
+
     id: int
     first_name: str
     last_name: str = ""
