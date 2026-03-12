@@ -120,7 +120,7 @@ def delete_promo_code(promo_id: int, db: Session = Depends(get_db), _=Depends(au
 
 
 @router.get("/promo-codes/lookup/{code}", response_model=schemas.PromoCodeOut)
-def lookup_promo_code(code: str, db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+def lookup_promo_code(code: str, db: Session = Depends(get_db)):
     p = db.query(models.PromoCode).filter(
         models.PromoCode.code == code.upper(),
         models.PromoCode.is_active == True,

@@ -13,11 +13,13 @@ export default function TelegramLoginButton({ onSuccess }) {
     if (!botUsername) return
 
     window.__tgAuthCallback = async (tgData) => {
+      console.log('TG auth data received:', tgData)
       try {
-        await loginWithTelegram(tgData)
+        const user = await loginWithTelegram(tgData)
+        console.log('Login success:', user)
         onSuccess?.()
       } catch (e) {
-        console.error('Telegram auth failed', e)
+        console.error('Telegram auth failed:', e?.response?.data || e.message)
       }
     }
 
