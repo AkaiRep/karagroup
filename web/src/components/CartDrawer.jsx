@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import TelegramLoginButton from '@/components/TelegramLoginButton'
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, promo, setPromo, removeItem, clearCart, total, finalTotal, count } = useCart()
+  const { cart, promo, setPromo, removeItem, setQty, clearCart, total, finalTotal, count } = useCart()
   const { user } = useAuth()
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
@@ -37,7 +37,7 @@ export default function CartDrawer({ open, onClose }) {
     setErrorMsg('')
     try {
       const orderData = {
-        items: items.map(i => ({ product_id: i.id, quantity: 1, discount: i.discount_percent || 0 })),
+        items: items.map(i => ({ product_id: i.id, quantity: i.quantity || 1, discount: i.discount_percent || 0 })),
         price: finalTotal,
         promo_code: promo?.code ?? null,
       }
@@ -117,28 +117,42 @@ export default function CartDrawer({ open, onClose }) {
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {items.map(item => {
                 const disc = item.discount_percent || 0
-                const price = item.price * (1 - disc / 100)
+                const unitPrice = item.price * (1 - disc / 100)
+                const qty = item.quantity || 1
                 return (
-                  <div key={item.id} className="flex items-start justify-between gap-3 bg-[#111318] rounded-xl p-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm leading-snug">{item.name}</p>
-                      <p className="text-green-400 text-sm font-semibold mt-1">
-                        {price.toLocaleString('ru-RU')} ₽
-                        {disc > 0 && (
-                          <span className="text-slate-500 font-normal line-through ml-2">
-                            {item.price.toLocaleString('ru-RU')} ₽
-                          </span>
-                        )}
-                      </p>
+                  <div key={item.id} className="bg-[#111318] rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm leading-snug">{item.name}</p>
+                        <p className="text-green-400 text-sm font-semibold mt-1">
+                          {(unitPrice * qty).toLocaleString('ru-RU')} ₽
+                          {qty > 1 && (
+                            <span className="text-slate-500 font-normal ml-1 text-xs">
+                              ({unitPrice.toLocaleString('ru-RU')} ₽ × {qty})
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-2 mt-3">
+                      <button
+                        onClick={() => setQty(item.id, qty - 1)}
+                        className="w-7 h-7 flex items-center justify-center bg-[#0d0f15] hover:bg-red-500/20 hover:text-red-400 text-slate-400 rounded-lg transition-colors"
+                      >−</button>
+                      <span className="w-8 text-center text-sm font-semibold text-green-400">{qty}</span>
+                      <button
+                        onClick={() => setQty(item.id, qty + 1)}
+                        className="w-7 h-7 flex items-center justify-center bg-[#0d0f15] hover:bg-green-500/20 hover:text-green-400 text-slate-400 rounded-lg transition-colors"
+                      >+</button>
+                    </div>
                   </div>
                 )
               })}

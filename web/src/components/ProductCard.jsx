@@ -2,8 +2,10 @@
 import { useCart } from '@/context/CartContext'
 
 export default function ProductCard({ product }) {
-  const { cart, addItem, removeItem } = useCart()
-  const inCart = !!cart[product.id]
+  const { cart, addItem, removeItem, setQty } = useCart()
+  const item = cart[product.id]
+  const inCart = !!item
+  const qty = item?.quantity || 0
 
   const discountedPrice = product.discount_percent
     ? product.price * (1 - product.discount_percent / 100)
@@ -47,12 +49,21 @@ export default function ProductCard({ product }) {
         </div>
 
         {inCart ? (
-          <button
-            onClick={() => removeItem(product.id)}
-            className="flex-shrink-0 px-4 py-2 bg-green-600/20 text-green-400 border border-green-500/30 rounded-xl text-sm font-medium hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all"
-          >
-            Убрать
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={() => setQty(product.id, qty - 1)}
+              className="w-8 h-8 flex items-center justify-center bg-[#1a1d26] hover:bg-red-500/20 hover:text-red-400 text-slate-300 rounded-lg transition-colors text-lg font-medium"
+            >
+              −
+            </button>
+            <span className="w-8 text-center font-semibold text-green-400">{qty}</span>
+            <button
+              onClick={() => setQty(product.id, qty + 1)}
+              className="w-8 h-8 flex items-center justify-center bg-[#1a1d26] hover:bg-green-500/20 hover:text-green-400 text-slate-300 rounded-lg transition-colors text-lg font-medium"
+            >
+              +
+            </button>
+          </div>
         ) : (
           <button
             onClick={() => addItem(product)}
