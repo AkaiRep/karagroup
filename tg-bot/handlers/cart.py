@@ -156,6 +156,7 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
 
     order_data = {
         "source": "telegram",
+        "status": "pending_payment",
         "items": items,
         "price": total,
         "client_info": callback.from_user.username or str(callback.from_user.id),
@@ -173,12 +174,29 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Ошибка при создании заказа. Попробуйте позже.")
         return
 
+    # Создаём платёж в ЮКассе
+    try:
+        payment = await api.create_payment(order_id)
+        payment_url = payment["payment_url"]
+    except Exception as e:
+        log.error("Payment creation error: %s", e)
+        await callback.answer("Ошибка при создании платежа. Попробуйте позже.")
+        return
+
     await state.clear()
 
+    from aiogram.types import InlineKeyboardMarkup
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="💳 Оплатить", url=payment_url)
+    kb.adjust(1)
+
     await edit_or_send(callback,
-        f"✅ <b>Заказ #{order_id} оформлен!</b>\n\n"
-        f"Для уточнения деталей напишите нашему менеджеру и сообщите номер заказа: <b>#{order_id}</b>\n\n"
-        f"👤 Менеджер: {settings.MANAGER_USERNAME}",
+        f"🛒 <b>Заказ #{order_id} создан!</b>\n\n"
+        f"Для завершения оформления оплатите заказ по кнопке ниже.\n"
+        f"После оплаты заказ автоматически будет принят в работу.\n\n"
+        f"💰 Сумма: <b>{total} ₽</b>",
+        reply_markup=kb.as_markup(),
         parse_mode="HTML",
     )
     await callback.message.answer(

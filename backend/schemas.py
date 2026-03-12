@@ -189,6 +189,7 @@ class MediaOut(BaseModel):
 class OrderCreate(BaseModel):
     external_id: Optional[str] = None
     source: OrderSource = OrderSource.other
+    status: Optional[OrderStatus] = None
     items: List[OrderItemCreate] = Field(default_factory=list)
     price: float = Field(..., gt=0)
     original_price: Optional[float] = None

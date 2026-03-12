@@ -121,6 +121,7 @@ def create_order(
     order = models.Order(
         external_id=data.external_id,
         source=data.source,
+        status=data.status if data.status is not None else models.OrderStatus.paid,
         original_price=data.price if promo else None,
         price=final_price,
         promo_code_id=promo.id if promo else None,
@@ -128,6 +129,8 @@ def create_order(
         notes=data.notes,
         client_info=data.client_info,
         client_url=data.client_url,
+        telegram_user_id=data.telegram_user_id,
+        telegram_username=data.telegram_username,
     )
     db.add(order)
     db.flush()
@@ -152,11 +155,13 @@ def get_tg_pending_updates(
     edit_cutoff = now - timedelta(hours=48)
 
     # 1. New orders that haven't been notified yet (limit to last 24h to avoid flooding)
+    # Exclude pending_payment — notify only after payment confirmed
     new_orders = (
         db.query(models.Order)
         .options(*_order_options())
         .filter(
             models.Order.tg_notified == False,
+            models.Order.status != models.OrderStatus.pending_payment,
             models.Order.created_at >= (now - timedelta(hours=24)),
         )
         .all()

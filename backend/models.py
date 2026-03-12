@@ -20,6 +20,7 @@ class OrderSource(str, enum.Enum):
 
 
 class OrderStatus(str, enum.Enum):
+    pending_payment = "pending_payment"
     paid = "paid"
     in_progress = "in_progress"
     completed = "completed"
