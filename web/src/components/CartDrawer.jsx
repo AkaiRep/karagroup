@@ -46,6 +46,7 @@ export default function CartDrawer({ open, onClose }) {
       clearCart()
       setCheckoutState('done')
     } catch (e) {
+      console.error('Checkout error:', e?.response?.data || e?.message || e)
       setErrorMsg(e?.response?.data?.detail || 'Ошибка при оформлении заказа')
       setCheckoutState('error')
     }
