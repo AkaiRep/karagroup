@@ -103,10 +103,10 @@ def confirm_order_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def about_kb() -> InlineKeyboardMarkup:
+def about_kb(terms_url: str, privacy_url: str) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.button(text="📄 Пользовательское соглашение", callback_data="terms")
-    kb.button(text="🔒 Политика конфиденциальности", callback_data="privacy")
+    kb.button(text="📄 Пользовательское соглашение", url=terms_url)
+    kb.button(text="🔒 Политика конфиденциальности", url=privacy_url)
     kb.button(text="← Назад", callback_data="main")
     kb.adjust(1)
     return kb.as_markup()
