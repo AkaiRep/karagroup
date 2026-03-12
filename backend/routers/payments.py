@@ -105,5 +105,28 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
             order.status = models.OrderStatus.paid
             db.commit()
             log.info("Order #%s marked as paid", order_id)
+            await _notify_user_payment(order)
 
     return {"status": "ok"}
+
+
+async def _notify_user_payment(order):
+    import httpx
+    bot_token = os.getenv("BOT_TOKEN")
+    tg_user_id = order.telegram_user_id
+    if not bot_token or not tg_user_id:
+        return
+    text = (
+        f"✅ <b>Оплата прошла успешно!</b>\n\n"
+        f"Заказ <b>#{order.id}</b> принят в работу.\n"
+        f"Наш исполнитель скоро возьмётся за него.\n\n"
+        f"Спасибо за заказ! 🎮"
+    )
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={"chat_id": tg_user_id, "text": text, "parse_mode": "HTML"},
+            )
+    except Exception as e:
+        log.error("Failed to notify user about payment: %s", e)
