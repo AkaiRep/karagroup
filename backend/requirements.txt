@@ -10,3 +10,4 @@ pydantic-settings==2.5.2
 websockets==13.1
 aiofiles==24.1.0
 yookassa==3.4.0
+python-dotenv==1.0.1
