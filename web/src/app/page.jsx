@@ -27,7 +27,7 @@ export default function CatalogPage() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Hero */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
           Игровой буст
         </h1>
         <p className="text-slate-400 text-lg max-w-xl mx-auto">
@@ -42,7 +42,7 @@ export default function CatalogPage() {
             onClick={() => setActiveCategory(null)}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               activeCategory === null
-                ? 'bg-violet-600 text-white'
+                ? 'bg-green-600 text-white'
                 : 'bg-[#111318] text-slate-400 hover:text-white border border-white/5'
             }`}
           >

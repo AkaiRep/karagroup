@@ -87,7 +87,7 @@ export default function CartDrawer({ open, onClose }) {
                 href={paymentUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-medium text-center transition-colors"
+                className="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium text-center transition-colors"
               >
                 Перейти к оплате
               </a>
@@ -120,7 +120,7 @@ export default function CartDrawer({ open, onClose }) {
                   <div key={item.id} className="flex items-start justify-between gap-3 bg-[#111318] rounded-xl p-4">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm leading-snug">{item.name}</p>
-                      <p className="text-violet-400 text-sm font-semibold mt-1">
+                      <p className="text-green-400 text-sm font-semibold mt-1">
                         {price.toLocaleString('ru-RU')} ₽
                         {disc > 0 && (
                           <span className="text-slate-500 font-normal line-through ml-2">
@@ -163,12 +163,12 @@ export default function CartDrawer({ open, onClose }) {
                     onChange={e => { setPromoInput(e.target.value); setPromoError('') }}
                     onKeyDown={e => e.key === 'Enter' && applyPromo()}
                     placeholder="Промокод"
-                    className="flex-1 bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500/50 transition-colors"
+                    className="flex-1 bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm placeholder-slate-600 focus:outline-none focus:border-green-500/50 transition-colors"
                   />
                   <button
                     onClick={applyPromo}
                     disabled={promoLoading}
-                    className="px-4 py-2.5 bg-[#111318] border border-white/10 hover:border-violet-500/30 rounded-xl text-sm transition-colors disabled:opacity-50"
+                    className="px-4 py-2.5 bg-[#111318] border border-white/10 hover:border-green-500/30 rounded-xl text-sm transition-colors disabled:opacity-50"
                   >
                     {promoLoading ? '...' : 'Применить'}
                   </button>
@@ -191,7 +191,7 @@ export default function CartDrawer({ open, onClose }) {
               )}
               <div className="flex justify-between font-bold text-lg">
                 <span>К оплате</span>
-                <span className="text-violet-400">{finalTotal.toLocaleString('ru-RU')} ₽</span>
+                <span className="text-green-400">{finalTotal.toLocaleString('ru-RU')} ₽</span>
               </div>
 
               {checkoutState === 'error' && (
@@ -202,7 +202,7 @@ export default function CartDrawer({ open, onClose }) {
                 <button
                   onClick={handleCheckout}
                   disabled={checkoutState === 'loading'}
-                  className="w-full py-3.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+                  className="w-full py-3.5 bg-green-600 hover:bg-green-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
                 >
                   {checkoutState === 'loading' ? 'Оформляем...' : 'Оформить заказ'}
                 </button>

@@ -16,7 +16,7 @@ export default function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-40 bg-[#07080d]/90 backdrop-blur border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-violet-400 tracking-tight">
+          <Link href="/" className="text-xl font-bold text-green-400 tracking-tight">
             KaraShop
           </Link>
 
@@ -81,8 +81,8 @@ export default function Header() {
             className="bg-[#111318] border border-white/10 rounded-2xl p-8 max-w-sm w-full mx-4 text-center"
             onClick={e => e.stopPropagation()}
           >
-            <div className="w-14 h-14 bg-violet-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-7 h-7 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-14 h-14 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
               </svg>

@@ -10,7 +10,7 @@ export default function AboutPage() {
 
       <div className="space-y-6">
         <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-3 text-violet-400">Кто мы</h2>
+          <h2 className="text-lg font-semibold mb-3 text-green-400">Кто мы</h2>
           <p className="text-slate-400 leading-relaxed">
             KaraShop — профессиональный сервис буста игровых аккаунтов. Мы работаем с опытными игроками,
             которые помогут вам достичь желаемого ранга быстро и безопасно.
@@ -18,7 +18,7 @@ export default function AboutPage() {
         </div>
 
         <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-4 text-violet-400">Наши гарантии</h2>
+          <h2 className="text-lg font-semibold mb-4 text-green-400">Наши гарантии</h2>
           <ul className="space-y-3">
             {[
               'Безопасность аккаунта — работаем с использованием VPN',
@@ -27,7 +27,7 @@ export default function AboutPage() {
               'Поддержка 24/7 в Telegram',
             ].map((item, i) => (
               <li key={i} className="flex items-start gap-3 text-slate-300">
-                <svg className="w-5 h-5 text-violet-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 {item}
@@ -37,7 +37,7 @@ export default function AboutPage() {
         </div>
 
         <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-4 text-violet-400">Контакты</h2>
+          <h2 className="text-lg font-semibold mb-4 text-green-400">Контакты</h2>
           <div className="space-y-3">
             {channel && (
               <a

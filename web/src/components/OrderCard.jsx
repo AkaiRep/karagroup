@@ -3,7 +3,7 @@
 const STATUS_LABELS = {
   pending_payment: { label: 'Ожидает оплаты', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
   paid: { label: 'Ожидает исполнителя', color: 'text-blue-400', bg: 'bg-blue-400/10' },
-  in_progress: { label: 'В работе', color: 'text-violet-400', bg: 'bg-violet-400/10' },
+  in_progress: { label: 'В работе', color: 'text-green-400', bg: 'bg-green-400/10' },
   completed: { label: 'Выполнен', color: 'text-green-400', bg: 'bg-green-400/10' },
   confirmed: { label: 'Подтверждён', color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
   cancelled: { label: 'Отменён', color: 'text-red-400', bg: 'bg-red-400/10' },
@@ -31,7 +31,7 @@ export default function OrderCard({ order }) {
           <p className="text-slate-500 text-xs mt-1">{date}</p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-lg font-bold text-violet-400">
+          <p className="text-lg font-bold text-green-400">
             {Number(order.price).toLocaleString('ru-RU')} ₽
           </p>
         </div>
