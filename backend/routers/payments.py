@@ -112,6 +112,7 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
 
 async def _notify_user_payment(order):
     import httpx
+
     bot_token = os.getenv("BOT_TOKEN")
     tg_user_id = order.telegram_user_id
     if not bot_token or not tg_user_id:
