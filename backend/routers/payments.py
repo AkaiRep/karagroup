@@ -18,6 +18,7 @@ def _configure_yookassa():
     from yookassa import Configuration
     shop_id = os.getenv("YOOKASSA_SHOP_ID")
     secret_key = os.getenv("YOOKASSA_SECRET_KEY")
+    log.info("YooKassa config: shop_id=%s secret_key=%s", shop_id, "***" if secret_key else None)
     if not shop_id or not secret_key:
         raise HTTPException(status_code=503, detail="YooKassa не настроена")
     Configuration.configure(shop_id, secret_key)
