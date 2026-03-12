@@ -8,7 +8,8 @@ from utils import edit_or_send
 router = Router()
 
 STATUS_LABEL = {
-    "paid": "⏳ Оплачен",
+    "pending_payment": "💳 Ожидает оплаты",
+    "paid": "⏳ Ожидает исполнителя",
     "in_progress": "🔧 В работе",
     "completed": "✅ Выполнен",
     "confirmed": "🎉 Подтверждён",

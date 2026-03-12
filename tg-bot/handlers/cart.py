@@ -191,14 +191,16 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
     kb.button(text="💳 Оплатить", url=payment_url)
     kb.adjust(1)
 
-    sent = await callback.message.answer(
+    pay_text = (
         f"🛒 <b>Заказ #{order_id} создан!</b>\n\n"
         f"Для завершения оформления оплатите заказ по кнопке ниже.\n"
         f"После оплаты заказ автоматически будет принят в работу.\n\n"
-        f"💰 Сумма: <b>{total} ₽</b>",
-        reply_markup=kb.as_markup(),
-        parse_mode="HTML",
+        f"💰 Сумма: <b>{total} ₽</b>"
     )
+    try:
+        sent = await callback.message.edit_text(pay_text, reply_markup=kb.as_markup(), parse_mode="HTML")
+    except Exception:
+        sent = await callback.message.answer(pay_text, reply_markup=kb.as_markup(), parse_mode="HTML")
     try:
         await api.update_tg_notify(order_id, {"tg_payment_message_id": sent.message_id})
     except Exception as e:
