@@ -11,7 +11,7 @@ pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name uvicorn 2>/dev/nu
 echo "==> Bot"
 cd $PROJECT/tg-bot
 pip install -r requirements.txt -q
-pm2 start "python3 main.py" --name tg-bot 2>/dev/null || pm2 restart tg-bot
+pm2 start "python3 bot.py" --name tg-bot 2>/dev/null || pm2 restart tg-bot
 
 echo "==> Web"
 cd $PROJECT/web
