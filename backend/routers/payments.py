@@ -104,7 +104,7 @@ async def payment_webhook(request: Request, db: Session = Depends(get_db)):
         if order and order.status == models.OrderStatus.pending_payment:
             order.status = models.OrderStatus.paid
             db.commit()
-            log.info("Order #%s marked as paid", order_id)
+            log.warning("Order #%s paid, tg_user=%s, payment_msg_id=%s", order_id, order.telegram_user_id, order.tg_payment_message_id)
             await _notify_user_payment(order)
 
     return {"status": "ok"}
