@@ -37,7 +37,8 @@ export default function CartDrawer({ open, onClose }) {
     setErrorMsg('')
     try {
       const orderData = {
-        product_ids: items.map(i => i.id),
+        items: items.map(i => ({ product_id: i.id, quantity: 1, discount: i.discount_percent || 0 })),
+        price: finalTotal,
         promo_code: promo?.code ?? null,
       }
       const order = await api.createOrder(orderData)
