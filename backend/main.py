@@ -50,6 +50,9 @@ def run_migrations():
         if "tg_notify_sent_at" not in order_cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN tg_notify_sent_at DATETIME"))
             conn.commit()
+        if "tg_payment_message_id" not in order_cols:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN tg_payment_message_id INTEGER"))
+            conn.commit()
         if "tg_notified" not in order_cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN tg_notified BOOLEAN NOT NULL DEFAULT 1"))
             conn.commit()

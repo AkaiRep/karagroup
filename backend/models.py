@@ -99,6 +99,7 @@ class Order(Base):
     telegram_username = Column(String(128), nullable=True)
     tg_notify_message_id = Column(Integer, nullable=True)
     tg_notify_sent_at = Column(DateTime, nullable=True)
+    tg_payment_message_id = Column(Integer, nullable=True)
     tg_notified = Column(Boolean, default=False, nullable=False)
     tg_last_notified_status = Column(String(32), nullable=True)
     tg_expiry_warned = Column(Boolean, default=False, nullable=False)

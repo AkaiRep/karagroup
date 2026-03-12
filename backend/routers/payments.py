@@ -116,17 +116,30 @@ async def _notify_user_payment(order):
     tg_user_id = order.telegram_user_id
     if not bot_token or not tg_user_id:
         return
+
     text = (
         f"✅ <b>Оплата прошла успешно!</b>\n\n"
         f"Заказ <b>#{order.id}</b> принят в работу.\n"
         f"Наш исполнитель скоро возьмётся за него.\n\n"
         f"Спасибо за заказ! 🎮"
     )
+
     try:
         async with httpx.AsyncClient() as client:
-            await client.post(
-                f"https://api.telegram.org/bot{bot_token}/sendMessage",
-                json={"chat_id": tg_user_id, "text": text, "parse_mode": "HTML"},
-            )
+            if order.tg_payment_message_id:
+                await client.post(
+                    f"https://api.telegram.org/bot{bot_token}/editMessageText",
+                    json={
+                        "chat_id": tg_user_id,
+                        "message_id": order.tg_payment_message_id,
+                        "text": text,
+                        "parse_mode": "HTML",
+                    },
+                )
+            else:
+                await client.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": tg_user_id, "text": text, "parse_mode": "HTML"},
+                )
     except Exception as e:
         log.error("Failed to notify user about payment: %s", e)

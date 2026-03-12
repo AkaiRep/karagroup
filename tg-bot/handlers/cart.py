@@ -191,7 +191,7 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
     kb.button(text="💳 Оплатить", url=payment_url)
     kb.adjust(1)
 
-    await edit_or_send(callback,
+    sent = await callback.message.answer(
         f"🛒 <b>Заказ #{order_id} создан!</b>\n\n"
         f"Для завершения оформления оплатите заказ по кнопке ниже.\n"
         f"После оплаты заказ автоматически будет принят в работу.\n\n"
@@ -199,6 +199,11 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
         reply_markup=kb.as_markup(),
         parse_mode="HTML",
     )
+    try:
+        await api.update_tg_notify(order_id, {"tg_payment_message_id": sent.message_id})
+    except Exception as e:
+        log.error("Failed to save payment message_id: %s", e)
+
     await callback.message.answer(
         WELCOME_TEXT,
         reply_markup=main_menu_kb(settings.CHANNEL_URL),

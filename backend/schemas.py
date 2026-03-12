@@ -221,6 +221,7 @@ class OrderTgNotifyUpdate(BaseModel):
     tg_notified: Optional[bool] = None
     tg_last_notified_status: Optional[str] = None
     tg_expiry_warned: Optional[bool] = None
+    tg_payment_message_id: Optional[int] = None
 
 
 class OrderOut(BaseModel):
