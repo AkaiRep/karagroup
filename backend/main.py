@@ -50,6 +50,10 @@ def run_migrations():
         if "tg_notify_sent_at" not in order_cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN tg_notify_sent_at DATETIME"))
             conn.commit()
+        user_cols = [c["name"] for c in inspector.get_columns("users")]
+        if "telegram_id" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN telegram_id INTEGER UNIQUE"))
+            conn.commit()
         if "tg_payment_message_id" not in order_cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN tg_payment_message_id INTEGER"))
             conn.commit()

@@ -27,7 +27,7 @@ def _configure_yookassa():
 def create_payment(
     order_id: int,
     db: Session = Depends(get_db),
-    _=Depends(auth_utils.require_admin),
+    current_user: models.User = Depends(auth_utils.get_current_user),
 ):
     from yookassa import Payment
 
@@ -36,6 +36,8 @@ def create_payment(
         raise HTTPException(status_code=404, detail="Order not found")
     if order.status != models.OrderStatus.pending_payment:
         raise HTTPException(status_code=400, detail="Заказ не ожидает оплаты")
+    if current_user.role == models.UserRole.client and order.telegram_user_id != current_user.telegram_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     _configure_yookassa()
 

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import hashlib
+import hmac
+import time
 import bcrypt
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
@@ -70,3 +72,23 @@ def require_worker(current_user: models.User = Depends(get_current_user)) -> mod
     if current_user.role not in (models.UserRole.worker, models.UserRole.admin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Worker access required")
     return current_user
+
+
+def require_client(current_user: models.User = Depends(get_current_user)) -> models.User:
+    if current_user.role not in (models.UserRole.client, models.UserRole.admin):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Client access required")
+    return current_user
+
+
+def verify_telegram_auth(data: dict, bot_token: str) -> bool:
+    check_hash = data.get("hash")
+    if not check_hash:
+        return False
+    auth_date = int(data.get("auth_date", 0))
+    if time.time() - auth_date > 86400:
+        return False
+    data_check = {k: v for k, v in data.items() if k != "hash"}
+    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(data_check.items()))
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    computed = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(computed, check_hash)

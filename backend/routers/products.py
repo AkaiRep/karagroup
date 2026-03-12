@@ -34,7 +34,6 @@ def set_global_discount(
 def list_products(
     active_only: bool = False,
     db: Session = Depends(get_db),
-    _=Depends(auth_utils.get_current_user),
 ):
     q = db.query(models.Product)
     if active_only:

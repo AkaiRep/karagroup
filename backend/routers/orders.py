@@ -105,7 +105,7 @@ def list_available_orders(
 def create_order(
     data: schemas.OrderCreate,
     db: Session = Depends(get_db),
-    _=Depends(auth_utils.require_admin),
+    current_user: models.User = Depends(auth_utils.get_current_user),
 ):
     # Resolve promo code if provided
     promo = None
@@ -121,18 +121,26 @@ def create_order(
         final_price = round(data.price * (1 - promo.discount_percent / 100), 2)
         media_earnings = round(final_price * promo.media_percent / 100, 2)
 
+    # Для клиентов — авто-заполняем данные и статус
+    is_client = current_user.role == models.UserRole.client
+    order_status = models.OrderStatus.pending_payment if is_client else (data.status or models.OrderStatus.paid)
+    order_source = models.OrderSource.website if is_client and data.source == models.OrderSource.other else data.source
+    tg_user_id = current_user.telegram_id if is_client else data.telegram_user_id
+    client_info = data.client_info or (f"@{current_user.username}" if is_client else None)
+    client_url = data.client_url or (f"tg://user?id={current_user.telegram_id}" if is_client and current_user.telegram_id else None)
+
     order = models.Order(
         external_id=data.external_id,
-        source=data.source,
-        status=data.status if data.status is not None else models.OrderStatus.paid,
+        source=order_source,
+        status=order_status,
         original_price=data.price if promo else None,
         price=final_price,
         promo_code_id=promo.id if promo else None,
         media_earnings=media_earnings,
         notes=data.notes,
-        client_info=data.client_info,
-        client_url=data.client_url,
-        telegram_user_id=data.telegram_user_id,
+        client_info=client_info,
+        client_url=client_url,
+        telegram_user_id=tg_user_id,
         telegram_username=data.telegram_username,
     )
     db.add(order)

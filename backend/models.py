@@ -11,11 +11,13 @@ import enum
 class UserRole(str, enum.Enum):
     admin = "admin"
     worker = "worker"
+    client = "client"
 
 
 class OrderSource(str, enum.Enum):
     funpay = "funpay"
     telegram = "telegram"
+    website = "website"
     other = "other"
 
 
@@ -43,6 +45,7 @@ class User(Base):
     worker_percentage = Column(Float, default=70.0)
     is_vip = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True)
+    telegram_id = Column(Integer, nullable=True, unique=True, index=True)
     last_seen_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
