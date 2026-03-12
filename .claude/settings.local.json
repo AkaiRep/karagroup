@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source .venv/bin/activate && rm -f karagroup.db && python migrate_from_csv.py)",
+      "Bash(python -c \"\nfrom database import engine\nfrom sqlalchemy import text\ntry:\n    with engine.connect\\(\\) as conn:\n        conn.execute\\(text\\('ALTER TABLE users ADD COLUMN is_vip BOOLEAN NOT NULL DEFAULT 0'\\)\\)\n        conn.commit\\(\\)\n    print\\('Column added'\\)\nexcept Exception as e:\n    print\\(f'Error \\(may already exist\\): {e}'\\)\n\")",
+      "Bash(python3 -c \"\nfrom database import engine\nfrom sqlalchemy import text\ntry:\n    with engine.connect\\(\\) as conn:\n        conn.execute\\(text\\('ALTER TABLE users ADD COLUMN is_vip BOOLEAN NOT NULL DEFAULT 0'\\)\\)\n        conn.commit\\(\\)\n    print\\('Column added'\\)\nexcept Exception as e:\n    print\\(f'Error \\(may already exist\\): {e}'\\)\n\")",
+      "Bash(python3 -c \"\nfrom database import engine\nfrom sqlalchemy import text\ntry:\n    with engine.connect\\(\\) as conn:\n        conn.execute\\(text\\('ALTER TABLE orders ADD COLUMN worker_is_vip BOOLEAN'\\)\\)\n        conn.commit\\(\\)\n    print\\('Column added'\\)\nexcept Exception as e:\n    print\\(f'Error: {e}'\\)\n\")",
+      "Bash(python3 -c \"\nfrom database import engine\nfrom sqlalchemy import text\ncmds = [\n    'CREATE TABLE IF NOT EXISTS media \\(id INTEGER PRIMARY KEY AUTOINCREMENT, name VARCHAR\\(128\\) NOT NULL, is_active BOOLEAN NOT NULL DEFAULT 1, created_at DATETIME\\)',\n    'CREATE TABLE IF NOT EXISTS promo_codes \\(id INTEGER PRIMARY KEY AUTOINCREMENT, media_id INTEGER NOT NULL REFERENCES media\\(id\\), code VARCHAR\\(64\\) NOT NULL UNIQUE, discount_percent FLOAT NOT NULL DEFAULT 0, media_percent FLOAT NOT NULL DEFAULT 0, is_active BOOLEAN NOT NULL DEFAULT 1, created_at DATETIME\\)',\n    'ALTER TABLE orders ADD COLUMN promo_code_id INTEGER REFERENCES promo_codes\\(id\\)',\n    'ALTER TABLE orders ADD COLUMN original_price FLOAT',\n    'ALTER TABLE orders ADD COLUMN media_earnings FLOAT',\n]\nwith engine.connect\\(\\) as conn:\n    for c in cmds:\n        try:\n            conn.execute\\(text\\(c\\)\\)\n            conn.commit\\(\\)\n            print\\('OK:', c[:60]\\)\n        except Exception as e:\n            print\\('Skip:', e\\)\n\")",
+      "Bash(python3 -c \"import schemas; print\\('OK'\\)\")",
+      "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/tg-bot/start.sh)",
+      "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/build.sh)",
+      "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/deploy.sh /Users/daniilsnajder/Documents/karagroup/server.sh)"
+    ]
+  }
+}

@@ -1,0 +1,222 @@
+from datetime import datetime, timezone
+from sqlalchemy import (
+    Column, Integer, String, Float, Boolean,
+    DateTime, ForeignKey, Enum as SAEnum, Text, UniqueConstraint
+)
+from sqlalchemy.orm import relationship
+from database import Base
+import enum
+
+
+class UserRole(str, enum.Enum):
+    admin = "admin"
+    worker = "worker"
+
+
+class OrderSource(str, enum.Enum):
+    funpay = "funpay"
+    telegram = "telegram"
+    other = "other"
+
+
+class OrderStatus(str, enum.Enum):
+    paid = "paid"
+    in_progress = "in_progress"
+    completed = "completed"
+    confirmed = "confirmed"
+
+
+class TransactionStatus(str, enum.Enum):
+    pending = "pending"
+    paid = "paid"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(64), unique=True, index=True, nullable=False)
+    email = Column(String(128), unique=True, index=True, nullable=True)
+    password_hash = Column(String(256), nullable=False)
+    role = Column(SAEnum(UserRole), default=UserRole.worker, nullable=False)
+    worker_percentage = Column(Float, default=70.0)
+    is_vip = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True)
+    last_seen_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    orders = relationship("Order", back_populates="worker", foreign_keys="Order.worker_id")
+    messages = relationship("ChatMessage", back_populates="sender")
+    transactions = relationship("Transaction", back_populates="worker")
+
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    products = relationship("Product", back_populates="category")
+
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(256), nullable=False)
+    description = Column(Text, nullable=True)
+    price = Column(Float, nullable=False)
+    is_active = Column(Boolean, default=True)
+    discount_percent = Column(Float, default=0.0, nullable=False)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    category = relationship("Category", back_populates="products")
+    order_items = relationship("OrderItem", back_populates="product")
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    external_id = Column(String(128), nullable=True, index=True)
+    source = Column(SAEnum(OrderSource), default=OrderSource.other, nullable=False)
+    status = Column(SAEnum(OrderStatus), default=OrderStatus.paid, nullable=False)
+    worker_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    promo_code_id = Column(Integer, ForeignKey("promo_codes.id"), nullable=True)
+    original_price = Column(Float, nullable=True)       # pre-discount price
+    price = Column(Float, nullable=False)               # what customer pays (after promo discount)
+    media_earnings = Column(Float, nullable=True)       # snapshotted at order creation
+    worker_earnings = Column(Float, nullable=True)      # snapshotted at take time
+    worker_is_vip = Column(Boolean, nullable=True)      # snapshotted at take time
+    notes = Column(Text, nullable=True)
+    client_info = Column(String(512), nullable=True)
+    client_url = Column(String(2048), nullable=True)
+    telegram_user_id = Column(Integer, nullable=True, index=True)
+    telegram_username = Column(String(128), nullable=True)
+    tg_notify_message_id = Column(Integer, nullable=True)
+    tg_notify_sent_at = Column(DateTime, nullable=True)
+    tg_notified = Column(Boolean, default=False, nullable=False)
+    tg_last_notified_status = Column(String(32), nullable=True)
+    tg_expiry_warned = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    taken_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+
+    worker = relationship("User", back_populates="orders", foreign_keys=[worker_id])
+    promo_code = relationship("PromoCode", back_populates="orders")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    messages = relationship("ChatMessage", back_populates="order", cascade="all, delete-orphan")
+    transaction = relationship("Transaction", back_populates="order", uselist=False, cascade="all, delete-orphan")
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    quantity = Column(Integer, default=1, nullable=False)
+    discount = Column(Float, default=0.0, nullable=False)  # 0-100 percent
+
+    order = relationship("Order", back_populates="items")
+    product = relationship("Product", back_populates="order_items")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False, default="")
+    image_url = Column(String(512), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    order = relationship("Order", back_populates="messages")
+    sender = relationship("User", back_populates="messages")
+
+
+class WorkSession(Base):
+    __tablename__ = "work_sessions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)  # null = still active
+
+    user = relationship("User")
+
+
+class ChatReadReceipt(Base):
+    __tablename__ = "chat_read_receipts"
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    last_read_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("order_id", "user_id", name="uq_chat_receipt"),)
+
+
+class GlobalChatMessage(Base):
+    __tablename__ = "global_chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    content = Column(Text, nullable=False, default="")
+    image_url = Column(String(512), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    sender = relationship("User")
+
+
+class Media(Base):
+    __tablename__ = "media"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    promo_codes = relationship("PromoCode", back_populates="media", cascade="all, delete-orphan")
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    media_id = Column(Integer, ForeignKey("media.id"), nullable=False)
+    code = Column(String(64), unique=True, nullable=False, index=True)
+    discount_percent = Column(Float, default=0.0, nullable=False)  # discount for customer
+    media_percent = Column(Float, default=0.0, nullable=False)      # % media person earns
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    media = relationship("Media", back_populates="promo_codes")
+    orders = relationship("Order", back_populates="promo_code")
+
+
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key = Column(String(64), primary_key=True)
+    value = Column(String(256), nullable=False, default="")
+
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), unique=True, nullable=False)
+    worker_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(SAEnum(TransactionStatus), default=TransactionStatus.pending, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = Column(DateTime, nullable=True)
+
+    order = relationship("Order", back_populates="transaction")
+    worker = relationship("User", back_populates="transactions")

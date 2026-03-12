@@ -1,0 +1,83 @@
+import axios from 'axios'
+
+const DEFAULT_SERVER = 'http://localhost:8000'
+
+export const getApiBase = () =>
+  (localStorage.getItem('serverUrl') || DEFAULT_SERVER).replace(/\/+$/, '')
+
+// For image URL construction (called as function in JSX)
+export const API_BASE = getApiBase
+
+const api = axios.create()
+
+api.interceptors.request.use((config) => {
+  config.baseURL = getApiBase()
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+api.interceptors.response.use(
+  (r) => r,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.hash = '#/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
+const wsBase = () => getApiBase().replace(/^http/, 'ws')
+
+export const login = (username, password) =>
+  api.post('/auth/login', { username, password }).then((r) => r.data)
+export const sendHeartbeat = () => api.post('/users/heartbeat')
+
+export const getAvailableOrders = () => api.get('/orders/available').then((r) => r.data)
+export const getMyOrders = () =>
+  api.get('/orders/', { params: { status: 'in_progress' } }).then((r) => r.data)
+export const getAllMyOrders = () =>
+  api.get('/orders/', { params: { exclude_status: 'paid' } }).then((r) => r.data)
+export const takeOrder = (id) => api.post(`/orders/${id}/take`).then((r) => r.data)
+export const completeOrder = (id) =>
+  api.patch(`/orders/${id}/status`, { status: 'completed' }).then((r) => r.data)
+
+export const getMessages = (orderId) =>
+  api.get(`/chat/${orderId}/messages`).then((r) => r.data)
+export const sendMessage = (orderId, content) =>
+  api.post(`/chat/${orderId}/messages`, { content }).then((r) => r.data)
+export const uploadChatImage = (orderId, file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post(`/chat/${orderId}/upload-image`, form).then((r) => r.data)
+}
+export const getUnreadCounts = () =>
+  api.get('/chat/unread-counts').then((r) => r.data)
+export const markChatRead = (orderId) =>
+  api.post(`/chat/${orderId}/read`).then((r) => r.data)
+export const createChatWs = (orderId) => {
+  const token = localStorage.getItem('token')
+  return new WebSocket(`${wsBase()}/chat/ws/${orderId}?token=${token}`)
+}
+
+export const getMyTransactions = () =>
+  api.get('/financial/transactions').then((r) => r.data)
+
+// ── Global Chat ───────────────────────────────────────────────────────────────
+export const getGlobalMessages = () =>
+  api.get('/global-chat/messages').then((r) => r.data)
+export const sendGlobalMessage = (content) =>
+  api.post('/global-chat/messages', { content }).then((r) => r.data)
+export const uploadGlobalImage = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post('/global-chat/upload-image', form).then((r) => r.data)
+}
+export const getGlobalUnreadCount = (since) =>
+  api.get('/global-chat/unread-count', { params: since ? { since } : {} }).then((r) => r.data)
+export const createGlobalChatWs = () => {
+  const token = localStorage.getItem('token')
+  return new WebSocket(`${wsBase()}/global-chat/ws?token=${token}`)
+}

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+*.egg-info/
+
+# База данных
+backend/karagroup.db
+backend/karagroup.db-shm
+backend/karagroup.db-wal
+
+# Загрузки
+backend/uploads/
+
+# Env файлы
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist-electron/
+out/
+
+# Mac
+.DS_Store
+
+# Логи
+*.log
+logs/
