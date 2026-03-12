@@ -13,6 +13,8 @@ async def show_about(callback: CallbackQuery):
     await edit_or_send(callback,
         "ℹ️ <b>О боте</b>\n\n"
         "Мы занимаемся профессиональным бустингом игровых аккаунтов.\n\n"
+        f"📢 Наш канал: {settings.CHANNEL_URL}\n"
+        f"👤 Поддержка: {settings.MANAGER_USERNAME}\n\n"
         "Выберите раздел:",
         reply_markup=about_kb(),
         parse_mode="HTML",
