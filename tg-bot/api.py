@@ -33,15 +33,24 @@ class BackendAPI:
             f"{settings.BACKEND_URL}{path}", headers=headers, **kwargs
         ) as r:
             if r.status == 401:
-                # Token expired — refresh once
                 self._token = None
                 token = await self._get_token()
                 headers = {"Authorization": f"Bearer {token}"}
                 async with getattr(session, method)(
                     f"{settings.BACKEND_URL}{path}", headers=headers, **kwargs
                 ) as r2:
-                    return await r2.json()
+                    return await self._parse(r2)
+            return await self._parse(r)
+
+    async def _parse(self, r) -> dict | list:
+        if r.status >= 400:
+            text = await r.text()
+            raise Exception(f"HTTP {r.status}: {text}")
+        content_type = r.headers.get("Content-Type", "")
+        if "application/json" in content_type:
             return await r.json()
+        text = await r.text()
+        raise Exception(f"Unexpected response ({r.status}): {text}")
 
     # ── Categories ────────────────────────────────────────────────────────────
 
