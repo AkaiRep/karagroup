@@ -154,14 +154,16 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
         for item in cart.values()
     ]
 
+    user = callback.from_user
     order_data = {
         "source": "telegram",
         "status": "pending_payment",
         "items": items,
         "price": total,
-        "client_info": callback.from_user.username or str(callback.from_user.id),
-        "telegram_user_id": callback.from_user.id,
-        "telegram_username": callback.from_user.username or "",
+        "client_info": f"@{user.username}" if user.username else str(user.id),
+        "client_url": f"tg://user?id={user.id}",
+        "telegram_user_id": user.id,
+        "telegram_username": user.username or "",
     }
     if promo:
         order_data["promo_code"] = promo["code"]
