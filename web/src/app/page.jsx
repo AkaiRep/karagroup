@@ -38,7 +38,7 @@ export default function CatalogPage() {
         <div
           className="absolute inset-0 scale-110 bg-cover bg-center"
           style={{
-            backgroundImage: "url('/bg.jpg')",
+            backgroundImage: "url('/hero-bg.jpg')",
             filter: 'blur(6px)',
           }}
         />
@@ -146,7 +146,7 @@ export default function CatalogPage() {
       <section className="relative overflow-hidden py-20">
         <div
           className="absolute inset-0 scale-110 bg-cover bg-center"
-          style={{ backgroundImage: "url('/bg.jpg')", filter: 'blur(8px)' }}
+          style={{ backgroundImage: "url('/footer-bg.jpg')", filter: 'blur(8px)' }}
         />
         <div className="absolute inset-0 bg-[#07080d]/85" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">

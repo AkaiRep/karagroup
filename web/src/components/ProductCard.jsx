@@ -18,7 +18,7 @@ export default function ProductCard({ product }) {
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-110 opacity-20 group-hover:opacity-30 transition-opacity duration-300"
-        style={{ backgroundImage: "url('/bg.jpg')", filter: 'blur(3px)' }}
+        style={{ backgroundImage: "url('/card-bg.jpg')", filter: 'blur(3px)' }}
       />
       {/* Dark gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/80 to-[#111318]/40" />
