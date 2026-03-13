@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { api } from '@/lib/api'
+import { api, BASE } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 import ReviewsCarousel from '@/components/ReviewsCarousel'
 
@@ -170,18 +170,27 @@ export default function CatalogPage() {
             {recentOrders.map(order => (
               <div
                 key={order.id}
-                className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 flex flex-col gap-1 min-w-[180px]"
+                className="relative flex-shrink-0 rounded-2xl overflow-hidden min-w-[180px] border border-white/15"
               >
-                <span className="text-slate-400 font-mono text-xs whitespace-nowrap">
-                  {order.client || 'Клиент'}
-                </span>
-                <span className="text-white font-medium text-sm whitespace-nowrap">
-                  {order.product}
-                  {order.extra_count > 0 && (
-                    <span className="text-slate-400 font-normal"> (+{order.extra_count})</span>
-                  )}
-                </span>
-                <span className="text-green-300 font-semibold text-sm whitespace-nowrap">{order.price} ₽</span>
+                {order.image_url && (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center opacity-30"
+                    style={{ backgroundImage: `url('${BASE.replace(/\/$/, '')}${order.image_url}')` }}
+                  />
+                )}
+                <div className={`absolute inset-0 ${order.image_url ? 'bg-[#07080d]/70' : 'bg-white/10'}`} />
+                <div className="relative z-10 px-4 py-3 flex flex-col gap-1">
+                  <span className="text-slate-400 font-mono text-xs whitespace-nowrap">
+                    {order.client || 'Клиент'}
+                  </span>
+                  <span className="text-white font-medium text-sm whitespace-nowrap">
+                    {order.product}
+                    {order.extra_count > 0 && (
+                      <span className="text-slate-400 font-normal"> (+{order.extra_count})</span>
+                    )}
+                  </span>
+                  <span className="text-green-300 font-semibold text-sm whitespace-nowrap">{order.price} ₽</span>
+                </div>
               </div>
             ))}
           </div>

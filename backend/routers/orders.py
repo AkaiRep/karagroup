@@ -115,17 +115,18 @@ def recent_orders(db: Session = Depends(get_db)):
     def top_product(items):
         valid = [i for i in items if i.product]
         if not valid:
-            return "Услуга", 0
+            return "Услуга", 0, None
         best = max(valid, key=lambda i: i.product.price or 0)
-        return best.product.name, len(valid) - 1
+        return best.product.name, len(valid) - 1, best.product.image_url
 
     result = []
     for o in orders:
-        product_name, extra_count = top_product(o.items)
+        product_name, extra_count, image_url = top_product(o.items)
         result.append({
             "id": o.id,
             "product": product_name,
             "extra_count": extra_count,
+            "image_url": image_url,
             "price": o.price,
             "client": mask_name(o.client_info),
             "created_at": o.created_at.isoformat(),
@@ -430,17 +431,18 @@ async def ws_recent_orders(websocket: WebSocket):
             def top(items):
                 valid = [i for i in items if i.product]
                 if not valid:
-                    return "Услуга", 0
+                    return "Услуга", 0, None
                 best = max(valid, key=lambda i: i.product.price or 0)
-                return best.product.name, len(valid) - 1
+                return best.product.name, len(valid) - 1, best.product.image_url
 
             result = []
             for o in orders:
-                product_name, extra_count = top(o.items)
+                product_name, extra_count, image_url = top(o.items)
                 result.append({
                     "id": o.id,
                     "product": product_name,
                     "extra_count": extra_count,
+                    "image_url": image_url,
                     "price": o.price,
                     "client": mask(o.client_info),
                     "created_at": o.created_at.isoformat(),
