@@ -146,25 +146,23 @@ export default function CatalogPage() {
 
           {recentOrders.length > 0 && (
             <div className="mt-8 w-full">
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-2 justify-center flex-wrap">
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-2">
                 {recentOrders.map(order => (
                   <div
                     key={order.id}
-                    className="flex-shrink-0 bg-white/5 border border-white/8 rounded-2xl px-4 py-3 text-sm flex flex-col gap-1.5 min-w-[160px] max-w-[200px]"
+                    className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-4 min-w-[200px]"
                   >
-                    <span className="text-white font-medium leading-snug line-clamp-2">{order.product}</span>
-                    <div className="flex items-center justify-between gap-2 mt-auto">
-                      <span className="text-slate-300 font-semibold">{order.price} ₽</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                        order.status === 'completed' ? 'bg-green-500/15 text-green-400' :
-                        order.status === 'confirmed' ? 'bg-blue-500/15 text-blue-400' :
-                        'bg-yellow-500/15 text-yellow-400'
-                      }`}>
-                        {order.status === 'completed' ? 'Выполнен' :
-                         order.status === 'confirmed' ? 'Подтверждён' : 'В работе'}
-                      </span>
-                    </div>
+                    <span className="text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[110px]">{order.product}</span>
+                    <span className="text-slate-200 font-semibold whitespace-nowrap">{order.price} ₽</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${
+                      order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
+                      order.status === 'confirmed' ? 'bg-blue-500/20 text-blue-300' :
+                      'bg-yellow-500/20 text-yellow-300'
+                    }`}>
+                      {order.status === 'completed' ? 'Выполнен' :
+                       order.status === 'confirmed' ? 'Подтверждён' : 'В работе'}
+                    </span>
                   </div>
                 ))}
               </div>
