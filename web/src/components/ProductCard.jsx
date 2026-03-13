@@ -18,15 +18,21 @@ export default function ProductCard({ product, globalDiscount = 0 }) {
   return (
     <div className="relative overflow-hidden bg-[#111318] border border-white/5 rounded-2xl flex flex-col hover:border-green-500/30 transition-all duration-200 group">
       {/* Background image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center scale-110 opacity-35 group-hover:opacity-40 transition-opacity duration-300"
-        style={{
-          backgroundImage: product.image_url
-            ? `url('${BASE}${product.image_url}')`
-            : "url('/card-bg.jpg')",
-          filter: 'blur(1px)',
-        }}
-      />
+      {(() => {
+        const imgUrl = product.image_url
+          ? `${BASE.replace(/\/$/, '')}${product.image_url}`
+          : null
+        console.log('[ProductCard]', product.name, '| image_url:', product.image_url, '| full:', imgUrl)
+        return (
+          <div
+            className="absolute inset-0 bg-cover bg-center scale-110 opacity-35 group-hover:opacity-40 transition-opacity duration-300"
+            style={{
+              backgroundImage: imgUrl ? `url('${imgUrl}')` : "url('/card-bg.jpg')",
+              filter: 'blur(1px)',
+            }}
+          />
+        )
+      })()}
       <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/55 to-[#111318]/10" />
 
       {/* Content */}
