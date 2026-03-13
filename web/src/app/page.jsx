@@ -100,6 +100,17 @@ export default function CatalogPage() {
     ? products.filter(p => p.category_id === activeCategory)
     : products
 
+  // Category popularity: sum of order_count of products in each category
+  const catPopularity = (catId) =>
+    products.filter(p => p.category_id === catId).reduce((s, p) => s + (p.order_count || 0), 0)
+
+  const sortedCategories = [...categories].sort((a, b) => catPopularity(b.id) - catPopularity(a.id))
+
+  // Most popular product globally
+  const topProductId = products.length
+    ? products.reduce((top, p) => (p.order_count || 0) > (top.order_count || 0) ? p : top, products[0]).id
+    : null
+
   const channel = process.env.NEXT_PUBLIC_BOT_CHANNEL
   const manager = process.env.NEXT_PUBLIC_MANAGER
 
@@ -208,7 +219,7 @@ export default function CatalogPage() {
           <p className="text-slate-400 mt-1 text-sm md:text-base">Выберите нужную услугу и добавьте в корзину</p>
         </div>
 
-        {categories.length > 0 && (
+        {sortedCategories.length > 0 && (
           <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar px-4 pb-1">
             <button
               onClick={() => switchCategory(null)}
@@ -220,7 +231,7 @@ export default function CatalogPage() {
             >
               Все
             </button>
-            {categories.map(cat => (
+            {sortedCategories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => switchCategory(cat.id)}
@@ -250,12 +261,12 @@ export default function CatalogPage() {
         ) : activeCategory !== null ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
-              <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} />
+              <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={product.id === topProductId && (product.order_count || 0) > 0} />
             ))}
           </div>
         ) : (
           <div className="px-4 space-y-8">
-            {categories
+            {sortedCategories
               .filter(cat => products.some(p => p.category_id === cat.id))
               .map(cat => {
                 const catProducts = products.filter(p => p.category_id === cat.id)
@@ -273,7 +284,7 @@ export default function CatalogPage() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {shown.map(product => (
-                        <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} />
+                        <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={product.id === topProductId && (product.order_count || 0) > 0} />
                       ))}
                     </div>
                     {hasMore && (
@@ -302,7 +313,7 @@ export default function CatalogPage() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {shown.map(product => (
-                      <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} />
+                      <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={product.id === topProductId && (product.order_count || 0) > 0} />
                     ))}
                   </div>
                   {hasMore && (

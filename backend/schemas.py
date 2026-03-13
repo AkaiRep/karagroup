@@ -112,6 +112,7 @@ class ProductOut(BaseModel):
     is_active: bool
     category_id: Optional[int]
     image_url: Optional[str]
+    order_count: int = 0
     category: Optional[CategoryOut]
     created_at: datetime
 

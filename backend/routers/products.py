@@ -36,10 +36,23 @@ def list_products(
     active_only: bool = False,
     db: Session = Depends(get_db),
 ):
+    from sqlalchemy import func
     q = db.query(models.Product)
     if active_only:
         q = q.filter(models.Product.is_active == True)
-    return q.order_by(models.Product.created_at.desc()).all()
+    products = q.all()
+
+    counts = dict(
+        db.query(models.OrderItem.product_id, func.count(models.OrderItem.id))
+        .join(models.Order, models.OrderItem.order_id == models.Order.id)
+        .filter(models.Order.status != models.OrderStatus.pending_payment)
+        .group_by(models.OrderItem.product_id)
+        .all()
+    )
+    for p in products:
+        p.order_count = counts.get(p.id, 0)
+
+    return sorted(products, key=lambda p: p.order_count, reverse=True)
 
 
 @router.post("/", response_model=schemas.ProductOut, status_code=status.HTTP_201_CREATED)
