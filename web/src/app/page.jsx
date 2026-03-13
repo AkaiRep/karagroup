@@ -45,7 +45,7 @@ export default function CatalogPage() {
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-[#07080d]/75" />
         {/* Gradient fade bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#07080d] to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#07080d] via-[#07080d]/60 to-transparent" />
 
         {/* Content */}
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
@@ -148,7 +148,7 @@ export default function CatalogPage() {
           className="absolute inset-0 scale-110 bg-cover bg-center"
           style={{ backgroundImage: "url('/footer-bg.jpg')", filter: 'blur(8px)' }}
         />
-        <div className="absolute inset-0 bg-[#07080d]/85" />
+        <div className="absolute inset-0 bg-[#07080d]/60" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Почему выбирают нас</h2>
           <p className="text-slate-300 text-lg mb-12 max-w-2xl mx-auto">
