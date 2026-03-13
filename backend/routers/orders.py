@@ -95,10 +95,7 @@ def recent_orders(db: Session = Depends(get_db)):
             joinedload(models.Order.items).joinedload(models.OrderItem.product),
         )
         .filter(
-            models.Order.status.in_([
-                models.OrderStatus.completed,
-                models.OrderStatus.confirmed,
-            ]),
+            models.Order.status != models.OrderStatus.pending_payment,
             models.Order.created_at >= cutoff,
         )
         .order_by(models.Order.id.desc())
@@ -402,10 +399,7 @@ async def ws_recent_orders(websocket: WebSocket):
                 db.query(models.Order)
                 .options(joinedload(models.Order.items).joinedload(models.OrderItem.product))
                 .filter(
-                    models.Order.status.in_([
-                        models.OrderStatus.completed,
-                        models.OrderStatus.confirmed,
-                    ]),
+                    models.Order.status != models.OrderStatus.pending_payment,
                     models.Order.created_at >= cutoff,
                 )
                 .order_by(models.Order.id.desc())
