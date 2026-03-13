@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import TelegramLoginButton from '@/components/TelegramLoginButton'
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, promo, setPromo, removeItem, setQty, clearCart, total, finalTotal, count } = useCart()
+  const { cart, promo, setPromo, removeItem, setQty, clearCart, total, finalTotal, count, effectiveDiscount } = useCart()
   const { user } = useAuth()
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
@@ -37,7 +37,7 @@ export default function CartDrawer({ open, onClose }) {
     setErrorMsg('')
     try {
       const orderData = {
-        items: items.map(i => ({ product_id: i.id, quantity: i.quantity || 1, discount: i.discount_percent || 0 })),
+        items: items.map(i => ({ product_id: i.id, quantity: i.quantity || 1, discount: effectiveDiscount(i) })),
         price: finalTotal,
         promo_code: promo?.code ?? null,
       }
@@ -116,7 +116,7 @@ export default function CartDrawer({ open, onClose }) {
           <>
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {items.map(item => {
-                const disc = item.discount_percent || 0
+                const disc = effectiveDiscount(item)
                 const unitPrice = item.price * (1 - disc / 100)
                 const qty = item.quantity || 1
                 return (

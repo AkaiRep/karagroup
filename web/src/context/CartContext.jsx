@@ -1,17 +1,20 @@
 'use client'
 import { createContext, useContext, useState, useEffect } from 'react'
+import { api } from '@/lib/api'
 
 const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState({}) // { [productId]: { ...product, quantity: 1 } }
   const [promo, setPromo] = useState(null)
+  const [globalDiscount, setGlobalDiscount] = useState(0)
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('cart')
       if (saved) setCart(JSON.parse(saved))
     } catch {}
+    api.getGlobalDiscount().then(d => setGlobalDiscount(d.value || 0)).catch(() => {})
   }, [])
 
   const save = (newCart) => {
@@ -44,8 +47,10 @@ export function CartProvider({ children }) {
     localStorage.removeItem('cart')
   }
 
+  const effectiveDiscount = (item) => Math.max(item.discount_percent || 0, globalDiscount)
+
   const total = Object.values(cart).reduce((sum, item) => {
-    const disc = item.discount_percent || 0
+    const disc = effectiveDiscount(item)
     return sum + item.price * (1 - disc / 100) * (item.quantity || 1)
   }, 0)
 
@@ -56,7 +61,7 @@ export function CartProvider({ children }) {
   const count = Object.values(cart).reduce((sum, item) => sum + (item.quantity || 1), 0)
 
   return (
-    <CartContext.Provider value={{ cart, promo, setPromo, addItem, removeItem, setQty, clearCart, total, finalTotal, count }}>
+    <CartContext.Provider value={{ cart, promo, setPromo, addItem, removeItem, setQty, clearCart, total, finalTotal, count, globalDiscount, effectiveDiscount }}>
       {children}
     </CartContext.Provider>
   )
