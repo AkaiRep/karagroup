@@ -25,15 +25,14 @@ export default function ProductCard({ product, globalDiscount = 0 }) {
         console.log('[ProductCard]', product.name, '| image_url:', product.image_url, '| full:', imgUrl)
         return (
           <div
-            className="absolute inset-0 bg-cover bg-center scale-110 opacity-35 group-hover:opacity-40 transition-opacity duration-300"
+            className="absolute inset-0 bg-cover bg-center scale-110 opacity-50 group-hover:opacity-60 transition-opacity duration-300"
             style={{
               backgroundImage: imgUrl ? `url('${imgUrl}')` : "url('/card-bg.jpg')",
-              filter: 'blur(1px)',
             }}
           />
         )
       })()}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/55 to-[#111318]/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/40 to-transparent" />
 
       {/* Content */}
       <div className="relative z-10 p-3 md:p-5 flex flex-col gap-3 flex-1">
