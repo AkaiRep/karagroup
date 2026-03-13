@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
 function StarRating({ rating }) {
@@ -20,10 +20,10 @@ function ReviewCard({ review }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-green-600/20 border border-green-500/20 flex items-center justify-center text-green-400 font-semibold text-sm">
-            {review.author?.[0]?.toUpperCase() ?? '?'}
+            F
           </div>
           <div>
-            <p className="text-sm font-medium leading-none">{review.author}</p>
+            <p className="text-sm font-medium leading-none">Покупатель</p>
             {review.date_str && <p className="text-xs text-slate-500 mt-0.5">{review.date_str}</p>}
           </div>
         </div>
@@ -41,7 +41,6 @@ function ReviewCard({ review }) {
 
 export default function ReviewsCarousel() {
   const [reviews, setReviews] = useState([])
-  const trackRef = useRef(null)
 
   useEffect(() => {
     api.getReviews().then(setReviews).catch(() => {})
@@ -49,8 +48,8 @@ export default function ReviewsCarousel() {
 
   if (reviews.length === 0) return null
 
-  // Дублируем для бесконечного скролла
   const doubled = [...reviews, ...reviews]
+  const duration = Math.max(reviews.length * 5, 30)
 
   return (
     <section className="py-14 overflow-hidden">
@@ -60,33 +59,18 @@ export default function ReviewsCarousel() {
       </div>
 
       <div className="relative">
-        {/* Fade edges */}
         <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#07080d] to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#07080d] to-transparent z-10 pointer-events-none" />
 
         <div
-          ref={trackRef}
           className="flex gap-4 carousel-track"
-          style={{ width: 'max-content' }}
+          style={{ width: 'max-content', '--carousel-duration': `${duration}s` }}
         >
           {doubled.map((review, i) => (
             <ReviewCard key={i} review={review} />
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        .carousel-track {
-          animation: scroll-carousel ${reviews.length * 6}s linear infinite;
-        }
-        .carousel-track:hover {
-          animation-play-state: paused;
-        }
-        @keyframes scroll-carousel {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
     </section>
   )
 }
