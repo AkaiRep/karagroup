@@ -50,7 +50,7 @@ def telegram_auth(data: TelegramAuthData, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.telegram_id == data.id).first()
     if not user:
         username = data.username or f"tg_{data.id}"
-        display = f"{data.first_name} {data.last_name}".strip() or username
+        display = " ".join(filter(None, [data.first_name, data.last_name])) or username
         user = models.User(
             username=display,
             password_hash="",
