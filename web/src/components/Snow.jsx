@@ -2,13 +2,13 @@
 import { useEffect, useRef } from 'react'
 
 const HEADER_HEIGHT = 64
-const NUM_FLAKES = 55
+const NUM_FLAKES = 27
 
 function randomFlake(canvasWidth, canvasHeight, randomY = false) {
   return {
     x: Math.random() * canvasWidth,
     y: randomY ? Math.random() * canvasHeight : -20,
-    size: Math.random() * 18 + 8,
+    size: Math.random() * 36 + 16,
     speed: Math.random() * 0.4 + 0.15,
     swayAmp: Math.random() * 0.4 + 0.1,
     swayOffset: Math.random() * Math.PI * 2,
@@ -28,6 +28,8 @@ export default function Snow() {
     const resize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight - HEADER_HEIGHT
+      canvas.style.width = window.innerWidth + 'px'
+      canvas.style.height = (window.innerHeight - HEADER_HEIGHT) + 'px'
     }
     resize()
     window.addEventListener('resize', resize)
@@ -97,11 +99,10 @@ export default function Snow() {
       ref={canvasRef}
       className="fixed pointer-events-none"
       style={{
+        position: 'fixed',
         top: HEADER_HEIGHT,
         left: 0,
-        zIndex: 35,
-        width: '100%',
-        height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+        zIndex: 5,
       }}
     />
   )
