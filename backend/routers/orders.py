@@ -105,9 +105,11 @@ def recent_orders(db: Session = Depends(get_db)):
     def mask_name(name: str | None) -> str | None:
         if not name:
             return None
-        n = name.strip()
+        n = name.strip().lstrip('@')
+        if not n:
+            return None
         if len(n) <= 2:
-            return n[0] + '***' if n else None
+            return n[0] + '***'
         return n[0] + '***' + n[-1]
 
     def top_product(items):
@@ -418,9 +420,11 @@ async def ws_recent_orders(websocket: WebSocket):
             def mask(name):
                 if not name:
                     return None
-                n = name.strip()
+                n = name.strip().lstrip('@')
+                if not n:
+                    return None
                 if len(n) <= 2:
-                    return n[0] + '***' if n else None
+                    return n[0] + '***'
                 return n[0] + '***' + n[-1]
 
             def top(items):
