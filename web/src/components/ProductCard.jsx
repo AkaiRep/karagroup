@@ -1,5 +1,6 @@
 'use client'
 import { useCart } from '@/context/CartContext'
+import { BASE } from '@/lib/api'
 
 export default function ProductCard({ product, globalDiscount = 0 }) {
   const { cart, addItem, setQty } = useCart()
@@ -21,7 +22,7 @@ export default function ProductCard({ product, globalDiscount = 0 }) {
         className="absolute inset-0 bg-cover bg-center scale-110 opacity-35 group-hover:opacity-40 transition-opacity duration-300"
         style={{
           backgroundImage: product.image_url
-            ? `url('${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${product.image_url}')`
+            ? `url('${BASE}${product.image_url}')`
             : "url('/card-bg.jpg')",
           filter: 'blur(1px)',
         }}
