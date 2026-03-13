@@ -242,35 +242,6 @@ export default function CatalogPage() {
 
       <ReviewsCarousel />
 
-      {/* Stats */}
-      <section className="relative overflow-hidden py-20">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#07080d] via-transparent to-[#07080d]" style={{zIndex: 1}} />
-        <div
-          className="absolute inset-0 scale-110 bg-cover bg-center"
-          style={{ backgroundImage: "url('/footer-bg.jpg')", filter: 'blur(8px)' }}
-        />
-        <div className="absolute inset-0 bg-[#07080d]/55" />
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Почему выбирают нас</h2>
-          <p className="text-slate-300 text-base md:text-lg mb-8 md:mb-12 max-w-2xl mx-auto">
-            Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 text-left">
-            {[
-              { num: '500+', label: 'Выполненных заказов', desc: 'За всё время работы' },
-              { num: '100%', label: 'Гарантия результата', desc: 'Или вернём деньги' },
-              { num: '<2ч', label: 'Время отклика', desc: 'Начинаем работу быстро' },
-            ].map(s => (
-              <div key={s.num} className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6">
-                <div className="text-4xl font-bold text-green-400 mb-2">{s.num}</div>
-                <div className="font-semibold mb-1">{s.label}</div>
-                <div className="text-slate-400 text-sm">{s.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* About */}
       <section className="max-w-4xl mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -332,6 +303,36 @@ export default function CatalogPage() {
           )}
         </div>
       </section>
+
+      {/* Stats */}
+      <section className="relative overflow-hidden py-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#07080d] via-transparent to-[#07080d]" style={{zIndex: 1}} />
+        <div
+          className="absolute inset-0 scale-110 bg-cover bg-center"
+          style={{ backgroundImage: "url('/footer-bg.jpg')", filter: 'blur(8px)' }}
+        />
+        <div className="absolute inset-0 bg-[#07080d]/55" />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Почему выбирают нас</h2>
+          <p className="text-slate-300 text-base md:text-lg mb-8 md:mb-12 max-w-2xl mx-auto">
+            Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 text-left">
+            {[
+              { num: '500+', label: 'Выполненных заказов', desc: 'За всё время работы' },
+              { num: '100%', label: 'Гарантия результата', desc: 'Или вернём деньги' },
+              { num: '<2ч', label: 'Время отклика', desc: 'Начинаем работу быстро' },
+            ].map(s => (
+              <div key={s.num} className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6">
+                <div className="text-4xl font-bold text-green-400 mb-2">{s.num}</div>
+                <div className="font-semibold mb-1">{s.label}</div>
+                <div className="text-slate-400 text-sm">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
     </div>
   )
 }
