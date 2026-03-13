@@ -12,6 +12,7 @@ export default function Header() {
   const [cartOpen, setCartOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const isTMA = typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData
 
   return (
     <>
@@ -50,9 +51,11 @@ export default function Header() {
               {user ? (
                 <>
                   <span className="text-sm text-slate-400">{user.username}</span>
-                  <button onClick={logout} className="text-sm text-slate-500 hover:text-white transition-colors">
-                    Выйти
-                  </button>
+                  {!isTMA && (
+                    <button onClick={logout} className="text-sm text-slate-500 hover:text-white transition-colors">
+                      Выйти
+                    </button>
+                  )}
                 </>
               ) : (
                 <button
@@ -96,9 +99,11 @@ export default function Header() {
               {user ? (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-slate-400">{user.username}</span>
-                  <button onClick={() => { logout(); setMenuOpen(false) }} className="text-sm text-red-400 hover:text-red-300 transition-colors">
-                    Выйти
-                  </button>
+                  {!isTMA && (
+                    <button onClick={() => { logout(); setMenuOpen(false) }} className="text-sm text-red-400 hover:text-red-300 transition-colors">
+                      Выйти
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button
