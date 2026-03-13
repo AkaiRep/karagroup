@@ -9,10 +9,12 @@ export default function Providers({ children }) {
     <AuthProvider>
       <CartProvider>
         <Header />
+        <div className="relative">
         <Snow />
         <main className="min-h-screen pt-16">
           {children}
         </main>
+        </div>
       </CartProvider>
     </AuthProvider>
   )

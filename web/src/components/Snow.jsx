@@ -97,9 +97,9 @@ export default function Snow() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed pointer-events-none"
+      className="pointer-events-none"
       style={{
-        position: 'fixed',
+        position: 'absolute',
         top: HEADER_HEIGHT,
         left: 0,
         zIndex: 5,
