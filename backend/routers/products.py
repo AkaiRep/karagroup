@@ -10,7 +10,7 @@ GLOBAL_DISCOUNT_KEY = "global_discount_percent"
 
 
 @router.get("/global-discount", response_model=schemas.GlobalDiscountOut)
-def get_global_discount(db: Session = Depends(get_db), _=Depends(auth_utils.get_current_user)):
+def get_global_discount(db: Session = Depends(get_db)):
     setting = db.query(models.Setting).filter(models.Setting.key == GLOBAL_DISCOUNT_KEY).first()
     return {"value": float(setting.value) if setting else 0.0}
 

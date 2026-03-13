@@ -25,6 +25,7 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState({})
   const [isMobile, setIsMobile] = useState(false)
+  const [globalDiscount, setGlobalDiscount] = useState(0)
   const heroBgRef = useRef(null)
 
   useEffect(() => {
@@ -52,10 +53,11 @@ export default function CatalogPage() {
   const showMore = (catId) => setVisibleCount(v => ({ ...v, [catId]: (v[catId] ?? PAGE_INIT) + PAGE_MORE }))
 
   useEffect(() => {
-    Promise.all([api.getProducts(), api.getCategories()])
-      .then(([prods, cats]) => {
+    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount()])
+      .then(([prods, cats, disc]) => {
         setProducts(prods)
         setCategories(cats)
+        setGlobalDiscount(disc.value || 0)
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -170,7 +172,7 @@ export default function CatalogPage() {
         ) : activeCategory !== null ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} />
             ))}
           </div>
         ) : (
@@ -193,7 +195,7 @@ export default function CatalogPage() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {shown.map(product => (
-                        <ProductCard key={product.id} product={product} />
+                        <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} />
                       ))}
                     </div>
                     {hasMore && (
@@ -222,7 +224,7 @@ export default function CatalogPage() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {shown.map(product => (
-                      <ProductCard key={product.id} product={product} />
+                      <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} />
                     ))}
                   </div>
                   {hasMore && (

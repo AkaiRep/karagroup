@@ -1,14 +1,15 @@
 'use client'
 import { useCart } from '@/context/CartContext'
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, globalDiscount = 0 }) {
   const { cart, addItem, setQty } = useCart()
   const item = cart[product.id]
   const inCart = !!item
   const qty = item?.quantity || 0
 
-  const discountedPrice = product.discount_percent
-    ? product.price * (1 - product.discount_percent / 100)
+  const effectiveDiscount = Math.max(product.discount_percent || 0, globalDiscount)
+  const discountedPrice = effectiveDiscount > 0
+    ? product.price * (1 - effectiveDiscount / 100)
     : null
 
   const displayPrice = discountedPrice ?? product.price
@@ -45,10 +46,15 @@ export default function ProductCard({ product }) {
             <span className="text-base md:text-xl font-bold text-white">
               {displayPrice.toLocaleString('ru-RU')} ₽
             </span>
-            {product.discount_percent > 0 && (
-              <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-medium">
-                -{product.discount_percent}%
-              </span>
+            {effectiveDiscount > 0 && (
+              <>
+                <span className="text-xs text-slate-500 line-through">
+                  {product.price.toLocaleString('ru-RU')} ₽
+                </span>
+                <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-medium">
+                  -{effectiveDiscount}%
+                </span>
+              </>
             )}
           </div>
 
