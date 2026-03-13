@@ -131,11 +131,52 @@ export default function CatalogPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-slate-500">Услуги не найдены</div>
-        ) : (
+        ) : activeCategory !== null ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
+          </div>
+        ) : (
+          <div className="px-4 space-y-8">
+            {categories
+              .filter(cat => products.some(p => p.category_id === cat.id))
+              .map(cat => {
+                const catProducts = products.filter(p => p.category_id === cat.id)
+                return (
+                  <div key={cat.id}>
+                    {/* Разделитель */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+                      <span className="text-sm font-semibold text-green-400 uppercase tracking-widest px-2">
+                        {cat.name}
+                      </span>
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {catProducts.map(product => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            }
+            {/* Товары без категории */}
+            {products.filter(p => !p.category_id).length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest px-2">Другое</span>
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {products.filter(p => !p.category_id).map(product => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
