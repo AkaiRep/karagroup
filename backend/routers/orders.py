@@ -84,6 +84,35 @@ def list_orders(
     return q.order_by(models.Order.created_at.desc()).all()
 
 
+@router.get("/recent")
+def recent_orders(db: Session = Depends(get_db)):
+    orders = (
+        db.query(models.Order)
+        .options(
+            joinedload(models.Order.items).joinedload(models.OrderItem.product),
+        )
+        .filter(models.Order.status.in_([
+            models.OrderStatus.completed,
+            models.OrderStatus.confirmed,
+            models.OrderStatus.in_progress,
+        ]))
+        .order_by(models.Order.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    result = []
+    for o in orders:
+        product_name = o.items[0].product.name if o.items and o.items[0].product else "Услуга"
+        result.append({
+            "id": o.id,
+            "product": product_name,
+            "price": o.price,
+            "status": o.status.value,
+            "created_at": o.created_at.isoformat(),
+        })
+    return result
+
+
 @router.get("/available", response_model=List[schemas.OrderOut])
 def list_available_orders(
     db: Session = Depends(get_db),

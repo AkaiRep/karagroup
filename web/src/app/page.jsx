@@ -20,6 +20,7 @@ export default function CatalogPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [globalDiscount, setGlobalDiscount] = useState(0)
   const [catalogVisible, setCatalogVisible] = useState(true)
+  const [recentOrders, setRecentOrders] = useState([])
   const heroBgRef = useRef(null)
 
   useEffect(() => {
@@ -56,11 +57,12 @@ export default function CatalogPage() {
   }
 
   useEffect(() => {
-    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount()])
-      .then(([prods, cats, disc]) => {
+    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount(), api.getRecentOrders()])
+      .then(([prods, cats, disc, recent]) => {
         setProducts(prods)
         setCategories(cats)
         setGlobalDiscount(disc.value || 0)
+        setRecentOrders(recent || [])
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -113,6 +115,33 @@ export default function CatalogPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </a>
+
+          {recentOrders.length > 0 && (
+            <div className="mt-8 w-full max-w-xl mx-auto">
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Последние заказы</p>
+              <div className="flex flex-col gap-2">
+                {recentOrders.map(order => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl px-4 py-2.5 text-sm"
+                  >
+                    <span className="text-slate-300 truncate mr-3">{order.product}</span>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-white font-medium">{order.price} ₽</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        order.status === 'completed' ? 'bg-green-500/15 text-green-400' :
+                        order.status === 'confirmed' ? 'bg-blue-500/15 text-blue-400' :
+                        'bg-yellow-500/15 text-yellow-400'
+                      }`}>
+                        {order.status === 'completed' ? 'Выполнен' :
+                         order.status === 'confirmed' ? 'Подтверждён' : 'В работе'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

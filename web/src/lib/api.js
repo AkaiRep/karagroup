@@ -25,6 +25,7 @@ export const api = {
   lookupPromo: (code) => client.get(`/media/promo-codes/lookup/${code}`).then(r => r.data),
 
   // Orders
+  getRecentOrders: () => client.get('/orders/recent').then(r => r.data),
   createOrder: (data) => client.post('/orders/', data).then(r => r.data),
   getMyOrders: (telegramUserId) => client.get('/orders/', { params: { telegram_user_id: telegramUserId } }).then(r => r.data),
 
