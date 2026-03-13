@@ -544,7 +544,15 @@ export default function Orders() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-white font-medium">{order.price} ₽</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="font-medium text-white">{order.price} ₽</div>
+                      {order.original_price && (
+                        <div className="text-xs text-slate-500 line-through">{order.original_price} ₽</div>
+                      )}
+                      {order.media_earnings > 0 && (
+                        <div className="text-xs text-purple-400">медиа: {order.media_earnings} ₽</div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <select
                         value={order.status}
