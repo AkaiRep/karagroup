@@ -1,8 +1,9 @@
+import asyncio
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from database import get_db
+from database import get_db, SessionLocal
 import models, schemas, auth as auth_utils
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -374,6 +375,49 @@ def remove_worker(
     order.worker_is_vip = None
     db.commit()
     return _load_order(db, order_id)
+
+
+@router.websocket("/ws/recent")
+async def ws_recent_orders(websocket: WebSocket):
+    await websocket.accept()
+    last_ids: set = set()
+    db: Session = SessionLocal()
+    try:
+        while True:
+            orders = (
+                db.query(models.Order)
+                .options(joinedload(models.Order.items).joinedload(models.OrderItem.product))
+                .filter(models.Order.status.in_([
+                    models.OrderStatus.completed,
+                    models.OrderStatus.confirmed,
+                    models.OrderStatus.in_progress,
+                ]))
+                .order_by(models.Order.created_at.desc())
+                .limit(10)
+                .all()
+            )
+            db.expire_all()
+            result = []
+            for o in orders:
+                product_name = o.items[0].product.name if o.items and o.items[0].product else "Услуга"
+                result.append({
+                    "id": o.id,
+                    "product": product_name,
+                    "price": o.price,
+                    "status": o.status.value,
+                    "created_at": o.created_at.isoformat(),
+                })
+            current_ids = {o["id"] for o in result}
+            if last_ids:
+                new_orders = [o for o in result if o["id"] not in last_ids]
+                for order in new_orders:
+                    await websocket.send_json(order)
+            last_ids = current_ids
+            await asyncio.sleep(5)
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
+        db.close()
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)

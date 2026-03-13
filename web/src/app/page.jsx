@@ -22,6 +22,7 @@ export default function CatalogPage() {
   const [catalogVisible, setCatalogVisible] = useState(true)
   const [recentOrders, setRecentOrders] = useState([])
   const heroBgRef = useRef(null)
+  const wsRef = useRef(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -55,6 +56,33 @@ export default function CatalogPage() {
       requestAnimationFrame(() => requestAnimationFrame(() => setCatalogVisible(true)))
     }, 100)
   }
+
+  useEffect(() => {
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+      .replace(/^https/, 'wss')
+      .replace(/^http/, 'ws')
+    let alive = true
+
+    const connect = () => {
+      if (!alive) return
+      const ws = new WebSocket(`${base}/orders/ws/recent`)
+      wsRef.current = ws
+      ws.onmessage = (e) => {
+        try {
+          const order = JSON.parse(e.data)
+          setRecentOrders(prev => [order, ...prev].slice(0, 10))
+        } catch {}
+      }
+      ws.onclose = () => {
+        if (alive) setTimeout(connect, 5000)
+      }
+    }
+    connect()
+    return () => {
+      alive = false
+      wsRef.current?.close()
+    }
+  }, [])
 
   useEffect(() => {
     Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount(), api.getRecentOrders()])
@@ -117,18 +145,18 @@ export default function CatalogPage() {
           </a>
 
           {recentOrders.length > 0 && (
-            <div className="mt-8 w-full max-w-xl mx-auto">
-              <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">Последние заказы</p>
-              <div className="flex flex-col gap-2">
+            <div className="mt-8 w-full">
+              <p className="text-xs text-slate-500 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-2 justify-center flex-wrap">
                 {recentOrders.map(order => (
                   <div
                     key={order.id}
-                    className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl px-4 py-2.5 text-sm"
+                    className="flex-shrink-0 bg-white/5 border border-white/8 rounded-2xl px-4 py-3 text-sm flex flex-col gap-1.5 min-w-[160px] max-w-[200px]"
                   >
-                    <span className="text-slate-300 truncate mr-3">{order.product}</span>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-white font-medium">{order.price} ₽</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    <span className="text-white font-medium leading-snug line-clamp-2">{order.product}</span>
+                    <div className="flex items-center justify-between gap-2 mt-auto">
+                      <span className="text-slate-300 font-semibold">{order.price} ₽</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
                         order.status === 'completed' ? 'bg-green-500/15 text-green-400' :
                         order.status === 'confirmed' ? 'bg-blue-500/15 text-blue-400' :
                         'bg-yellow-500/15 text-yellow-400'
