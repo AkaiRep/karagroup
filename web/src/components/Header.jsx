@@ -26,7 +26,6 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-6 text-sm text-slate-400">
             <Link href="/" className="hover:text-white transition-colors">Каталог</Link>
             {user && <Link href="/orders" className="hover:text-white transition-colors">Мои заказы</Link>}
-            <Link href="/about" className="hover:text-white transition-colors">О нас</Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -94,7 +93,6 @@ export default function Header() {
           <div className="md:hidden border-t border-white/5 bg-[#07080d]/95 px-4 py-4 flex flex-col gap-3">
             <Link href="/" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Каталог</Link>
             {user && <Link href="/orders" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Мои заказы</Link>}
-            <Link href="/about" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">О нас</Link>
             <div className="pt-2 border-t border-white/5">
               {user ? (
                 <div className="flex items-center justify-between">

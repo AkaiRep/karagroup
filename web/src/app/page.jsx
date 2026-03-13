@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 import ReviewsCarousel from '@/components/ReviewsCarousel'
@@ -11,6 +11,13 @@ const FEATURES = [
   { icon: '💬', title: 'Поддержка 24/7', desc: 'Всегда на связи в Telegram' },
 ]
 
+const GUARANTEES = [
+  'Безопасность аккаунта — работаем с использованием VPN',
+  'Гарантия результата или возврат средств',
+  'Оперативное выполнение заказов',
+  'Поддержка 24/7 в Telegram',
+]
+
 export default function CatalogPage() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -18,12 +25,24 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true)
   const [visibleCount, setVisibleCount] = useState({})
   const [isMobile, setIsMobile] = useState(false)
+  const heroBgRef = useRef(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Parallax
+  useEffect(() => {
+    const onScroll = () => {
+      if (heroBgRef.current) {
+        heroBgRef.current.style.transform = `translateY(${window.scrollY * 0.35}px) scale(1.15)`
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const PAGE_INIT = isMobile ? 4 : 3
@@ -46,24 +65,26 @@ export default function CatalogPage() {
     ? products.filter(p => p.category_id === activeCategory)
     : products
 
+  const channel = process.env.NEXT_PUBLIC_BOT_CHANNEL
+  const manager = process.env.NEXT_PUBLIC_MANAGER
+
   return (
     <div>
       {/* Hero */}
       <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
-        {/* Background image */}
         <div
-          className="absolute inset-0 scale-110 bg-cover bg-center"
+          ref={heroBgRef}
+          className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: "url('/hero-bg.jpg')",
             filter: 'blur(6px)',
+            transform: 'scale(1.15)',
+            willChange: 'transform',
           }}
         />
-        {/* Dark overlay */}
         <div className="absolute inset-0 bg-[#07080d]/75" />
-        {/* Gradient fade bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#07080d] via-[#07080d]/60 to-transparent" />
 
-        {/* Content */}
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-1.5 rounded-full mb-6 font-medium">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
@@ -110,7 +131,6 @@ export default function CatalogPage() {
           <p className="text-slate-400 mt-1 text-sm md:text-base">Выберите нужную услугу и добавьте в корзину</p>
         </div>
 
-        {/* Category filter — горизонтальный скролл на мобиле */}
         {categories.length > 0 && (
           <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar px-4 pb-1">
             <button
@@ -222,7 +242,7 @@ export default function CatalogPage() {
 
       <ReviewsCarousel />
 
-      {/* About */}
+      {/* Stats */}
       <section className="relative overflow-hidden py-20">
         <div className="absolute inset-0 bg-gradient-to-b from-[#07080d] via-transparent to-[#07080d]" style={{zIndex: 1}} />
         <div
@@ -248,6 +268,68 @@ export default function CatalogPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section className="max-w-4xl mx-auto px-4 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
+            <h2 className="text-lg font-semibold mb-3 text-green-400">Кто мы</h2>
+            <p className="text-slate-400 leading-relaxed">
+              KaraShop — профессиональный сервис буста игровых аккаунтов. Мы работаем с опытными игроками,
+              которые помогут вам достичь желаемого ранга быстро и безопасно.
+            </p>
+          </div>
+
+          <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
+            <h2 className="text-lg font-semibold mb-4 text-green-400">Наши гарантии</h2>
+            <ul className="space-y-3">
+              {GUARANTEES.map((item, i) => (
+                <li key={i} className="flex items-start gap-3 text-slate-300 text-sm">
+                  <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {(channel || manager) && (
+            <div className="bg-[#111318] border border-white/5 rounded-2xl p-6 md:col-span-2">
+              <h2 className="text-lg font-semibold mb-4 text-green-400">Контакты</h2>
+              <div className="flex flex-wrap gap-4">
+                {channel && (
+                  <a
+                    href={channel}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 text-[#229ED9] hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.903.614z" />
+                    </svg>
+                    Наш Telegram-канал
+                  </a>
+                )}
+                {manager && (
+                  <a
+                    href={`https://t.me/${manager.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 text-[#229ED9] hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                    </svg>
+                    Написать менеджеру: {manager}
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>
