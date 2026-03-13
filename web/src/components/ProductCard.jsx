@@ -18,10 +18,10 @@ export default function ProductCard({ product, globalDiscount = 0 }) {
     <div className="relative overflow-hidden bg-[#111318] border border-white/5 rounded-2xl flex flex-col hover:border-green-500/30 transition-all duration-200 group">
       {/* Background image */}
       <div
-        className="absolute inset-0 bg-cover bg-center scale-110 opacity-20 group-hover:opacity-25 transition-opacity duration-300"
+        className="absolute inset-0 bg-cover bg-center scale-110 opacity-35 group-hover:opacity-40 transition-opacity duration-300"
         style={{ backgroundImage: "url('/card-bg.jpg')", filter: 'blur(1px)' }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/70 to-[#111318]/20" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/55 to-[#111318]/10" />
 
       {/* Content */}
       <div className="relative z-10 p-3 md:p-5 flex flex-col gap-3 flex-1">
