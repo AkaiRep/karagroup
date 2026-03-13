@@ -87,16 +87,20 @@ def list_orders(
 
 @router.get("/recent")
 def recent_orders(db: Session = Depends(get_db)):
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
     orders = (
         db.query(models.Order)
         .options(
             joinedload(models.Order.items).joinedload(models.OrderItem.product),
         )
-        .filter(models.Order.status.in_([
-            models.OrderStatus.completed,
-            models.OrderStatus.confirmed,
-            models.OrderStatus.in_progress,
-        ]))
+        .filter(
+            models.Order.status.in_([
+                models.OrderStatus.completed,
+                models.OrderStatus.confirmed,
+            ]),
+            models.Order.created_at >= cutoff,
+        )
         .order_by(models.Order.created_at.desc())
         .limit(10)
         .all()
@@ -392,14 +396,18 @@ async def ws_recent_orders(websocket: WebSocket):
     db: Session = SessionLocal()
     try:
         while True:
+            from datetime import timedelta
+            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
             orders = (
                 db.query(models.Order)
                 .options(joinedload(models.Order.items).joinedload(models.OrderItem.product))
-                .filter(models.Order.status.in_([
-                    models.OrderStatus.completed,
-                    models.OrderStatus.confirmed,
-                    models.OrderStatus.in_progress,
-                ]))
+                .filter(
+                    models.Order.status.in_([
+                        models.OrderStatus.completed,
+                        models.OrderStatus.confirmed,
+                    ]),
+                    models.Order.created_at >= cutoff,
+                )
                 .order_by(models.Order.created_at.desc())
                 .limit(10)
                 .all()
