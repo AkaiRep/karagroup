@@ -20,6 +20,10 @@ img {
   -webkit-touch-callout: none;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: #07080d;
   color: #f1f5f9;

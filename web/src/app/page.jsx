@@ -19,6 +19,7 @@ export default function CatalogPage() {
   const [visibleCount, setVisibleCount] = useState({})
   const [isMobile, setIsMobile] = useState(false)
   const [globalDiscount, setGlobalDiscount] = useState(0)
+  const [catalogVisible, setCatalogVisible] = useState(true)
   const heroBgRef = useRef(null)
 
   useEffect(() => {
@@ -44,6 +45,15 @@ export default function CatalogPage() {
 
   const getVisible = (catId) => visibleCount[catId] ?? PAGE_INIT
   const showMore = (catId) => setVisibleCount(v => ({ ...v, [catId]: (v[catId] ?? PAGE_INIT) + PAGE_MORE }))
+
+  const switchCategory = (catId) => {
+    setCatalogVisible(false)
+    setTimeout(() => {
+      setActiveCategory(catId)
+      setVisibleCount({})
+      setCatalogVisible(true)
+    }, 180)
+  }
 
   useEffect(() => {
     Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount()])
@@ -144,7 +154,7 @@ export default function CatalogPage() {
         {categories.length > 0 && (
           <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar px-4 pb-1">
             <button
-              onClick={() => setActiveCategory(null)}
+              onClick={() => switchCategory(null)}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeCategory === null
                   ? 'bg-green-600 text-white'
@@ -156,7 +166,7 @@ export default function CatalogPage() {
             {categories.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => switchCategory(cat.id)}
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   activeCategory === cat.id
                     ? 'bg-green-600 text-white'
@@ -169,6 +179,9 @@ export default function CatalogPage() {
           </div>
         )}
 
+        <div
+          style={{ transition: 'opacity 0.18s ease, transform 0.18s ease', opacity: catalogVisible ? 1 : 0, transform: catalogVisible ? 'translateY(0)' : 'translateY(6px)' }}
+        >
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -248,6 +261,7 @@ export default function CatalogPage() {
             })()}
           </div>
         )}
+        </div>
       </section>
 
       <ReviewsCarousel />
