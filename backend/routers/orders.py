@@ -101,7 +101,7 @@ def recent_orders(db: Session = Depends(get_db)):
             ]),
             models.Order.created_at >= cutoff,
         )
-        .order_by(models.Order.created_at.desc())
+        .order_by(models.Order.id.desc())
         .limit(10)
         .all()
     )
@@ -408,7 +408,7 @@ async def ws_recent_orders(websocket: WebSocket):
                     ]),
                     models.Order.created_at >= cutoff,
                 )
-                .order_by(models.Order.created_at.desc())
+                .order_by(models.Order.id.desc())
                 .limit(10)
                 .all()
             )
