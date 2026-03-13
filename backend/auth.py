@@ -87,12 +87,12 @@ def verify_telegram_auth(data: dict, bot_token: str) -> bool:
     auth_date = int(data.get("auth_date", 0))
     if time.time() - auth_date > 86400:
         return False
-    data_check = {k: v for k, v in data.items() if k != "hash"}
     def _val(v):
         if v is True: return "true"
         if v is False: return "false"
-        return v
-    data_check_string = "\n".join(f"{k}={_val(v)}" for k, v in sorted(data_check.items()))
+        return str(v)
+    data_check = {k: _val(v) for k, v in data.items() if k != "hash" and v is not None and v != ""}
+    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(data_check.items()))
     secret_key = hashlib.sha256(bot_token.encode()).digest()
     computed = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     return hmac.compare_digest(computed, check_hash)

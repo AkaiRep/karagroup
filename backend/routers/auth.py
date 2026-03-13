@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -29,9 +30,9 @@ class TelegramAuthData(BaseModel):
 
     id: int
     first_name: str
-    last_name: str = ""
-    username: str = ""
-    photo_url: str = ""
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    photo_url: Optional[str] = None
     auth_date: int
     hash: str
 
