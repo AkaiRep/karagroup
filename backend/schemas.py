@@ -100,6 +100,7 @@ class ProductUpdate(BaseModel):
     is_active: Optional[bool] = None
     discount_percent: Optional[float] = Field(None, ge=0, le=100)
     category_id: Optional[int] = None
+    image_url: Optional[str] = None
 
 
 class ProductOut(BaseModel):
@@ -110,6 +111,7 @@ class ProductOut(BaseModel):
     discount_percent: float
     is_active: bool
     category_id: Optional[int]
+    image_url: Optional[str]
     category: Optional[CategoryOut]
     created_at: datetime
 

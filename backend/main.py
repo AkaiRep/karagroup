@@ -12,6 +12,7 @@ from routers import auth, users, orders, products, financial, chat, global_chat,
 
 # Ensure uploads directory exists
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
+Path("uploads/products").mkdir(parents=True, exist_ok=True)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -30,6 +31,9 @@ def run_migrations():
         # Add discount_percent to products if missing
         if "discount_percent" not in product_cols:
             conn.execute(text("ALTER TABLE products ADD COLUMN discount_percent REAL NOT NULL DEFAULT 0.0"))
+            conn.commit()
+        if "image_url" not in product_cols:
+            conn.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(512)"))
             conn.commit()
         # Add description to categories if missing
         cat_cols = [c["name"] for c in inspector.get_columns("categories")]

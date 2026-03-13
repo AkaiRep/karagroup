@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   getProducts, createProduct, updateProduct, deleteProduct,
   getCategories, createCategory, updateCategory, deleteCategory,
   getGlobalDiscount, setGlobalDiscount,
+  uploadProductImage, deleteProductImage, API_BASE,
 } from '../api'
 
 export default function Products() {
@@ -22,6 +23,9 @@ export default function Products() {
   const [globalDiscount, setGlobalDiscountState] = useState(0)
   const [globalDiscountInput, setGlobalDiscountInput] = useState('0')
   const [savingGlobal, setSavingGlobal] = useState(false)
+  const [uploadingImageFor, setUploadingImageFor] = useState(null)
+  const imageInputRef = useRef(null)
+  const imageTargetId = useRef(null)
 
   const load = () =>
     Promise.all([getProducts(), getCategories(), getGlobalDiscount()]).then(([p, c, gd]) => {
@@ -88,6 +92,29 @@ export default function Products() {
   const handleDelete = async (id) => {
     if (!confirm('Удалить услугу?')) return
     await deleteProduct(id)
+    load()
+  }
+
+  const handleImageClick = (id) => {
+    imageTargetId.current = id
+    imageInputRef.current.click()
+  }
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !imageTargetId.current) return
+    setUploadingImageFor(imageTargetId.current)
+    try {
+      await uploadProductImage(imageTargetId.current, file)
+      load()
+    } finally {
+      setUploadingImageFor(null)
+      e.target.value = ''
+    }
+  }
+
+  const handleImageDelete = async (id) => {
+    await deleteProductImage(id)
     load()
   }
 
@@ -364,6 +391,9 @@ export default function Products() {
         </div>
       )}
 
+      {/* Hidden image input */}
+      <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+
       {/* Products grid */}
       <div className="grid grid-cols-3 gap-4">
         {filtered.map((p) => {
@@ -372,7 +402,33 @@ export default function Products() {
             ? Math.round(p.price * (1 - effectiveDiscount / 100) * 100) / 100
             : null
           return (
-          <div key={p.id} className={`bg-[#1a1f2e] border rounded-xl p-5 transition-opacity ${p.is_active ? 'border-slate-700/50' : 'border-slate-700/20 opacity-50'}`}>
+          <div key={p.id} className={`bg-[#1a1f2e] border rounded-xl overflow-hidden transition-opacity ${p.is_active ? 'border-slate-700/50' : 'border-slate-700/20 opacity-50'}`}>
+            {/* Image */}
+            <div className="relative h-28 bg-[#0f1117] group">
+              {p.image_url ? (
+                <img src={`${API_BASE()}${p.image_url}`} alt={p.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">Нет фото</div>
+              )}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handleImageClick(p.id)}
+                  disabled={uploadingImageFor === p.id}
+                  className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-white transition-colors"
+                >
+                  {uploadingImageFor === p.id ? '...' : p.image_url ? 'Заменить' : 'Загрузить'}
+                </button>
+                {p.image_url && (
+                  <button
+                    onClick={() => handleImageDelete(p.id)}
+                    className="text-xs px-2 py-1 rounded bg-red-500/30 hover:bg-red-500/50 text-red-300 transition-colors"
+                  >
+                    Удалить
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="p-5">
             {p.category && (
               <div className="text-xs text-brand-400 mb-1">{p.category.name}</div>
             )}
@@ -401,6 +457,7 @@ export default function Products() {
               <button onClick={() => handleDelete(p.id)} className="text-xs px-2 py-1 rounded text-red-400 hover:bg-red-400/10 transition-colors ml-auto">
                 Удалить
               </button>
+            </div>
             </div>
           </div>
         )})}

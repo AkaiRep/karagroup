@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from pathlib import Path
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Body
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
@@ -65,6 +66,43 @@ def update_product(product_id: int, data: schemas.ProductUpdate, db: Session = D
         raise HTTPException(status_code=404, detail="Product not found")
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(product, field, value)
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.post("/{product_id}/image", response_model=schemas.ProductOut)
+async def upload_product_image(
+    product_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    ext = Path(file.filename).suffix.lower() if file.filename else '.jpg'
+    filename = f"product_{product_id}{ext}"
+    path = Path("uploads/products") / filename
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(await file.read())
+    product.image_url = f"/uploads/products/{filename}"
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.delete("/{product_id}/image", response_model=schemas.ProductOut)
+def delete_product_image(
+    product_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    product.image_url = None
     db.commit()
     db.refresh(product)
     return product

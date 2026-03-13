@@ -19,7 +19,12 @@ export default function ProductCard({ product, globalDiscount = 0 }) {
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center scale-110 opacity-35 group-hover:opacity-40 transition-opacity duration-300"
-        style={{ backgroundImage: "url('/card-bg.jpg')", filter: 'blur(1px)' }}
+        style={{
+          backgroundImage: product.image_url
+            ? `url('${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${product.image_url}')`
+            : "url('/card-bg.jpg')",
+          filter: 'blur(1px)',
+        }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/55 to-[#111318]/10" />
 

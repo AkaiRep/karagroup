@@ -74,6 +74,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     is_active = Column(Boolean, default=True)
     discount_percent = Column(Float, default=0.0, nullable=False)
+    image_url = Column(String(512), nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

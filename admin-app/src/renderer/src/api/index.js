@@ -54,6 +54,12 @@ export const getProducts = () => api.get('/products/').then((r) => r.data)
 export const createProduct = (data) => api.post('/products/', data).then((r) => r.data)
 export const updateProduct = (id, data) => api.patch(`/products/${id}`, data).then((r) => r.data)
 export const deleteProduct = (id) => api.delete(`/products/${id}`)
+export const uploadProductImage = (id, file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return api.post(`/products/${id}/image`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+}
+export const deleteProductImage = (id) => api.delete(`/products/${id}/image`).then((r) => r.data)
 export const getGlobalDiscount = () => api.get('/products/global-discount').then((r) => r.data)
 export const setGlobalDiscount = (value) => api.patch('/products/global-discount', { value }).then((r) => r.data)
 
