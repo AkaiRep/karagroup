@@ -52,7 +52,7 @@ export default function CatalogPage() {
       setActiveCategory(catId)
       setVisibleCount({})
       setCatalogVisible(true)
-    }, 180)
+    }, 300)
   }
 
   useEffect(() => {
@@ -180,7 +180,7 @@ export default function CatalogPage() {
         )}
 
         <div
-          style={{ transition: 'opacity 0.18s ease, transform 0.18s ease', opacity: catalogVisible ? 1 : 0, transform: catalogVisible ? 'translateY(0)' : 'translateY(6px)' }}
+          style={{ transition: 'opacity 0.3s ease, transform 0.3s ease', opacity: catalogVisible ? 1 : 0, transform: catalogVisible ? 'translateY(0)' : 'translateY(10px)' }}
         >
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
