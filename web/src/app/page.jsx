@@ -172,13 +172,11 @@ export default function CatalogPage() {
                 key={order.id}
                 className="relative flex-shrink-0 rounded-2xl overflow-hidden min-w-[180px] border border-white/15"
               >
-                {order.image_url && (
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-30"
-                    style={{ backgroundImage: `url('${BASE.replace(/\/$/, '')}${order.image_url}')` }}
-                  />
-                )}
-                <div className={`absolute inset-0 ${order.image_url ? 'bg-[#07080d]/70' : 'bg-white/10'}`} />
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-30"
+                  style={{ backgroundImage: order.image_url ? `url('${BASE.replace(/\/$/, '')}${order.image_url}')` : "url('/card-bg.jpg')" }}
+                />
+                <div className="absolute inset-0 bg-[#07080d]/70" />
                 <div className="relative z-10 px-4 py-3 flex flex-col gap-1">
                   <span className="text-slate-400 font-mono text-xs whitespace-nowrap">
                     {order.client || 'Клиент'}
