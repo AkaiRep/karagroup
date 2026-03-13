@@ -101,6 +101,14 @@ def recent_orders(db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
+    def mask_name(name: str | None) -> str | None:
+        if not name:
+            return None
+        n = name.strip()
+        if len(n) <= 2:
+            return n[0] + '***' if n else None
+        return n[0] + '***' + n[-1]
+
     result = []
     for o in orders:
         product_name = o.items[0].product.name if o.items and o.items[0].product else "Услуга"
@@ -108,7 +116,7 @@ def recent_orders(db: Session = Depends(get_db)):
             "id": o.id,
             "product": product_name,
             "price": o.price,
-            "status": o.status.value,
+            "client": mask_name(o.client_info),
             "created_at": o.created_at.isoformat(),
         })
     return result
@@ -397,6 +405,14 @@ async def ws_recent_orders(websocket: WebSocket):
                 .all()
             )
             db.expire_all()
+            def mask(name):
+                if not name:
+                    return None
+                n = name.strip()
+                if len(n) <= 2:
+                    return n[0] + '***' if n else None
+                return n[0] + '***' + n[-1]
+
             result = []
             for o in orders:
                 product_name = o.items[0].product.name if o.items and o.items[0].product else "Услуга"
@@ -404,7 +420,7 @@ async def ws_recent_orders(websocket: WebSocket):
                     "id": o.id,
                     "product": product_name,
                     "price": o.price,
-                    "status": o.status.value,
+                    "client": mask(o.client_info),
                     "created_at": o.created_at.isoformat(),
                 })
             current_ids = {o["id"] for o in result}

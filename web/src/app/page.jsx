@@ -151,18 +151,13 @@ export default function CatalogPage() {
                 {recentOrders.map(order => (
                   <div
                     key={order.id}
-                    className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-4 min-w-[200px]"
+                    className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-3"
                   >
-                    <span className="text-white font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[110px]">{order.product}</span>
-                    <span className="text-slate-200 font-semibold whitespace-nowrap">{order.price} ₽</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${
-                      order.status === 'completed' ? 'bg-green-500/20 text-green-300' :
-                      order.status === 'confirmed' ? 'bg-blue-500/20 text-blue-300' :
-                      'bg-yellow-500/20 text-yellow-300'
-                    }`}>
-                      {order.status === 'completed' ? 'Выполнен' :
-                       order.status === 'confirmed' ? 'Подтверждён' : 'В работе'}
-                    </span>
+                    {order.client && (
+                      <span className="text-slate-300 font-mono text-xs whitespace-nowrap">{order.client}</span>
+                    )}
+                    <span className="text-white font-medium whitespace-nowrap">{order.product}</span>
+                    <span className="text-green-300 font-semibold whitespace-nowrap">{order.price} ₽</span>
                   </div>
                 ))}
               </div>
