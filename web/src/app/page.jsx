@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 
@@ -15,12 +15,21 @@ export default function CatalogPage() {
   const [categories, setCategories] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [visibleCount, setVisibleCount] = useState({}) // { [categoryId]: number }
+  const [visibleCount, setVisibleCount] = useState({})
+  const [isMobile, setIsMobile] = useState(false)
 
-  const PAGE_SIZE = 4
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
-  const getVisible = (catId) => visibleCount[catId] ?? PAGE_SIZE
-  const showMore = (catId) => setVisibleCount(v => ({ ...v, [catId]: (v[catId] ?? PAGE_SIZE) + PAGE_SIZE }))
+  const PAGE_INIT = isMobile ? 4 : 3
+  const PAGE_MORE = isMobile ? 8 : 6
+
+  const getVisible = (catId) => visibleCount[catId] ?? PAGE_INIT
+  const showMore = (catId) => setVisibleCount(v => ({ ...v, [catId]: (v[catId] ?? PAGE_INIT) + PAGE_MORE }))
 
   useEffect(() => {
     Promise.all([api.getProducts(), api.getCategories()])
