@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     NOTIFY_TOPIC_ID: int = 0
     TERMS_URL: str = "https://telegra.ph/terms"
     PRIVACY_URL: str = "https://telegra.ph/privacy"
+    WEB_APP_URL: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

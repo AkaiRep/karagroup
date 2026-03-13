@@ -1,4 +1,7 @@
 import os
+import hmac
+import hashlib
+from urllib.parse import parse_qsl
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -16,6 +19,58 @@ def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+    token = auth_utils.create_access_token({"sub": str(user.id)})
+    return {"access_token": token, "token_type": "bearer", "user": user}
+
+
+class TelegramWebAppAuthData(BaseModel):
+    init_data: str
+
+
+@router.post("/telegram-webapp", response_model=schemas.TokenResponse)
+def telegram_webapp_auth(data: TelegramWebAppAuthData, db: Session = Depends(get_db)):
+    bot_token = os.getenv("BOT_TOKEN")
+    if not bot_token:
+        raise HTTPException(status_code=503, detail="Telegram auth not configured")
+
+    params = dict(parse_qsl(data.init_data, keep_blank_values=True))
+    received_hash = params.pop("hash", None)
+    if not received_hash:
+        raise HTTPException(status_code=401, detail="Missing hash")
+
+    data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
+    secret_key = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
+    expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(expected_hash, received_hash):
+        raise HTTPException(status_code=401, detail="Invalid Telegram WebApp data")
+
+    import json
+    user_json = params.get("user")
+    if not user_json:
+        raise HTTPException(status_code=401, detail="No user data")
+    tg_user = json.loads(user_json)
+
+    tg_id = tg_user.get("id")
+    first_name = tg_user.get("first_name", "")
+    last_name = tg_user.get("last_name")
+    username = tg_user.get("username")
+
+    user = db.query(models.User).filter(models.User.telegram_id == tg_id).first()
+    if not user:
+        uname = username or f"tg_{tg_id}"
+        display = " ".join(filter(None, [first_name, last_name])) or uname
+        user = models.User(
+            username=display,
+            password_hash="",
+            role=models.UserRole.client,
+            telegram_id=tg_id,
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
     token = auth_utils.create_access_token({"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer", "user": user}
 

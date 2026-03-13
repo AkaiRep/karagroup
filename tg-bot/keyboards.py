@@ -1,9 +1,12 @@
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-def main_menu_kb(channel_url: str) -> InlineKeyboardMarkup:
+def main_menu_kb(channel_url: str, web_app_url: str = "") -> InlineKeyboardMarkup:
+    from aiogram.types import InlineKeyboardButton
     kb = InlineKeyboardBuilder()
+    if web_app_url:
+        kb.row(InlineKeyboardButton(text="🌐 Открыть магазин", web_app=WebAppInfo(url=web_app_url)))
     kb.button(text="🛒 Магазин", callback_data="shop")
     kb.button(text="📢 Наш канал", url=channel_url)
     kb.button(text="📋 Мои заказы", callback_data="my_orders")

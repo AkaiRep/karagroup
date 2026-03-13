@@ -15,6 +15,22 @@ export function AuthProvider({ children }) {
         .then(setUser)
         .catch(() => localStorage.removeItem('token'))
         .finally(() => setLoading(false))
+      return
+    }
+
+    // Auto-login if opened as Telegram Mini App
+    const twa = typeof window !== 'undefined' && window.Telegram?.WebApp
+    const initData = twa?.initData
+    if (initData) {
+      twa.ready()
+      twa.expand()
+      api.telegramWebAppAuth(initData)
+        .then(res => {
+          localStorage.setItem('token', res.access_token)
+          setUser(res.user)
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false))
     } else {
       setLoading(false)
     }

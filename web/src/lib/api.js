@@ -15,6 +15,7 @@ client.interceptors.request.use((config) => {
 export const api = {
   // Auth
   telegramAuth: (data) => client.post('/auth/telegram', data).then(r => r.data),
+  telegramWebAppAuth: (initData) => client.post('/auth/telegram-webapp', { init_data: initData }).then(r => r.data),
   getMe: () => client.get('/auth/me').then(r => r.data),
 
   // Catalog
