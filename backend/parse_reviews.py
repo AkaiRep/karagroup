@@ -13,7 +13,18 @@ FUNPAY_URL = "https://funpay.com/users/4503762/"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept-Language": "ru-RU,ru;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
+
+
+def parse_rating(item) -> int:
+    """Извлекает рейтинг из класса div.ratingX"""
+    rating_div = item.select_one(".review-item-rating .rating > div")
+    if rating_div:
+        for cls in rating_div.get("class", []):
+            if cls.startswith("rating") and cls[6:].isdigit():
+                return int(cls[6:])
+    return 5
 
 
 def parse_reviews() -> list[dict]:
@@ -27,31 +38,29 @@ def parse_reviews() -> list[dict]:
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # Отзывы в блоках .review или .order-review
-    items = soup.select(".review-item, .order-review, [class*='review']")
-
-    # Fallback — ищем по структуре FunPay
-    if not items:
-        items = soup.select(".param-item")
-
-    for item in items:
-        text_el = item.select_one(".review-text, .text, p")
-        author_el = item.select_one(".nickname, .username, .name, a[href*='/users/']")
-        date_el = item.select_one(".date, time, .ago")
-        game_el = item.select_one(".game, .category, .lot-name")
+    for container in soup.select(".review-container"):
+        text_el = container.select_one(".review-item-text")
+        date_el = container.select_one(".review-item-date")
+        detail_el = container.select_one(".review-item-detail")
 
         text = text_el.get_text(strip=True) if text_el else ""
-        author = author_el.get_text(strip=True) if author_el else "Покупатель"
-        date_str = date_el.get_text(strip=True) if date_el else ""
-        game = game_el.get_text(strip=True) if game_el else ""
-
-        if not text or len(text) < 3:
+        if not text or len(text) < 2:
             continue
 
+        # Игнорируем отзывы из одного числа типа "5"
+        if text.isdigit():
+            continue
+
+        date_str = date_el.get_text(strip=True) if date_el else ""
+        detail = detail_el.get_text(strip=True) if detail_el else ""
+        # detail выглядит как "Genshin Impact, 8 €" — берём только игру
+        game = detail.split(",")[0].strip() if detail else ""
+        rating = parse_rating(container)
+
         reviews.append({
-            "author": author,
+            "author": "Покупатель",
             "text": text,
-            "rating": 5,
+            "rating": rating,
             "game": game,
             "date_str": date_str,
         })
@@ -80,4 +89,4 @@ if __name__ == "__main__":
     if reviews:
         save_reviews(reviews)
     else:
-        print("[WARN] No reviews found — check selectors")
+        print("[WARN] No reviews found")
