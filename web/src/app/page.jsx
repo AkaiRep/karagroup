@@ -53,18 +53,18 @@ export default function CatalogPage() {
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             Принимаем заказы
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
             Профессиональный{' '}
             <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
               игровой буст
             </span>
           </h1>
-          <p className="text-slate-300 text-xl leading-relaxed mb-8 max-w-xl mx-auto">
+          <p className="text-slate-300 text-base md:text-xl leading-relaxed mb-6 md:mb-8 max-w-xl mx-auto">
             Поднимем ваш ранг быстро и безопасно. Работаем с топовыми игроками, гарантируем результат.
           </p>
           <a
             href="#catalog"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-2xl transition-colors text-lg"
+            className="inline-flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-2xl transition-colors text-base md:text-lg"
           >
             Смотреть услуги
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,11 +151,11 @@ export default function CatalogPage() {
         />
         <div className="absolute inset-0 bg-[#07080d]/55" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Почему выбирают нас</h2>
-          <p className="text-slate-300 text-lg mb-12 max-w-2xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Почему выбирают нас</h2>
+          <p className="text-slate-300 text-base md:text-lg mb-8 md:mb-12 max-w-2xl mx-auto">
             Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 text-left">
             {[
               { num: '500+', label: 'Выполненных заказов', desc: 'За всё время работы' },
               { num: '100%', label: 'Гарантия результата', desc: 'Или вернём деньги' },
