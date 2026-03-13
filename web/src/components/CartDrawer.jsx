@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import TelegramLoginButton from '@/components/TelegramLoginButton'
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, promo, setPromo, removeItem, setQty, clearCart, total, finalTotal, count, effectiveDiscount } = useCart()
+  const { cart, promo, setPromo, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount } = useCart()
   const { user } = useAuth()
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
@@ -194,18 +194,24 @@ export default function CartDrawer({ open, onClose }) {
             </div>
 
             {/* Summary */}
-            <div className="px-5 py-4 border-t border-white/5 space-y-3">
+            <div className="px-5 py-4 border-t border-white/5 space-y-2">
               <div className="flex justify-between text-sm text-slate-400">
-                <span>Итого без скидки</span>
-                <span>{total.toLocaleString('ru-RU')} ₽</span>
+                <span>Сумма</span>
+                <span>{baseTotal.toLocaleString('ru-RU')} ₽</span>
               </div>
+              {total < baseTotal && (
+                <div className="flex justify-between text-sm text-green-400">
+                  <span>Скидка</span>
+                  <span>-{(baseTotal - total).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
+                </div>
+              )}
               {promo && (
                 <div className="flex justify-between text-sm text-green-400">
                   <span>Промокод -{promo.discount_percent}%</span>
-                  <span>-{(total - finalTotal).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽</span>
+                  <span>-{(total - finalTotal).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg">
+              <div className="flex justify-between font-bold text-lg pt-1 border-t border-white/5">
                 <span>К оплате</span>
                 <span className="text-green-400">{finalTotal.toLocaleString('ru-RU')} ₽</span>
               </div>

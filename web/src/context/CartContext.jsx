@@ -49,11 +49,17 @@ export function CartProvider({ children }) {
 
   const effectiveDiscount = (item) => Math.max(item.discount_percent || 0, globalDiscount)
 
+  // Сумма без каких-либо скидок
+  const baseTotal = Object.values(cart).reduce((sum, item) =>
+    sum + item.price * (item.quantity || 1), 0)
+
+  // Сумма после скидки на товары (глобальная / per-product)
   const total = Object.values(cart).reduce((sum, item) => {
     const disc = effectiveDiscount(item)
     return sum + item.price * (1 - disc / 100) * (item.quantity || 1)
   }, 0)
 
+  // Итог после промокода
   const finalTotal = promo
     ? Math.round(total * (1 - promo.discount_percent / 100) * 100) / 100
     : Math.round(total * 100) / 100
@@ -61,7 +67,7 @@ export function CartProvider({ children }) {
   const count = Object.values(cart).reduce((sum, item) => sum + (item.quantity || 1), 0)
 
   return (
-    <CartContext.Provider value={{ cart, promo, setPromo, addItem, removeItem, setQty, clearCart, total, finalTotal, count, globalDiscount, effectiveDiscount }}>
+    <CartContext.Provider value={{ cart, promo, setPromo, addItem, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount }}>
       {children}
     </CartContext.Provider>
   )
