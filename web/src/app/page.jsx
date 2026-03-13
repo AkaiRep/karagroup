@@ -106,7 +106,7 @@ export default function CatalogPage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[70vh] flex flex-col items-center justify-center overflow-hidden">
         <div
           ref={heroBgRef}
           className="absolute inset-0 bg-cover bg-center"
@@ -144,26 +144,27 @@ export default function CatalogPage() {
             </svg>
           </a>
 
-          {recentOrders.length > 0 && (
-            <div className="mt-8 w-full">
-              <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 px-2">
-                {recentOrders.map(order => (
-                  <div
-                    key={order.id}
-                    className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-3"
-                  >
-                    {order.client && (
-                      <span className="text-slate-300 font-mono text-xs whitespace-nowrap">{order.client}</span>
-                    )}
-                    <span className="text-white font-medium whitespace-nowrap">{order.product}</span>
-                    <span className="text-green-300 font-semibold whitespace-nowrap">{order.price} ₽</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
+
+        {recentOrders.length > 0 && (
+          <div className="relative z-10 w-full mt-8 pb-8 px-4">
+            <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar">
+              {recentOrders.map(order => (
+                <div
+                  key={order.id}
+                  className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-3"
+                >
+                  {order.client && (
+                    <span className="text-slate-300 font-mono text-xs whitespace-nowrap">{order.client}</span>
+                  )}
+                  <span className="text-white font-medium whitespace-nowrap">{order.product}</span>
+                  <span className="text-green-300 font-semibold whitespace-nowrap">{order.price} ₽</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* About */}
