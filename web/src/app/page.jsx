@@ -155,13 +155,18 @@ export default function CatalogPage() {
             {recentOrders.map(order => (
               <div
                 key={order.id}
-                className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-3"
+                className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 flex flex-col gap-1 min-w-[180px]"
               >
-                {order.client && (
-                  <span className="text-slate-300 font-mono text-xs whitespace-nowrap">{order.client}</span>
-                )}
-                <span className="text-white font-medium whitespace-nowrap">{order.product}</span>
-                <span className="text-green-300 font-semibold whitespace-nowrap">{order.price} ₽</span>
+                <span className="text-slate-400 font-mono text-xs whitespace-nowrap">
+                  {order.client || 'Клиент'}
+                </span>
+                <span className="text-white font-medium text-sm whitespace-nowrap">
+                  {order.product}
+                  {order.extra_count > 0 && (
+                    <span className="text-slate-400 font-normal"> (+{order.extra_count})</span>
+                  )}
+                </span>
+                <span className="text-green-300 font-semibold text-sm whitespace-nowrap">{order.price} ₽</span>
               </div>
             ))}
           </div>
