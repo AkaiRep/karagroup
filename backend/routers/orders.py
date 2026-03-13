@@ -332,10 +332,12 @@ def remove_worker(
     if order.worker_id is None:
         raise HTTPException(status_code=400, detail="Order has no worker")
     # Delete the pending transaction for this order if it exists
-    db.query(models.Transaction).filter(
+    tx = db.query(models.Transaction).filter(
         models.Transaction.order_id == order_id,
         models.Transaction.status == models.TransactionStatus.pending,
-    ).delete()
+    ).first()
+    if tx:
+        db.delete(tx)
     order.worker_id = None
     order.status = models.OrderStatus.paid
     order.taken_at = None

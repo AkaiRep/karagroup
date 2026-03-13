@@ -44,7 +44,10 @@
       "allowToChangeInstallationDirectory": true
     },
     "mac": {
-      "target": "dmg",
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "dir", "arch": ["x64", "arm64"] }
+      ],
       "icon": "resources/icon.icns"
     }
   }
