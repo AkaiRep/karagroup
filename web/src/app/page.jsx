@@ -106,10 +106,14 @@ export default function CatalogPage() {
 
   const sortedCategories = [...categories].sort((a, b) => catPopularity(b.id) - catPopularity(a.id))
 
-  // Most popular product globally
-  const topProductId = products.length
-    ? products.reduce((top, p) => (p.order_count || 0) > (top.order_count || 0) ? p : top, products[0]).id
-    : null
+  // Most popular product per category
+  const topProductIds = new Set(
+    categories.map(cat => {
+      const catProducts = products.filter(p => p.category_id === cat.id && (p.order_count || 0) > 0)
+      if (!catProducts.length) return null
+      return catProducts.reduce((top, p) => p.order_count > top.order_count ? p : top).id
+    }).filter(Boolean)
+  )
 
   const channel = process.env.NEXT_PUBLIC_BOT_CHANNEL
   const manager = process.env.NEXT_PUBLIC_MANAGER
@@ -261,7 +265,7 @@ export default function CatalogPage() {
         ) : activeCategory !== null ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
-              <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={product.id === topProductId && (product.order_count || 0) > 0} />
+              <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={topProductIds.has(product.id)} />
             ))}
           </div>
         ) : (
@@ -284,7 +288,7 @@ export default function CatalogPage() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {shown.map(product => (
-                        <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={product.id === topProductId && (product.order_count || 0) > 0} />
+                        <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={topProductIds.has(product.id)} />
                       ))}
                     </div>
                     {hasMore && (
@@ -313,7 +317,7 @@ export default function CatalogPage() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {shown.map(product => (
-                      <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={product.id === topProductId && (product.order_count || 0) > 0} />
+                      <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={topProductIds.has(product.id)} />
                     ))}
                   </div>
                   {hasMore && (
