@@ -144,11 +144,12 @@ export default function CatalogPage() {
 
       {/* About */}
       <section className="relative overflow-hidden py-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#07080d] via-transparent to-[#07080d]" style={{zIndex: 1}} />
         <div
           className="absolute inset-0 scale-110 bg-cover bg-center"
           style={{ backgroundImage: "url('/footer-bg.jpg')", filter: 'blur(8px)' }}
         />
-        <div className="absolute inset-0 bg-[#07080d]/60" />
+        <div className="absolute inset-0 bg-[#07080d]/55" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Почему выбирают нас</h2>
           <p className="text-slate-300 text-lg mb-12 max-w-2xl mx-auto">
