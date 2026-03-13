@@ -65,6 +65,7 @@ export const updateOrder = (id, data) => api.patch(`/orders/${id}`, data).then((
 export const updateOrderStatus = (id, status) =>
   api.patch(`/orders/${id}/status`, { status }).then((r) => r.data)
 export const deleteOrder = (id) => api.delete(`/orders/${id}`)
+export const removeWorkerFromOrder = (id) => api.post(`/orders/${id}/remove-worker`).then((r) => r.data)
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 export const getMessages = (orderId) =>

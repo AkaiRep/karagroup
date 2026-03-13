@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   getOrders, getProducts, getUsers, createOrder,
-  updateOrderStatus, deleteOrder, lookupPromoCode, getGlobalDiscount,
+  updateOrderStatus, deleteOrder, lookupPromoCode, getGlobalDiscount, removeWorkerFromOrder,
 } from '../api'
 import ChatPanel from '../components/ChatPanel'
 import { useChatStore } from '../store'
@@ -171,6 +171,12 @@ export default function Orders() {
 
   const handleStatusChange = async (orderId, status) => {
     await updateOrderStatus(orderId, status)
+    load()
+  }
+
+  const handleRemoveWorker = async (id) => {
+    if (!confirm('Снять качера с заказа? Заказ вернётся в статус "Оплачен".')) return
+    await removeWorkerFromOrder(id)
     load()
   }
 
@@ -548,7 +554,20 @@ export default function Orders() {
                         {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{order.worker?.username || '—'}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-400">{order.worker?.username || '—'}</span>
+                        {order.worker && (
+                          <button
+                            onClick={() => handleRemoveWorker(order.id)}
+                            className="text-orange-400 hover:bg-orange-400/10 px-1.5 py-0.5 rounded transition-colors"
+                            title="Снять качера"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       {fmtOrderDuration(order) ? (
                         <div className="text-xs">
