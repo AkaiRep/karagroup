@@ -15,6 +15,12 @@ export default function CatalogPage() {
   const [categories, setCategories] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [visibleCount, setVisibleCount] = useState({}) // { [categoryId]: number }
+
+  const PAGE_SIZE = 4
+
+  const getVisible = (catId) => visibleCount[catId] ?? PAGE_SIZE
+  const showMore = (catId) => setVisibleCount(v => ({ ...v, [catId]: (v[catId] ?? PAGE_SIZE) + PAGE_SIZE }))
 
   useEffect(() => {
     Promise.all([api.getProducts(), api.getCategories()])
@@ -143,9 +149,11 @@ export default function CatalogPage() {
               .filter(cat => products.some(p => p.category_id === cat.id))
               .map(cat => {
                 const catProducts = products.filter(p => p.category_id === cat.id)
+                const visible = getVisible(cat.id)
+                const shown = catProducts.slice(0, visible)
+                const hasMore = catProducts.length > visible
                 return (
                   <div key={cat.id}>
-                    {/* Разделитель */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                       <span className="text-sm font-semibold text-green-400 uppercase tracking-widest px-2">
@@ -154,29 +162,50 @@ export default function CatalogPage() {
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {catProducts.map(product => (
+                      {shown.map(product => (
                         <ProductCard key={product.id} product={product} />
                       ))}
                     </div>
+                    {hasMore && (
+                      <button
+                        onClick={() => showMore(cat.id)}
+                        className="mt-4 w-full py-2.5 border border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400 rounded-xl text-sm font-medium transition-colors"
+                      >
+                        Загрузить ещё ({catProducts.length - visible})
+                      </button>
+                    )}
                   </div>
                 )
               })
             }
-            {/* Товары без категории */}
-            {products.filter(p => !p.category_id).length > 0 && (
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                  <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest px-2">Другое</span>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            {products.filter(p => !p.category_id).length > 0 && (() => {
+              const uncatProducts = products.filter(p => !p.category_id)
+              const visible = getVisible('uncategorized')
+              const shown = uncatProducts.slice(0, visible)
+              const hasMore = uncatProducts.length > visible
+              return (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest px-2">Другое</span>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {shown.map(product => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <button
+                      onClick={() => showMore('uncategorized')}
+                      className="mt-4 w-full py-2.5 border border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400 rounded-xl text-sm font-medium transition-colors"
+                    >
+                      Загрузить ещё ({uncatProducts.length - visible})
+                    </button>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {products.filter(p => !p.category_id).map(product => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
         )}
       </section>
