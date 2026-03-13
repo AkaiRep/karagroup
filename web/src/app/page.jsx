@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
+import ReviewsCarousel from '@/components/ReviewsCarousel'
 
 const FEATURES = [
   { icon: '⚡', title: 'Быстро', desc: 'Начинаем выполнение в течение нескольких часов после оплаты' },
@@ -218,6 +219,8 @@ export default function CatalogPage() {
           </div>
         )}
       </section>
+
+      <ReviewsCarousel />
 
       {/* About */}
       <section className="relative overflow-hidden py-20">

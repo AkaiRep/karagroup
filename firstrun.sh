@@ -1,26 +1,37 @@
 #!/bin/bash
 set -e
-
 PROJECT=/root/karagroup
 
-echo "==> Backend"
-cd $PROJECT/backend
-pip install -r requirements.txt -q
-pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name uvicorn 2>/dev/null || pm2 restart uvicorn
+echo "==> Backend deps"
+pip install -r $PROJECT/backend/requirements.txt -q
 
-echo "==> Bot"
-cd $PROJECT/tg-bot
-pip install -r requirements.txt -q
-pm2 start "python3 bot.py" --name tg-bot 2>/dev/null || pm2 restart tg-bot
+echo "==> Bot deps"
+pip install -r $PROJECT/tg-bot/requirements.txt -q
 
-echo "==> Web"
+echo "==> Start backend"
+pm2 delete uvicorn 2>/dev/null || true
+pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name uvicorn --cwd $PROJECT/backend
+
+echo "==> Start bot"
+pm2 delete tg-bot 2>/dev/null || true
+pm2 start "python3 bot.py" --name tg-bot --cwd $PROJECT/tg-bot
+
+echo "==> Build web"
 cd $PROJECT/web
 npm install --silent
 npm run build
-pm2 start "npm start" --name karashop-web 2>/dev/null || pm2 restart karashop-web
 
-echo "==> Save pm2"
-pm2 save
+echo "==> Start web"
+pm2 delete karashop-web 2>/dev/null || true
+pm2 start "npm start" --name karashop-web --cwd $PROJECT/web
 
-echo "==> Done"
+echo "==> Setup reviews cron"
+pm2 delete parse-reviews 2>/dev/null || true
+pm2 start "python3 parse_reviews.py" --name parse-reviews --cwd $PROJECT/backend --cron "0 4 * * *" --no-autorestart
+
+pm2 save --force
+pm2 startup
+
+echo ""
+echo "✓ Done"
 pm2 status

@@ -11,7 +11,8 @@
       "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/build.sh)",
       "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/deploy.sh /Users/daniilsnajder/Documents/karagroup/server.sh)",
       "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/push.sh)",
-      "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/setup-ssl.sh)"
+      "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/setup-ssl.sh)",
+      "WebFetch(domain:funpay.com)"
     ]
   }
 }

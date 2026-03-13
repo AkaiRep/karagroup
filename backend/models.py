@@ -225,3 +225,16 @@ class Transaction(Base):
 
     order = relationship("Order", back_populates="transaction")
     worker = relationship("User", back_populates="transactions")
+
+
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    author = Column(String, nullable=False)
+    text = Column(Text, nullable=False)
+    rating = Column(Integer, default=5)
+    game = Column(String, nullable=True)
+    date_str = Column(String, nullable=True)
+    source = Column(String, default="funpay")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

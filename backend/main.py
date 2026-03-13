@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import engine, Base
 import models  # noqa: F401
-from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments
+from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews
 
 # Ensure uploads directory exists
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
@@ -98,6 +98,7 @@ app.include_router(global_chat.router)
 app.include_router(media.router)
 app.include_router(categories.router)
 app.include_router(payments.router)
+app.include_router(reviews.router)
 
 
 @app.get("/")

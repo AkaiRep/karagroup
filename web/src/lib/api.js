@@ -29,4 +29,7 @@ export const api = {
 
   // Payments
   createPayment: (orderId) => client.post(`/payments/create/${orderId}`).then(r => r.data),
+
+  // Reviews
+  getReviews: () => client.get('/reviews/').then(r => r.data),
 }
