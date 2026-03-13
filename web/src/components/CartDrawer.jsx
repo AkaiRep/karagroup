@@ -38,7 +38,7 @@ export default function CartDrawer({ open, onClose }) {
     try {
       const orderData = {
         items: items.map(i => ({ product_id: i.id, quantity: i.quantity || 1, discount: effectiveDiscount(i) })),
-        price: finalTotal,
+        price: Math.round(total * 100) / 100,  // цена без промокода, бэкенд сам применит promo
         promo_code: promo?.code ?? null,
       }
       const order = await api.createOrder(orderData)
