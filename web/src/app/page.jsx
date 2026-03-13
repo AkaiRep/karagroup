@@ -88,20 +88,18 @@ export default function CatalogPage() {
       </section>
 
       {/* Catalog */}
-      <section id="catalog" className="max-w-6xl mx-auto px-4 pb-16">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold">Каталог услуг</h2>
-            <p className="text-slate-400 mt-1">Выберите нужную услугу и добавьте в корзину</p>
-          </div>
+      <section id="catalog" className="max-w-6xl mx-auto pb-16">
+        <div className="px-4 mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold">Каталог услуг</h2>
+          <p className="text-slate-400 mt-1 text-sm md:text-base">Выберите нужную услугу и добавьте в корзину</p>
         </div>
 
-        {/* Category filter */}
+        {/* Category filter — горизонтальный скролл на мобиле */}
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar px-4 pb-1">
             <button
               onClick={() => setActiveCategory(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 activeCategory === null
                   ? 'bg-green-600 text-white'
                   : 'bg-[#111318] text-slate-400 hover:text-white border border-white/5'
@@ -113,7 +111,7 @@ export default function CatalogPage() {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   activeCategory === cat.id
                     ? 'bg-green-600 text-white'
                     : 'bg-[#111318] text-slate-400 hover:text-white border border-white/5'
@@ -126,15 +124,15 @@ export default function CatalogPage() {
         )}
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-[#111318] rounded-2xl h-56 animate-pulse" />
+              <div key={i} className="bg-[#111318] rounded-2xl h-48 animate-pulse" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-slate-500">Услуги не найдены</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
