@@ -146,26 +146,27 @@ export default function CatalogPage() {
 
         </div>
 
-        {recentOrders.length > 0 && (
-          <div className="relative z-10 w-full mt-8 pb-8 px-4">
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar">
-              {recentOrders.map(order => (
-                <div
-                  key={order.id}
-                  className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-3"
-                >
-                  {order.client && (
-                    <span className="text-slate-300 font-mono text-xs whitespace-nowrap">{order.client}</span>
-                  )}
-                  <span className="text-white font-medium whitespace-nowrap">{order.product}</span>
-                  <span className="text-green-300 font-semibold whitespace-nowrap">{order.price} ₽</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </section>
+
+      {recentOrders.length > 0 && (
+        <div className="w-full py-4 px-4">
+          <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
+          <div className="flex gap-3 overflow-x-auto no-scrollbar">
+            {recentOrders.map(order => (
+              <div
+                key={order.id}
+                className="flex-shrink-0 bg-white/10 border border-white/15 rounded-2xl px-4 py-3 text-sm flex items-center gap-3"
+              >
+                {order.client && (
+                  <span className="text-slate-300 font-mono text-xs whitespace-nowrap">{order.client}</span>
+                )}
+                <span className="text-white font-medium whitespace-nowrap">{order.product}</span>
+                <span className="text-green-300 font-semibold whitespace-nowrap">{order.price} ₽</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* About */}
       <section className="max-w-4xl mx-auto px-4 py-16">
