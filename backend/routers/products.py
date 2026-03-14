@@ -44,8 +44,6 @@ def list_products(
 
     counts = dict(
         db.query(models.OrderItem.product_id, func.count(models.OrderItem.id))
-        .join(models.Order, models.OrderItem.order_id == models.Order.id)
-        .filter(models.Order.status != models.OrderStatus.pending_payment)
         .group_by(models.OrderItem.product_id)
         .all()
     )
