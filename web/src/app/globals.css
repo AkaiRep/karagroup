@@ -45,14 +45,14 @@ body {
   display: none;
 }
 
-@keyframes marquee {
+@keyframes dev-banner-scroll {
   0% { transform: translateX(0); }
-  100% { transform: translateX(-33.333%); }
+  100% { transform: translateX(-50%); }
 }
 
-.animate-marquee {
+.dev-banner-marquee {
   display: inline-block;
-  animation: marquee 18s linear infinite;
+  animation: dev-banner-scroll 22s linear infinite;
 }
 
 @keyframes carousel-scroll {
