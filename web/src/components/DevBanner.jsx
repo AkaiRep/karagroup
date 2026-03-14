@@ -30,6 +30,7 @@ export default function DevBanner() {
         overflow: 'hidden',
         background: 'repeating-linear-gradient(45deg, #1c1400 0px, #1c1400 12px, #2d2200 12px, #2d2200 24px)',
         borderBottom: '1px solid rgba(251,191,36,0.4)',
+        animation: 'devBannerGlow 1.4s ease-in-out infinite',
       }}
     >
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', pointerEvents: 'none' }} />

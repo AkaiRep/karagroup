@@ -56,6 +56,11 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); transform: scale(1); }
 }
 
+@keyframes devBannerGlow {
+  0%, 100% { box-shadow: 0 0 0px rgba(251,191,36,0); border-color: rgba(251,191,36,0.3); }
+  50%       { box-shadow: 0 0 18px rgba(251,191,36,0.5); border-color: rgba(251,191,36,0.9); }
+}
+
 @keyframes carousel-scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
