@@ -59,7 +59,7 @@ export default function DevBanner() {
             fontSize: 13,
             fontWeight: 500,
             letterSpacing: '0.03em',
-            animation: 'devBannerScroll 28s linear infinite',
+            animation: 'devBannerScroll 28s linear infinite, devBannerTextPulse 1.4s ease-in-out infinite',
           }}>
             <span>{chunk}</span>
             <span>{chunk}</span>
