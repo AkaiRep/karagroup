@@ -32,6 +32,9 @@ export const api = {
   // Payments
   createPayment: (orderId, paymentMethod) => client.post(`/payments/create/${orderId}`, paymentMethod ? { payment_method: paymentMethod } : {}).then(r => r.data),
 
+  // Site settings
+  getSiteSettings: () => client.get('/site-settings/').then(r => r.data),
+
   // Reviews
   getReviews: () => client.get('/reviews/').then(r => r.data),
 }

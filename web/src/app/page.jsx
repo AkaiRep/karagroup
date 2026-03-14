@@ -4,11 +4,17 @@ import { api, BASE } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 import ReviewsCarousel from '@/components/ReviewsCarousel'
 
-const GUARANTEES = [
+const DEFAULT_GUARANTEES = [
   'Безопасность аккаунта — работаем с использованием VPN',
   'Гарантия результата или возврат средств',
   'Оперативное выполнение заказов',
   'Поддержка 24/7 в Telegram',
+]
+
+const DEFAULT_STATS = [
+  { num: '500+', label: 'Выполненных заказов', desc: 'За всё время работы' },
+  { num: '100%', label: 'Гарантия результата', desc: 'Или вернём деньги' },
+  { num: '<2ч', label: 'Время отклика', desc: 'Начинаем работу быстро' },
 ]
 
 export default function CatalogPage() {
@@ -21,6 +27,7 @@ export default function CatalogPage() {
   const [globalDiscount, setGlobalDiscount] = useState(0)
   const [catalogVisible, setCatalogVisible] = useState(true)
   const [recentOrders, setRecentOrders] = useState([])
+  const [siteSettings, setSiteSettings] = useState({})
   const heroBgRef = useRef(null)
   const wsRef = useRef(null)
 
@@ -85,12 +92,13 @@ export default function CatalogPage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount(), api.getRecentOrders()])
-      .then(([prods, cats, disc, recent]) => {
+    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount(), api.getRecentOrders(), api.getSiteSettings()])
+      .then(([prods, cats, disc, recent, settings]) => {
         setProducts(prods)
         setCategories(cats)
         setGlobalDiscount(disc.value || 0)
         setRecentOrders(recent || [])
+        setSiteSettings(settings || {})
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -115,6 +123,21 @@ export default function CatalogPage() {
     }).filter(Boolean)
   )
 
+  const s = siteSettings
+  const heroBadge = s.hero_badge || 'Принимаем заказы'
+  const heroTitle = s.hero_title || 'Профессиональный игровой буст'
+  const heroSubtitle = s.hero_subtitle || 'Поднимем ваш ранг быстро и безопасно. Работаем с топовыми игроками, гарантируем результат.'
+  const heroButton = s.hero_button || 'Смотреть услуги'
+  const aboutText = s.about_text || 'KaraShop — профессиональный сервис буста игровых аккаунтов. Мы работаем с опытными игроками, которые помогут вам достичь желаемого ранга быстро и безопасно.'
+  const guarantees = s.guarantees ? s.guarantees.split('\n').filter(Boolean) : DEFAULT_GUARANTEES
+  const statsTitle = s.stats_title || 'Почему выбирают нас'
+  const statsSubtitle = s.stats_subtitle || 'Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.'
+  const stats = [
+    { num: s.stat_1_num || DEFAULT_STATS[0].num, label: s.stat_1_label || DEFAULT_STATS[0].label, desc: s.stat_1_desc || DEFAULT_STATS[0].desc },
+    { num: s.stat_2_num || DEFAULT_STATS[1].num, label: s.stat_2_label || DEFAULT_STATS[1].label, desc: s.stat_2_desc || DEFAULT_STATS[1].desc },
+    { num: s.stat_3_num || DEFAULT_STATS[2].num, label: s.stat_3_label || DEFAULT_STATS[2].label, desc: s.stat_3_desc || DEFAULT_STATS[2].desc },
+  ]
+
   const channel = process.env.NEXT_PUBLIC_BOT_CHANNEL
   const manager = process.env.NEXT_PUBLIC_MANAGER
 
@@ -138,22 +161,21 @@ export default function CatalogPage() {
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-1.5 rounded-full mb-6 font-medium">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            Принимаем заказы
+            {heroBadge}
           </div>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
-            Профессиональный{' '}
             <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-              игровой буст
+              {heroTitle}
             </span>
           </h1>
           <p className="text-slate-300 text-base md:text-xl leading-relaxed mb-6 md:mb-8 max-w-xl mx-auto">
-            Поднимем ваш ранг быстро и безопасно. Работаем с топовыми игроками, гарантируем результат.
+            {heroSubtitle}
           </p>
           <a
             href="#catalog"
             className="inline-flex items-center gap-2 px-6 py-3 md:px-8 md:py-4 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-2xl transition-colors text-base md:text-lg"
           >
-            Смотреть услуги
+            {heroButton}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
@@ -200,16 +222,15 @@ export default function CatalogPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
             <h2 className="text-lg font-semibold mb-3 text-green-400">Кто мы</h2>
-            <p className="text-slate-400 leading-relaxed">
-              KaraShop — профессиональный сервис буста игровых аккаунтов. Мы работаем с опытными игроками,
-              которые помогут вам достичь желаемого ранга быстро и безопасно.
+            <p className="text-slate-400 leading-relaxed whitespace-pre-line">
+              {aboutText}
             </p>
           </div>
 
           <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
             <h2 className="text-lg font-semibold mb-4 text-green-400">Наши гарантии</h2>
             <ul className="space-y-3">
-              {GUARANTEES.map((item, i) => (
+              {guarantees.map((item, i) => (
                 <li key={i} className="flex items-start gap-3 text-slate-300 text-sm">
                   <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -354,16 +375,12 @@ export default function CatalogPage() {
         />
         <div className="absolute inset-0 bg-[#07080d]/55" />
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Почему выбирают нас</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">{statsTitle}</h2>
           <p className="text-slate-300 text-base md:text-lg mb-8 md:mb-12 max-w-2xl mx-auto">
-            Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.
+            {statsSubtitle}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 text-left">
-            {[
-              { num: '500+', label: 'Выполненных заказов', desc: 'За всё время работы' },
-              { num: '100%', label: 'Гарантия результата', desc: 'Или вернём деньги' },
-              { num: '<2ч', label: 'Время отклика', desc: 'Начинаем работу быстро' },
-            ].map(s => (
+            {stats.map(s => (
               <div key={s.num} className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6">
                 <div className="text-4xl font-bold text-green-400 mb-2">{s.num}</div>
                 <div className="font-semibold mb-1">{s.label}</div>
