@@ -11,6 +11,7 @@ router = APIRouter(prefix="/site-settings", tags=["site-settings"])
 ALLOWED_KEYS = {
     "dev_banner_enabled",
     "dev_banner_text",
+    "dev_banner_color",
     # Hero
     "hero_badge",
     "hero_title",

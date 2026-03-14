@@ -7,6 +7,7 @@ const SEP = ' \u00a0\u00a0\u00a0⚠\u00a0\u00a0\u00a0 '
 export default function DevBanner() {
   const [enabled, setEnabled] = useState(false)
   const [text, setText] = useState('Сайт находится в разработке — возможны временные неполадки')
+  const [color, setColor] = useState('#fbbf24')
 
   useEffect(() => {
     fetch(`${BASE}/site-settings/`)
@@ -14,6 +15,7 @@ export default function DevBanner() {
       .then(data => {
         setEnabled(data.dev_banner_enabled === 'true')
         if (data.dev_banner_text) setText(data.dev_banner_text)
+        if (data.dev_banner_color) setColor(data.dev_banner_color)
       })
       .catch(() => {})
   }, [])
@@ -44,8 +46,8 @@ export default function DevBanner() {
             width: 10,
             height: 10,
             borderRadius: '50%',
-            backgroundColor: '#fbbf24',
-            boxShadow: '0 0 0 0 rgba(251,191,36,0.7)',
+            backgroundColor: color,
+            boxShadow: `0 0 0 0 ${color}b3`,
             animation: 'devBannerPulse 0.9s ease-in-out infinite',
           }} />
         </div>
@@ -55,7 +57,7 @@ export default function DevBanner() {
           <div style={{
             display: 'inline-block',
             whiteSpace: 'nowrap',
-            color: '#fde68a',
+            color: color,
             fontSize: 13,
             fontWeight: 500,
             letterSpacing: '0.03em',
