@@ -59,6 +59,9 @@ def run_migrations():
             conn.execute(text("ALTER TABLE users ADD COLUMN telegram_id INTEGER"))
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_telegram_id ON users (telegram_id)"))
             conn.commit()
+        if "telegram_username" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN telegram_username VARCHAR(128)"))
+            conn.commit()
         if "tg_payment_message_id" not in order_cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN tg_payment_message_id INTEGER"))
             conn.commit()

@@ -46,6 +46,7 @@ class User(Base):
     is_vip = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True)
     telegram_id = Column(Integer, nullable=True, unique=True, index=True)
+    telegram_username = Column(String(128), nullable=True)
     last_seen_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

@@ -58,20 +58,22 @@ def telegram_webapp_auth(data: TelegramWebAppAuthData, db: Session = Depends(get
 
     user = db.query(models.User).filter(models.User.telegram_id == tg_id).first()
     if not user:
-        uname = username or f"tg_{tg_id}"
+        display = " ".join(filter(None, [first_name, last_name])) or username or f"tg_{tg_id}"
         user = models.User(
-            username=uname,
+            username=display,
             password_hash="",
             role=models.UserRole.client,
             telegram_id=tg_id,
+            telegram_username=username,
             is_active=True,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-    elif username and user.username != username:
-        user.username = username
-        db.commit()
+    else:
+        if username and user.telegram_username != username:
+            user.telegram_username = username
+            db.commit()
 
     token = auth_utils.create_access_token({"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer", "user": user}

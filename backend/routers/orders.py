@@ -102,33 +102,16 @@ def recent_orders(db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
-    def mask_name(name: str | None) -> str | None:
-        if not name:
-            return None
-        n = name.strip().lstrip('@')
-        if not n:
-            return None
-        if len(n) <= 2:
-            return n[0] + '***'
-        return n[0] + '***' + n[-1]
-
-    def top_product(items):
-        valid = [i for i in items if i.product]
-        if not valid:
-            return "Услуга", 0, None
-        best = max(valid, key=lambda i: i.product.price or 0)
-        return best.product.name, len(valid) - 1, best.product.image_url
-
     result = []
     for o in orders:
-        product_name, extra_count, image_url = top_product(o.items)
+        product_name, extra_count, image_url = _top_product(o.items)
         result.append({
             "id": o.id,
             "product": product_name,
             "extra_count": extra_count,
             "image_url": image_url,
             "price": o.price,
-            "client": mask_name(o.client_info),
+            "client": _mask(o.client_info),
             "created_at": o.created_at.isoformat(),
         })
     return result
@@ -177,8 +160,10 @@ def create_order(
     order_source = models.OrderSource.website if is_client and data.source == models.OrderSource.other else data.source
     tg_user_id = current_user.telegram_id if is_client else data.telegram_user_id
     if is_client:
-        has_real_username = current_user.username and not current_user.username.startswith("tg_")
-        auto_client_info = f"@{current_user.username}" if has_real_username else current_user.username
+        if current_user.telegram_username:
+            auto_client_info = f"@{current_user.telegram_username}"
+        else:
+            auto_client_info = current_user.username or f"tg_{current_user.telegram_id}"
     else:
         auto_client_info = None
     client_info = data.client_info or auto_client_info
@@ -402,67 +387,73 @@ def remove_worker(
     return _load_order(db, order_id)
 
 
+def _mask(name):
+    if not name:
+        return None
+    n = name.strip().lstrip('@')
+    if not n:
+        return None
+    return n[0] + '***' if len(n) <= 2 else n[0] + '***' + n[-1]
+
+
+def _top_product(items):
+    valid = [i for i in items if i.product]
+    if not valid:
+        return "Услуга", 0, None
+    best = max(valid, key=lambda i: i.product.price or 0)
+    return best.product.name, len(valid) - 1, best.product.image_url
+
+
+def _fetch_recent(db: Session):
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    orders = (
+        db.query(models.Order)
+        .options(joinedload(models.Order.items).joinedload(models.OrderItem.product))
+        .filter(
+            models.Order.status != models.OrderStatus.pending_payment,
+            models.Order.created_at >= cutoff,
+        )
+        .order_by(models.Order.id.desc())
+        .limit(10)
+        .all()
+    )
+    result = []
+    for o in orders:
+        product_name, extra_count, image_url = _top_product(o.items)
+        result.append({
+            "id": o.id,
+            "product": product_name,
+            "extra_count": extra_count,
+            "image_url": image_url,
+            "price": o.price,
+            "client": _mask(o.client_info),
+            "created_at": o.created_at.isoformat(),
+        })
+    return result
+
+
 @router.websocket("/ws/recent")
 async def ws_recent_orders(websocket: WebSocket):
     await websocket.accept()
     last_ids: set = set()
-    db: Session = SessionLocal()
     try:
         while True:
-            from datetime import timedelta
-            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
-            orders = (
-                db.query(models.Order)
-                .options(joinedload(models.Order.items).joinedload(models.OrderItem.product))
-                .filter(
-                    models.Order.status != models.OrderStatus.pending_payment,
-                    models.Order.created_at >= cutoff,
-                )
-                .order_by(models.Order.id.desc())
-                .limit(10)
-                .all()
-            )
-            db.expire_all()
-            def mask(name):
-                if not name:
-                    return None
-                n = name.strip().lstrip('@')
-                if not n:
-                    return None
-                if len(n) <= 2:
-                    return n[0] + '***'
-                return n[0] + '***' + n[-1]
+            db: Session = SessionLocal()
+            try:
+                result = _fetch_recent(db)
+            finally:
+                db.close()
 
-            def top(items):
-                valid = [i for i in items if i.product]
-                if not valid:
-                    return "Услуга", 0, None
-                best = max(valid, key=lambda i: i.product.price or 0)
-                return best.product.name, len(valid) - 1, best.product.image_url
-
-            result = []
-            for o in orders:
-                product_name, extra_count, image_url = top(o.items)
-                result.append({
-                    "id": o.id,
-                    "product": product_name,
-                    "extra_count": extra_count,
-                    "image_url": image_url,
-                    "price": o.price,
-                    "client": mask(o.client_info),
-                    "created_at": o.created_at.isoformat(),
-                })
             current_ids = {o["id"] for o in result}
             if last_ids:
-                new_orders = [o for o in result if o["id"] not in last_ids]
-                for order in new_orders:
-                    await websocket.send_json(order)
+                for order in result:
+                    if order["id"] not in last_ids:
+                        await websocket.send_json(order)
             last_ids = current_ids
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
     except (WebSocketDisconnect, Exception):
         pass
-    finally:
-        db.close()
 
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
