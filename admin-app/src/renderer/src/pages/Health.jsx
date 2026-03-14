@@ -215,6 +215,24 @@ export default function Health() {
                 </ResponsiveContainer>
               </Card>
 
+              <Card title="Задержка Telegram API (мс)" icon="✈️">
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={data.history} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="tgGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                    <XAxis dataKey="t" tick={{ fill: CHART_THEME.text, fontSize: 10 }} />
+                    <YAxis tick={{ fill: CHART_THEME.text, fontSize: 10 }} unit=" мс" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="tg_ms" name="TG latency" stroke="#3b82f6" fill="url(#tgGrad)" strokeWidth={2} dot={false} connectNulls />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+
               <Card title="Активность заказов" icon="📦">
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={data.history} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>

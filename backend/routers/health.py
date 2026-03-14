@@ -18,7 +18,7 @@ _start_time = time.time()
 _history: deque = deque(maxlen=30)
 
 
-def _snapshot(db: Session) -> dict:
+def _snapshot(db: Session, tg_latency_ms=None) -> dict:
     t0 = time.monotonic()
     db.execute(text("SELECT 1"))
     db_ms = round((time.monotonic() - t0) * 1000, 1)
@@ -34,6 +34,7 @@ def _snapshot(db: Session) -> dict:
     return {
         "t": datetime.now(timezone.utc).strftime("%H:%M:%S"),
         "db_ms": db_ms,
+        "tg_ms": tg_latency_ms,
         "orders_active": orders_active,
         "orders_pending": orders_pending,
     }
@@ -111,19 +112,19 @@ async def health_check(
     except Exception as e:
         results["counts_error"] = str(e)
 
-    # ── History snapshot ───────────────────────────────────────────────────────
-    try:
-        snap = _snapshot(db)
-        _history.append(snap)
-    except Exception:
-        pass
-    results["history"] = list(_history)
-
     # ── Telegram ───────────────────────────────────────────────────────────────
     bot_token = os.getenv("BOT_TOKEN", "")
     tg_bot = await _check_telegram(bot_token) if bot_token else {"bot_ok": False, "bot_error": "BOT_TOKEN не задан"}
     tg_servers = await _check_tg_servers()
     results["telegram"] = {**tg_bot, **tg_servers}
+
+    # ── History snapshot ───────────────────────────────────────────────────────
+    try:
+        snap = _snapshot(db, tg_latency_ms=results["telegram"].get("tg_latency_ms"))
+        _history.append(snap)
+    except Exception:
+        pass
+    results["history"] = list(_history)
 
     # ── Env vars ───────────────────────────────────────────────────────────────
     results["env"] = {
