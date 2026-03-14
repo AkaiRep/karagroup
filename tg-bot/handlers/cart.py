@@ -52,6 +52,7 @@ def _cart_total(cart: dict) -> float:
 
 @router.callback_query(F.data == "cart")
 async def show_cart(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     await state.set_state(None)
     data = await state.get_data()
     cart = data.get("cart", {})
@@ -60,11 +61,11 @@ async def show_cart(callback: CallbackQuery, state: FSMContext):
         reply_markup=cart_kb(cart),
         parse_mode="HTML",
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("remove_"))
 async def remove_from_cart(callback: CallbackQuery, state: FSMContext):
+    await callback.answer("Удалено из корзины")
     pid = callback.data.split("_")[1]
     data = await state.get_data()
     cart = data.get("cart", {})
@@ -75,16 +76,15 @@ async def remove_from_cart(callback: CallbackQuery, state: FSMContext):
         reply_markup=cart_kb(cart),
         parse_mode="HTML",
     )
-    await callback.answer("Удалено из корзины")
 
 
 # ── Checkout: promo code step ─────────────────────────────────────────────────
 
 @router.callback_query(F.data == "checkout")
 async def checkout(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     data = await state.get_data()
     if not data.get("cart"):
-        await callback.answer("Корзина пуста!")
         return
 
     await state.update_data(promo=None)
@@ -95,7 +95,6 @@ async def checkout(callback: CallbackQuery, state: FSMContext):
         reply_markup=promo_kb(),
         parse_mode="HTML",
     )
-    await callback.answer()
 
 
 @router.message(ShopStates.waiting_promo)
@@ -125,6 +124,7 @@ async def process_promo(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "skip_promo")
 async def skip_promo(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     data = await state.get_data()
     cart = data.get("cart", {})
     total = _cart_total(cart)
@@ -132,21 +132,20 @@ async def skip_promo(callback: CallbackQuery, state: FSMContext):
     await state.set_state(None)
 
     text = f"{format_cart(cart)}\n\nНажмите «Оплатить» для подтверждения заказа."
-    await edit_or_send(callback,text, reply_markup=confirm_order_kb(), parse_mode="HTML")
-    await callback.answer()
+    await edit_or_send(callback, text, reply_markup=confirm_order_kb(), parse_mode="HTML")
 
 
 # ── Payment ───────────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "pay_confirm")
 async def pay_confirm(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     data = await state.get_data()
     cart = data.get("cart", {})
     total = data.get("pending_total") or _cart_total(cart)
     promo = data.get("promo")
 
     if not cart:
-        await callback.answer("Корзина пуста!")
         return
 
     items = [
@@ -200,6 +199,7 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("paymethod_"))
 async def select_pay_method(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     _, order_id_str, method_str = callback.data.split("_")
     order_id = int(order_id_str)
     method = int(method_str)
@@ -212,7 +212,7 @@ async def select_pay_method(callback: CallbackQuery, state: FSMContext):
         payment_url = payment["payment_url"]
     except Exception as e:
         log.error("Payment creation error: %s", e)
-        await callback.answer("Ошибка при создании платежа. Попробуйте позже.", show_alert=True)
+        await callback.message.answer("❌ Ошибка при создании платежа. Попробуйте позже.")
         return
 
     await state.clear()

@@ -29,16 +29,17 @@ class BackendAPI:
         token = await self._get_token()
         session = await self._session_()
         headers = {"Authorization": f"Bearer {token}"}
+        timeout = aiohttp.ClientTimeout(total=10)
 
         async with getattr(session, method)(
-            f"{settings.BACKEND_URL}{path}", headers=headers, **kwargs
+            f"{settings.BACKEND_URL}{path}", headers=headers, timeout=timeout, **kwargs
         ) as r:
             if r.status == 401:
                 self._token = None
                 token = await self._get_token()
                 headers = {"Authorization": f"Bearer {token}"}
                 async with getattr(session, method)(
-                    f"{settings.BACKEND_URL}{path}", headers=headers, **kwargs
+                    f"{settings.BACKEND_URL}{path}", headers=headers, timeout=timeout, **kwargs
                 ) as r2:
                     return await self._parse(r2)
             return await self._parse(r)

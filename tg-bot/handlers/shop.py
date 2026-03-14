@@ -40,16 +40,13 @@ def format_product_list(category: dict, products: list, global_discount: float) 
 
 @router.callback_query(F.data == "shop")
 async def show_categories(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
     categories = await api.get_categories()
     data = await state.get_data()
     cart = data.get("cart", {})
 
     if not categories:
-        await edit_or_send(callback,
-            "😔 Категорий пока нет",
-            reply_markup=back_kb("main"),
-        )
-        await callback.answer()
+        await edit_or_send(callback, "😔 Категорий пока нет", reply_markup=back_kb("main"))
         return
 
     await edit_or_send(callback,
@@ -57,7 +54,6 @@ async def show_categories(callback: CallbackQuery, state: FSMContext):
         reply_markup=categories_kb(categories, len(cart)),
         parse_mode="HTML",
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("cat_"))
@@ -78,10 +74,10 @@ async def noop(callback: CallbackQuery):
 
 
 async def _render_category(callback: CallbackQuery, state: FSMContext, category_id: int, page: int):
+    await callback.answer()
     categories, all_products, gd = await _fetch_catalog()
     category = next((c for c in categories if c["id"] == category_id), None)
     if not category:
-        await callback.answer("Категория не найдена")
         return
 
     products = [p for p in all_products if p.get("category_id") == category_id]
@@ -97,7 +93,6 @@ async def _render_category(callback: CallbackQuery, state: FSMContext, category_
             reply_markup=back_kb("shop"),
             parse_mode="HTML",
         )
-        await callback.answer()
         return
 
     text = format_product_list(category, products, global_discount)
@@ -106,27 +101,26 @@ async def _render_category(callback: CallbackQuery, state: FSMContext, category_
         reply_markup=products_kb(products, cart, category_id, page),
         parse_mode="HTML",
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("add_"))
 async def toggle_cart(callback: CallbackQuery, state: FSMContext):
     product_id = int(callback.data.split("_")[1])
+    data = await state.get_data()
+    cart = data.get("cart", {})
+    pid = str(product_id)
+    # Answer immediately with result based on local state
+    await callback.answer("Убрано из корзины" if pid in cart else "✅ Добавлено в корзину!")
 
     categories, all_products, gd = await _fetch_catalog()
     product = next((p for p in all_products if p["id"] == product_id), None)
     if not product:
-        await callback.answer("Услуга не найдена")
         return
 
     global_discount = gd.get("value", 0)
-    data = await state.get_data()
-    cart = data.get("cart", {})
-    pid = str(product_id)
 
     if pid in cart:
         del cart[pid]
-        await callback.answer("Убрано из корзины")
     else:
         disc = _effective_discount(product, global_discount)
         cart[pid] = {
