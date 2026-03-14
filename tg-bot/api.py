@@ -1,4 +1,5 @@
 import aiohttp
+from typing import Optional
 from config import settings
 
 
@@ -70,7 +71,7 @@ class BackendAPI:
     async def create_order(self, data: dict) -> dict:
         return await self._request("post", "/orders/", json=data)
 
-    async def create_payment(self, order_id: int, payment_method: int | None = None) -> dict:
+    async def create_payment(self, order_id: int, payment_method: Optional[int] = None) -> dict:
         body = {"payment_method": payment_method} if payment_method else {}
         return await self._request("post", f"/payments/create/{order_id}", json=body)
 

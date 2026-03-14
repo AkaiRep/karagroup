@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import Any
+from typing import Any, Optional
 
 from database import get_db
 import models, auth as auth_utils
@@ -14,7 +14,7 @@ ALLOWED_KEYS = {
 }
 
 
-def _get(db: Session, key: str) -> str | None:
+def _get(db: Session, key: str) -> Optional[str]:
     s = db.query(models.Setting).filter(models.Setting.key == key).first()
     return s.value if s else None
 
