@@ -18,7 +18,7 @@ export default function DevBanner() {
 
   if (!enabled) return null
 
-  const chunk = Array(8).fill(text).join('   ⚠️   ')
+  const chunk = Array(8).fill(text).join('          ')
 
   return (
     <div
@@ -34,10 +34,9 @@ export default function DevBanner() {
       <div className="relative flex items-center py-2 gap-3">
         {/* pulsing dot */}
         <div className="flex-shrink-0 pl-4 flex items-center">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
-          </span>
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 dev-banner-pulse"
+          />
         </div>
 
         {/* seamless marquee: two identical chunks, animate -50% */}

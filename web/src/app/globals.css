@@ -55,6 +55,15 @@ body {
   animation: dev-banner-scroll 22s linear infinite;
 }
 
+@keyframes dev-banner-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.5); }
+}
+
+.dev-banner-pulse {
+  animation: dev-banner-pulse 1.2s ease-in-out infinite;
+}
+
 @keyframes carousel-scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
