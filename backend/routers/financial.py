@@ -25,6 +25,7 @@ def get_dashboard(
 
     confirmed_orders = [o for o in orders if o.status == models.OrderStatus.confirmed]
     total_revenue = sum(o.price for o in confirmed_orders)
+    avg_order_value = total_revenue / len(confirmed_orders) if confirmed_orders else 0.0
 
     # Profit split per confirmed order — use snapshotted values set at take time
     # Chain: price → media cut → worker cut → owner split
@@ -118,6 +119,7 @@ def get_dashboard(
 
     return schemas.DashboardStats(
         total_revenue=total_revenue,
+        avg_order_value=avg_order_value,
         total_orders=len(orders),
         orders_by_status=orders_by_status,
         orders_by_source=orders_by_source,

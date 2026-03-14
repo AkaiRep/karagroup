@@ -309,6 +309,7 @@ class TransactionOut(BaseModel):
 
 class DashboardStats(BaseModel):
     total_revenue: float
+    avg_order_value: float
     total_orders: int
     orders_by_status: dict
     orders_by_source: dict

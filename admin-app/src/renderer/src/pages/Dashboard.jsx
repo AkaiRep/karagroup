@@ -68,6 +68,12 @@ export default function Dashboard() {
           value={`${stats.total_revenue.toFixed(0)} ₽`}
           color="text-green-400"
         />
+        <StatCard
+          label="Средний чек"
+          value={`${stats.avg_order_value.toFixed(0)} ₽`}
+          sub="По подтверждённым заказам"
+          color="text-emerald-400"
+        />
         <StatCard label="Всего заказов" value={stats.total_orders} />
         <StatCard
           label="К выплате качерам"
