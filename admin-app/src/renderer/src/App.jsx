@@ -9,6 +9,7 @@ import Workers from './pages/Workers'
 import Financial from './pages/Financial'
 import GlobalChat from './pages/GlobalChat'
 import Media from './pages/Media'
+import Settings from './pages/Settings'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore()
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="financial" element={<Financial />} />
           <Route path="global-chat" element={<GlobalChat />} />
           <Route path="media" element={<Media />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

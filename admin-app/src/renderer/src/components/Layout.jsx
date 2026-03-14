@@ -11,6 +11,7 @@ const nav = [
   { to: '/workers', label: 'Качеры', icon: '👷' },
   { to: '/financial', label: 'Финансы', icon: '💰' },
   { to: '/media', label: 'Медиа', icon: '📺' },
+  { to: '/settings', label: 'Настройки', icon: '⚙️' },
 ]
 
 export default function Layout() {

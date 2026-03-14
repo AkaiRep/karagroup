@@ -1,6 +1,7 @@
 import './globals.css'
 import Providers from './providers'
 import Script from 'next/script'
+import DevBanner from '@/components/DevBanner'
 
 export const metadata = {
   title: 'KaraShop — Буст аккаунтов',
@@ -25,7 +26,10 @@ export default function RootLayout({ children }) {
           ym(107698834,'init',{ssr:true,webvisor:true,clickmap:true,ecommerce:"dataLayer",referrer:document.referrer,url:location.href,accurateTrackBounce:true,trackLinks:true});
         `}</Script>
         <noscript><img src="https://mc.yandex.ru/watch/107698834" style={{position:'absolute',left:'-9999px'}} alt="" /></noscript>
-        <Providers>{children}</Providers>
+        <Providers>
+          <DevBanner />
+          {children}
+        </Providers>
       </body>
     </html>
   )

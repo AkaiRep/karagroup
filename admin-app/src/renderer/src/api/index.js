@@ -119,6 +119,10 @@ export const updatePromoCode = (id, data) => api.patch(`/media/promo-codes/${id}
 export const deletePromoCode = (id) => api.delete(`/media/promo-codes/${id}`)
 export const lookupPromoCode = (code) => api.get(`/media/promo-codes/lookup/${code}`).then((r) => r.data)
 
+// ── Site Settings ─────────────────────────────────────────────────────────────
+export const getSiteSettings = () => api.get('/site-settings/').then(r => r.data)
+export const updateSiteSetting = (key, value) => api.patch(`/site-settings/${key}`, { value }).then(r => r.data)
+
 // ── Financial ─────────────────────────────────────────────────────────────────
 export const getDashboard = () => api.get('/financial/dashboard').then((r) => r.data)
 export const getTransactions = (params) =>
