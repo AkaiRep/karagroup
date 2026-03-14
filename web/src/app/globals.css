@@ -45,23 +45,15 @@ body {
   display: none;
 }
 
-@keyframes dev-banner-scroll {
+@keyframes devBannerScroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 
-.dev-banner-marquee {
-  display: inline-block;
-  animation: dev-banner-scroll 22s linear infinite;
-}
-
-@keyframes dev-banner-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.5); }
-}
-
-.dev-banner-pulse {
-  animation: dev-banner-pulse 1.2s ease-in-out infinite;
+@keyframes devBannerPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(251,191,36,0.8); transform: scale(1); }
+  50%  { box-shadow: 0 0 0 8px rgba(251,191,36,0); transform: scale(1.3); }
+  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); transform: scale(1); }
 }
 
 @keyframes carousel-scroll {

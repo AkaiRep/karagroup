@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { BASE } from '@/lib/api'
 
+const SEP = ' \u00a0\u00a0\u00a0⚠\u00a0\u00a0\u00a0 '
+
 export default function DevBanner() {
   const [enabled, setEnabled] = useState(false)
   const [text, setText] = useState('Сайт находится в разработке — возможны временные неполадки')
@@ -18,32 +20,48 @@ export default function DevBanner() {
 
   if (!enabled) return null
 
-  const chunk = Array(8).fill(text).join('          ')
+  const chunk = Array(10).fill(text).join(SEP)
 
   return (
     <div
-      className="relative w-full overflow-hidden"
       style={{
-        background: 'repeating-linear-gradient(45deg, #1c1400 0px, #1c1400 12px, #251c00 12px, #251c00 24px)',
-        borderBottom: '1px solid rgba(251,191,36,0.35)',
+        position: 'relative',
+        width: '100%',
+        overflow: 'hidden',
+        background: 'repeating-linear-gradient(45deg, #1c1400 0px, #1c1400 12px, #2d2200 12px, #2d2200 24px)',
+        borderBottom: '1px solid rgba(251,191,36,0.4)',
       }}
     >
-      {/* dark overlay */}
-      <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', pointerEvents: 'none' }} />
 
-      <div className="relative flex items-center py-2 gap-3">
-        {/* pulsing dot */}
-        <div className="flex-shrink-0 pl-4 flex items-center">
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 dev-banner-pulse"
-          />
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '7px 0', gap: 12 }}>
+
+        {/* pulsing dot — inline styles only */}
+        <div style={{ flexShrink: 0, paddingLeft: 16, display: 'flex', alignItems: 'center' }}>
+          <span style={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: '#fbbf24',
+            boxShadow: '0 0 0 0 rgba(251,191,36,0.7)',
+            animation: 'devBannerPulse 0.9s ease-in-out infinite',
+          }} />
         </div>
 
-        {/* seamless marquee: two identical chunks, animate -50% */}
-        <div className="overflow-hidden flex-1">
-          <div className="dev-banner-marquee whitespace-nowrap text-amber-300 text-sm font-medium tracking-wide">
-            <span>{chunk}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span>{chunk}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        {/* seamless marquee */}
+        <div style={{ overflow: 'hidden', flex: 1 }}>
+          <div style={{
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            color: '#fde68a',
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: '0.03em',
+            animation: 'devBannerScroll 28s linear infinite',
+          }}>
+            <span>{chunk}</span>
+            <span>{chunk}</span>
           </div>
         </div>
       </div>
