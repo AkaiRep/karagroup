@@ -176,7 +176,12 @@ def create_order(
     order_status = models.OrderStatus.pending_payment if is_client else (data.status or models.OrderStatus.paid)
     order_source = models.OrderSource.website if is_client and data.source == models.OrderSource.other else data.source
     tg_user_id = current_user.telegram_id if is_client else data.telegram_user_id
-    client_info = data.client_info or (f"@{current_user.username}" if is_client else None)
+    if is_client:
+        has_real_username = current_user.username and not current_user.username.startswith("tg_")
+        auto_client_info = f"@{current_user.username}" if has_real_username else current_user.username
+    else:
+        auto_client_info = None
+    client_info = data.client_info or auto_client_info
     client_url = data.client_url or (f"tg://user?id={current_user.telegram_id}" if is_client and current_user.telegram_id else None)
 
     order = models.Order(
