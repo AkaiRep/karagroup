@@ -10,7 +10,7 @@ from config import settings
 
 log = logging.getLogger(__name__)
 
-POLL_INTERVAL = 3           # seconds between checks
+POLL_INTERVAL = 10          # seconds between checks
 EXPIRY_WARN_HOURS = 36      # warn at 36h (12h before edit window closes)
 EDIT_WINDOW_HOURS = 48      # Telegram edit limit
 
@@ -186,4 +186,9 @@ async def run_notifier(bot: Bot) -> None:
     log.info("Notification updater started")
     while True:
         await asyncio.sleep(POLL_INTERVAL)
-        await check_and_update(bot)
+        try:
+            await asyncio.wait_for(check_and_update(bot), timeout=8)
+        except asyncio.TimeoutError:
+            log.warning("Notifier cycle timed out, skipping")
+        except Exception as e:
+            log.error("Notifier error: %s", e)

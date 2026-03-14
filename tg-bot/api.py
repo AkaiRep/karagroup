@@ -10,7 +10,8 @@ class BackendAPI:
 
     async def _session_(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+            connector = aiohttp.TCPConnector(limit=10, keepalive_timeout=30)
+            self._session = aiohttp.ClientSession(connector=connector)
         return self._session
 
     async def _get_token(self) -> str:
