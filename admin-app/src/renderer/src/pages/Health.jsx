@@ -1,5 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getHealth } from '../api'
+import {
+  LineChart, Line, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts'
 
 function StatusDot({ ok }) {
   return (
@@ -7,10 +11,11 @@ function StatusDot({ ok }) {
   )
 }
 
-function Card({ title, children }) {
+function Card({ title, icon, children }) {
   return (
     <div className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-700/50 bg-[#151922]">
+      <div className="px-5 py-3 border-b border-slate-700/50 bg-[#151922] flex items-center gap-2">
+        {icon && <span>{icon}</span>}
         <h2 className="font-semibold text-slate-200 text-sm">{title}</h2>
       </div>
       <div className="p-5">{children}</div>
@@ -18,16 +23,39 @@ function Card({ title, children }) {
   )
 }
 
-function Row({ label, value, ok, mono = false }) {
+function Row({ label, value, ok, mono = false, sub }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-slate-700/30 last:border-0">
-      <span className="text-sm text-slate-400">{label}</span>
+    <div className="flex items-center justify-between py-2.5 border-b border-slate-700/30 last:border-0">
+      <div>
+        <span className="text-sm text-slate-400">{label}</span>
+        {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+      </div>
       <div className="flex items-center gap-2">
         {ok !== undefined && <StatusDot ok={ok} />}
         <span className={`text-sm font-medium ${mono ? 'font-mono' : ''} ${ok === false ? 'text-red-400' : 'text-slate-200'}`}>
           {value}
         </span>
       </div>
+    </div>
+  )
+}
+
+const CHART_THEME = {
+  grid: '#1e2535',
+  text: '#64748b',
+  tooltip: { bg: '#1a1f2e', border: '#334155' },
+}
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-[#1a1f2e] border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-xl">
+      <p className="text-slate-400 mb-1">{label}</p>
+      {payload.map(p => (
+        <p key={p.name} style={{ color: p.color }}>
+          {p.name}: <span className="font-semibold">{p.value}</span>
+        </p>
+      ))}
     </div>
   )
 }
@@ -62,7 +90,7 @@ export default function Health() {
   }, [load])
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Здоровье системы</h1>
@@ -93,20 +121,18 @@ export default function Health() {
       )}
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 text-red-400 text-sm">
-          {error}
-        </div>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 text-red-400 text-sm">{error}</div>
       )}
 
       {data && !loading && (
         <div className="space-y-4">
 
-          {/* Overall */}
+          {/* Overall status */}
           <div className={`rounded-xl border p-4 flex items-center gap-4 ${data.ok ? 'bg-green-500/5 border-green-500/30' : 'bg-red-500/5 border-red-500/30'}`}>
             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${data.ok ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
               {data.ok ? '✅' : '❌'}
             </div>
-            <div>
+            <div className="flex-1">
               <p className={`font-semibold text-lg ${data.ok ? 'text-green-400' : 'text-red-400'}`}>
                 {data.ok ? 'Система работает нормально' : 'Обнаружены проблемы'}
               </p>
@@ -114,59 +140,108 @@ export default function Health() {
             </div>
           </div>
 
-          {/* Database */}
-          <Card title="🗄️ База данных">
-            <Row
-              label="Подключение"
-              value={data.database.ok ? 'Работает' : 'Ошибка'}
-              ok={data.database.ok}
-            />
-            {data.database.latency_ms !== null && (
+          {/* Telegram */}
+          {data.telegram && (
+            <Card title="Telegram" icon="✈️">
               <Row
-                label="Задержка запроса"
-                value={`${data.database.latency_ms} мс`}
-                ok={data.database.latency_ms < 100}
+                label="Бот"
+                value={data.telegram.bot_ok ? `@${data.telegram.bot_username}` : 'Недоступен'}
+                ok={data.telegram.bot_ok}
+                sub={data.telegram.bot_error}
+              />
+              <Row
+                label="Ping Telegram API"
+                value={data.telegram.tg_latency_ms != null ? `${data.telegram.tg_latency_ms} мс` : '—'}
+                ok={data.telegram.tg_servers_ok}
                 mono
-              />
-            )}
-            {data.db_error && (
-              <p className="text-red-400 text-xs mt-2 font-mono">{data.db_error}</p>
-            )}
-          </Card>
-
-          {/* Counts */}
-          {data.counts && (
-            <Card title="📊 Статистика">
-              <Row label="Заказов всего" value={data.counts.orders_total} />
-              <Row
-                label="Активных заказов"
-                value={data.counts.orders_active}
-                ok={data.counts.orders_active >= 0}
+                sub={data.telegram.tg_servers_error}
               />
               <Row
-                label="Ожидают оплаты"
-                value={data.counts.orders_pending_payment}
-                ok={data.counts.orders_pending_payment === 0}
+                label="Серверы Telegram"
+                value={data.telegram.tg_servers_ok ? 'Работают' : 'Проблемы'}
+                ok={data.telegram.tg_servers_ok}
               />
-              <Row label="Пользователей" value={data.counts.users_total} />
-              {data.counts.users_online !== null && (
-                <Row label="Онлайн сейчас" value={data.counts.users_online} />
-              )}
-              <Row label="Услуг активных" value={`${data.counts.products_active} / ${data.counts.products_total}`} />
             </Card>
+          )}
+
+          {/* DB + counts row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card title="База данных" icon="🗄️">
+              <Row
+                label="Подключение"
+                value={data.database.ok ? 'Работает' : 'Ошибка'}
+                ok={data.database.ok}
+              />
+              {data.database.latency_ms != null && (
+                <Row
+                  label="Задержка"
+                  value={`${data.database.latency_ms} мс`}
+                  ok={data.database.latency_ms < 50}
+                  mono
+                />
+              )}
+              {data.db_error && <p className="text-red-400 text-xs mt-2 font-mono">{data.db_error}</p>}
+            </Card>
+
+            {data.counts && (
+              <Card title="Статистика" icon="📊">
+                <Row label="Заказов всего" value={data.counts.orders_total} />
+                <Row label="Активных" value={data.counts.orders_active} ok={data.counts.orders_active >= 0} />
+                <Row label="Ожидают оплаты" value={data.counts.orders_pending_payment} ok={data.counts.orders_pending_payment === 0} />
+                <Row label="Пользователей" value={data.counts.users_total} />
+                <Row label="Услуг (акт./всего)" value={`${data.counts.products_active} / ${data.counts.products_total}`} />
+              </Card>
+            )}
+          </div>
+
+          {/* Charts */}
+          {data.history && data.history.length > 1 && (
+            <>
+              <Card title="Задержка базы данных (мс)" icon="📈">
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={data.history} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="dbGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                    <XAxis dataKey="t" tick={{ fill: CHART_THEME.text, fontSize: 10 }} />
+                    <YAxis tick={{ fill: CHART_THEME.text, fontSize: 10 }} unit=" мс" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="db_ms" name="DB latency" stroke="#22c55e" fill="url(#dbGrad)" strokeWidth={2} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+
+              <Card title="Активность заказов" icon="📦">
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={data.history} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.grid} />
+                    <XAxis dataKey="t" tick={{ fill: CHART_THEME.text, fontSize: 10 }} />
+                    <YAxis tick={{ fill: CHART_THEME.text, fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: CHART_THEME.text }} />
+                    <Line type="monotone" dataKey="orders_active" name="Активные" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="orders_pending" name="Ожидают оплаты" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Card>
+            </>
+          )}
+
+          {data.history && data.history.length <= 1 && (
+            <div className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-6 text-center text-slate-500 text-sm">
+              Графики появятся после нескольких обновлений (обновляй страницу)
+            </div>
           )}
 
           {/* Env */}
           {data.env && (
-            <Card title="⚙️ Переменные окружения">
+            <Card title="Переменные окружения" icon="⚙️">
               {Object.entries(data.env).map(([key, val]) => (
-                <Row
-                  key={key}
-                  label={key}
-                  value={val ? 'Настроено' : 'Не задано'}
-                  ok={val}
-                  mono
-                />
+                <Row key={key} label={key} value={val ? 'Настроено' : 'Не задано'} ok={val} mono />
               ))}
             </Card>
           )}
