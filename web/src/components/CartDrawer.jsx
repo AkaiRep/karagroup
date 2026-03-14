@@ -11,8 +11,9 @@ export default function CartDrawer({ open, onClose }) {
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
-  const [checkoutState, setCheckoutState] = useState('idle') // idle | confirm | loading | done | error
+  const [checkoutState, setCheckoutState] = useState('idle') // idle | loading | method | paying | done | error
   const [paymentUrl, setPaymentUrl] = useState(null)
+  const [pendingOrderId, setPendingOrderId] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
 
   const items = Object.values(cart)
@@ -38,17 +39,28 @@ export default function CartDrawer({ open, onClose }) {
     try {
       const orderData = {
         items: items.map(i => ({ product_id: i.id, quantity: i.quantity || 1, discount: effectiveDiscount(i) })),
-        price: Math.round(total * 100) / 100,  // цена без промокода, бэкенд сам применит promo
+        price: Math.round(total * 100) / 100,
         promo_code: promo?.code ?? null,
       }
       const order = await api.createOrder(orderData)
-      const payment = await api.createPayment(order.id)
-      setPaymentUrl(payment.payment_url)
+      setPendingOrderId(order.id)
       clearCart()
-      setCheckoutState('done')
+      setCheckoutState('method')
     } catch (e) {
       console.error('Checkout error:', e?.response?.data || e?.message || e)
       setErrorMsg(e?.response?.data?.detail || 'Ошибка при оформлении заказа')
+      setCheckoutState('error')
+    }
+  }
+
+  const handlePayMethod = async (method) => {
+    setCheckoutState('paying')
+    try {
+      const payment = await api.createPayment(pendingOrderId, method)
+      setPaymentUrl(payment.payment_url)
+      setCheckoutState('done')
+    } catch (e) {
+      setErrorMsg('Ошибка при создании платежа')
       setCheckoutState('error')
     }
   }
@@ -71,6 +83,48 @@ export default function CartDrawer({ open, onClose }) {
             </svg>
           </button>
         </div>
+
+        {/* Method selection */}
+        {(checkoutState === 'method' || checkoutState === 'paying') && (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Заказ создан!</h3>
+              <p className="text-slate-400 text-sm">Выберите способ оплаты</p>
+            </div>
+            <div className="w-full space-y-3">
+              <button
+                onClick={() => handlePayMethod(2)}
+                disabled={checkoutState === 'paying'}
+                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                <span className="text-xl">⚡</span>
+                <span>СБП — Система быстрых платежей</span>
+              </button>
+              <button
+                onClick={() => handlePayMethod(11)}
+                disabled={checkoutState === 'paying'}
+                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                <span className="text-xl">💳</span>
+                <span>Карта РФ</span>
+              </button>
+              <button
+                onClick={() => handlePayMethod(12)}
+                disabled={checkoutState === 'paying'}
+                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                <span className="text-xl">🌍</span>
+                <span>Международная карта</span>
+              </button>
+            </div>
+            {checkoutState === 'paying' && <p className="text-slate-500 text-sm">Создаём ссылку на оплату...</p>}
+          </div>
+        )}
 
         {/* Done state */}
         {checkoutState === 'done' && (
@@ -226,7 +280,7 @@ export default function CartDrawer({ open, onClose }) {
                   disabled={checkoutState === 'loading'}
                   className="w-full py-3.5 bg-green-600 hover:bg-green-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
                 >
-                  {checkoutState === 'loading' ? 'Оформляем...' : 'Оформить заказ'}
+                  {checkoutState === 'loading' ? 'Создаём заказ...' : 'Оформить заказ'}
                 </button>
               ) : (
                 <div className="space-y-3">

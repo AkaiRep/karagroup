@@ -1,9 +1,10 @@
 import os
-import uuid
 import logging
-import json
+from typing import Optional
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -13,24 +14,28 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
+PLATEGA_BASE = "https://app.platega.io"
 
-def _configure_yookassa():
-    from yookassa import Configuration
-    shop_id = os.getenv("YOOKASSA_SHOP_ID")
-    secret_key = os.getenv("YOOKASSA_SECRET_KEY")
-    if not shop_id or not secret_key:
-        raise HTTPException(status_code=503, detail=f"YooKassa не настроена: shop_id={shop_id!r} secret_key={'set' if secret_key else None!r}")
-    Configuration.configure(shop_id, secret_key)
+
+def _platega_headers():
+    merchant_id = os.getenv("PLATEGA_MERCHANT_ID")
+    secret = os.getenv("PLATEGA_SECRET")
+    if not merchant_id or not secret:
+        raise HTTPException(status_code=503, detail="Platega не настроена")
+    return {"X-MerchantId": merchant_id, "X-Secret": secret}
+
+
+class PaymentRequest(BaseModel):
+    payment_method: Optional[int] = None  # 2=СБП, 11=карта РФ, 12=международная
 
 
 @router.post("/create/{order_id}")
-def create_payment(
+async def create_payment(
     order_id: int,
+    body: PaymentRequest = PaymentRequest(),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
-    from yookassa import Payment
-
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -39,82 +44,93 @@ def create_payment(
     if current_user.role == models.UserRole.client and order.telegram_user_id != current_user.telegram_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    _configure_yookassa()
+    return_url = os.getenv("PLATEGA_RETURN_URL", "https://t.me/")
+    payment_method = body.payment_method or int(os.getenv("PLATEGA_PAYMENT_METHOD", "2"))
 
-    return_url = os.getenv("YOOKASSA_RETURN_URL", "https://t.me/")
-
-    payment = Payment.create({
-        "amount": {
-            "value": f"{order.price:.2f}",
+    payload = {
+        "paymentMethod": payment_method,
+        "paymentDetails": {
+            "amount": round(order.price, 2),
             "currency": "RUB",
         },
-        "confirmation": {
-            "type": "redirect",
-            "return_url": return_url,
-        },
-        "capture": True,
         "description": f"Заказ #{order_id}",
-        "metadata": {"order_id": str(order_id)},
-    }, str(uuid.uuid4()))
+        "return": return_url,
+        "failedUrl": return_url,
+        "payload": str(order_id),
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{PLATEGA_BASE}/transaction/process",
+            json=payload,
+            headers=_platega_headers(),
+            timeout=15,
+        )
+
+    if resp.status_code != 200:
+        log.error("Platega create error: %s %s", resp.status_code, resp.text)
+        raise HTTPException(status_code=502, detail="Ошибка платёжной системы")
+
+    data = resp.json()
+    transaction_id = data.get("transactionId")
+    redirect_url = data.get("redirect")
+
+    if not redirect_url:
+        log.error("Platega no redirect: %s", data)
+        raise HTTPException(status_code=502, detail="Ошибка платёжной системы")
+
+    log.info("Platega payment created: order=%s transaction=%s", order_id, transaction_id)
 
     return {
-        "payment_url": payment.confirmation.confirmation_url,
-        "payment_id": payment.id,
+        "payment_url": redirect_url,
+        "payment_id": transaction_id,
     }
 
 
 @router.post("/webhook")
 async def payment_webhook(request: Request, db: Session = Depends(get_db)):
-    from yookassa import Configuration, Payment as YKPayment
+    merchant_id = os.getenv("PLATEGA_MERCHANT_ID")
+    secret = os.getenv("PLATEGA_SECRET")
 
-    shop_id = os.getenv("YOOKASSA_SHOP_ID")
-    secret_key = os.getenv("YOOKASSA_SECRET_KEY")
-    if not shop_id or not secret_key:
+    if not merchant_id or not secret:
         return {"status": "ok"}
 
-    Configuration.configure(shop_id, secret_key)
+    # Верификация — Platega присылает те же заголовки что и мы
+    incoming_merchant = request.headers.get("X-MerchantId")
+    incoming_secret = request.headers.get("X-Secret")
 
-    body = await request.body()
+    if incoming_merchant != merchant_id or incoming_secret != secret:
+        log.warning("Platega webhook auth failed: merchant=%s", incoming_merchant)
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     try:
-        data = json.loads(body)
+        data = await request.json()
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    event = data.get("event")
-    obj = data.get("object", {})
+    status = data.get("status")
+    order_id_str = data.get("payload")
+    transaction_id = data.get("id")
 
-    log.info("YooKassa webhook: event=%s payment_id=%s", event, obj.get("id"))
+    log.info("Platega webhook: status=%s order=%s transaction=%s", status, order_id_str, transaction_id)
 
-    if event == "payment.succeeded":
-        payment_id = obj.get("id")
-        order_id = int(obj.get("metadata", {}).get("order_id", 0))
-
-        if not payment_id or not order_id:
-            return {"status": "ok"}
-
-        # Верифицируем платёж через API ЮКассы
+    if status == "CONFIRMED" and order_id_str:
         try:
-            payment = YKPayment.find_one(payment_id)
-            if payment.status != "succeeded":
-                log.warning("Payment %s status is %s, not succeeded", payment_id, payment.status)
-                return {"status": "ok"}
-        except Exception as e:
-            log.error("Payment verification failed: %s", e)
-            raise HTTPException(status_code=500, detail="Payment verification error")
+            order_id = int(order_id_str)
+        except ValueError:
+            return {"status": "ok"}
 
         order = db.query(models.Order).filter(models.Order.id == order_id).first()
         if order and order.status == models.OrderStatus.pending_payment:
             order.status = models.OrderStatus.paid
             db.commit()
-            log.warning("Order #%s paid, tg_user=%s, payment_msg_id=%s", order_id, order.telegram_user_id, order.tg_payment_message_id)
+            log.info("Order #%s marked as paid via Platega", order_id)
             await _notify_user_payment(order)
 
     return {"status": "ok"}
 
 
 async def _notify_user_payment(order):
-    import httpx
-
     bot_token = os.getenv("BOT_TOKEN")
     tg_user_id = order.telegram_user_id
     if not bot_token or not tg_user_id:

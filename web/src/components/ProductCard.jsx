@@ -22,7 +22,6 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
         const imgUrl = product.image_url
           ? `${BASE.replace(/\/$/, '')}${product.image_url}`
           : null
-        console.log('[ProductCard]', product.name, '| image_url:', product.image_url, '| full:', imgUrl)
         return (
           <div
             className="absolute inset-0 bg-cover bg-center scale-110 opacity-50 group-hover:opacity-60 transition-opacity duration-300"

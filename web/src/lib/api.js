@@ -30,7 +30,7 @@ export const api = {
   getMyOrders: (telegramUserId) => client.get('/orders/', { params: { telegram_user_id: telegramUserId } }).then(r => r.data),
 
   // Payments
-  createPayment: (orderId) => client.post(`/payments/create/${orderId}`).then(r => r.data),
+  createPayment: (orderId, paymentMethod) => client.post(`/payments/create/${orderId}`, paymentMethod ? { payment_method: paymentMethod } : {}).then(r => r.data),
 
   // Reviews
   getReviews: () => client.get('/reviews/').then(r => r.data),

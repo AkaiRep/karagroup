@@ -70,8 +70,9 @@ class BackendAPI:
     async def create_order(self, data: dict) -> dict:
         return await self._request("post", "/orders/", json=data)
 
-    async def create_payment(self, order_id: int) -> dict:
-        return await self._request("post", f"/payments/create/{order_id}")
+    async def create_payment(self, order_id: int, payment_method: int | None = None) -> dict:
+        body = {"payment_method": payment_method} if payment_method else {}
+        return await self._request("post", f"/payments/create/{order_id}", json=body)
 
     async def lookup_promo_code(self, code: str) -> dict:
         return await self._request("get", f"/media/promo-codes/lookup/{code}")

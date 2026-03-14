@@ -176,21 +176,50 @@ async def pay_confirm(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Ошибка при создании заказа. Попробуйте позже.")
         return
 
-    # Создаём платёж в ЮКассе
+    await state.update_data(pending_order_id=order_id, pending_total=total)
+
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    kb = InlineKeyboardBuilder()
+    kb.button(text="⚡ СБП", callback_data=f"paymethod_{order_id}_2")
+    kb.button(text="💳 Карта РФ", callback_data=f"paymethod_{order_id}_11")
+    kb.button(text="🌍 Международная", callback_data=f"paymethod_{order_id}_12")
+    kb.adjust(1)
+
+    method_text = (
+        f"🛒 <b>Заказ #{order_id} создан!</b>\n\n"
+        f"💰 Сумма: <b>{total} ₽</b>\n\n"
+        f"Выберите способ оплаты:"
+    )
     try:
-        payment = await api.create_payment(order_id)
+        await callback.message.edit_text(method_text, reply_markup=kb.as_markup(), parse_mode="HTML")
+    except Exception:
+        await callback.message.answer(method_text, reply_markup=kb.as_markup(), parse_mode="HTML")
+
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("paymethod_"))
+async def select_pay_method(callback: CallbackQuery, state: FSMContext):
+    _, order_id_str, method_str = callback.data.split("_")
+    order_id = int(order_id_str)
+    method = int(method_str)
+
+    data = await state.get_data()
+    total = data.get("pending_total", "?")
+
+    try:
+        payment = await api.create_payment(order_id, method)
         payment_url = payment["payment_url"]
     except Exception as e:
         log.error("Payment creation error: %s", e)
-        await callback.answer("Ошибка при создании платежа. Попробуйте позже.")
+        await callback.answer("Ошибка при создании платежа. Попробуйте позже.", show_alert=True)
         return
 
     await state.clear()
 
-    from aiogram.types import InlineKeyboardMarkup
     from aiogram.utils.keyboard import InlineKeyboardBuilder
     kb = InlineKeyboardBuilder()
-    kb.button(text="💳 Оплатить", url=payment_url)
+    kb.button(text="💳 Перейти к оплате", url=payment_url)
     kb.adjust(1)
 
     pay_text = (
