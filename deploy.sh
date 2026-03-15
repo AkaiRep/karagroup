@@ -42,6 +42,9 @@ echo ""
 section "1. Системные зависимости"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 apt-get update -q
+apt-get install -y -q software-properties-common
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update -q
 apt-get install -y -q \
   curl git nginx certbot python3-certbot-nginx \
   python3.11 python3.11-venv python3-pip \
