@@ -149,11 +149,13 @@ pm2 delete karagroup-backend karagroup-bot karagroup-web 2>/dev/null || true
 
 pm2 start "$APP_DIR/backend/.venv/bin/uvicorn" \
   --name karagroup-backend \
+  --interpreter none \
   --cwd "$APP_DIR/backend" \
   -- main:app --host 127.0.0.1 --port $BACKEND_PORT --workers 2
 
 pm2 start "$APP_DIR/tg-bot/.venv/bin/python" \
   --name karagroup-bot \
+  --interpreter none \
   --cwd "$APP_DIR/tg-bot" \
   -- bot.py
 
