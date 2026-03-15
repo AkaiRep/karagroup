@@ -134,8 +134,8 @@ section "6. Web (Next.js)"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/web"
 
-# Пробросить NEXT_PUBLIC переменные из .env бэкенда
-export $(grep -E '^NEXT_PUBLIC_' "$BACKEND_ENV" | xargs) 2>/dev/null || true
+# Записать NEXT_PUBLIC переменные в .env.production чтобы Next.js подхватил при билде
+grep -E '^NEXT_PUBLIC_' "$BACKEND_ENV" > "$APP_DIR/web/.env.production" 2>/dev/null || true
 
 npm install --silent
 npm run build
