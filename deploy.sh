@@ -47,7 +47,7 @@ add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update -q
 apt-get install -y -q \
   curl git nginx certbot python3-certbot-nginx \
-  python3.11 python3.11-venv python3-pip \
+  python3.11 python3.11-venv python3.11-distutils \
   build-essential
 ok "Системные пакеты"
 
@@ -107,7 +107,8 @@ fi
 section "4. Backend (FastAPI)"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/backend"
-[ -d ".venv" ] || python3.11 -m venv .venv
+[ -d ".venv" ] || python3.11 -m venv .venv --without-pip
+curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11 --quiet
 .venv/bin/pip install --upgrade pip --quiet
 .venv/bin/pip install -r requirements.txt --quiet
 ok "Backend зависимости"
@@ -117,7 +118,8 @@ ok "Backend зависимости"
 section "5. Telegram Bot"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/tg-bot"
-[ -d ".venv" ] || python3.11 -m venv .venv
+[ -d ".venv" ] || python3.11 -m venv .venv --without-pip
+curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11 --quiet
 .venv/bin/pip install --upgrade pip --quiet
 .venv/bin/pip install -r requirements.txt --quiet
 
@@ -174,7 +176,7 @@ section "8. Nginx"
 cat > /etc/nginx/sites-available/karagroup <<NGINX
 server {
     listen 80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name ${DOMAIN};
 
     client_max_body_size 20M;
 
@@ -267,7 +269,6 @@ if [[ "$ssl_answer" =~ ^[Yy]$ ]]; then
   read -p "  Email для certbot: " ssl_email
   certbot --nginx \
     -d "$DOMAIN" \
-    -d "www.$DOMAIN" \
     --non-interactive \
     --agree-tos \
     -m "$ssl_email" \
