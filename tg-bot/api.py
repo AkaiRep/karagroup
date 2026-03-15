@@ -73,6 +73,9 @@ class BackendAPI:
     async def create_order(self, data: dict) -> dict:
         return await self._request("post", "/orders/", json=data)
 
+    async def get_order(self, order_id: int) -> dict:
+        return await self._request("get", f"/orders/{order_id}")
+
     async def create_payment(self, order_id: int, payment_method: Optional[int] = None) -> dict:
         body = {"payment_method": payment_method} if payment_method else {}
         return await self._request("post", f"/payments/create/{order_id}", json=body)

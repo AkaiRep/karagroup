@@ -205,11 +205,14 @@ async def select_pay_method(callback: CallbackQuery, state: FSMContext):
     method = int(method_str)
 
     data = await state.get_data()
-    total = data.get("pending_total", "?")
+    total = data.get("pending_total")
 
     try:
         payment = await api.create_payment(order_id, method)
         payment_url = payment["payment_url"]
+        if total is None:
+            order = await api.get_order(order_id)
+            total = order.get("price", "?")
     except Exception as e:
         log.error("Payment creation error: %s", e)
         await callback.message.answer("❌ Ошибка при создании платежа. Попробуйте позже.")
