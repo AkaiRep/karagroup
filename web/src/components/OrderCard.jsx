@@ -27,7 +27,6 @@ export default function OrderCard({ order }) {
               {status.label}
             </span>
           </div>
-          <h3 className="font-semibold text-base">{order.product_name ?? 'Услуга'}</h3>
           <p className="text-slate-500 text-xs mt-1">{date}</p>
         </div>
         <div className="text-right flex-shrink-0">
@@ -36,6 +35,22 @@ export default function OrderCard({ order }) {
           </p>
         </div>
       </div>
+
+      {order.items && order.items.length > 0 && (
+        <div className="mt-3 border-t border-white/5 pt-3 space-y-1.5">
+          {order.items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between text-sm">
+              <span className="text-slate-300">
+                {item.product?.name ?? `Услуга #${item.product_id}`}
+                {item.quantity > 1 && <span className="text-slate-500 ml-1">×{item.quantity}</span>}
+              </span>
+              {item.discount > 0 && (
+                <span className="text-xs text-slate-500 ml-2">-{item.discount}%</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {order.notes && (
         <p className="mt-3 text-sm text-slate-400 border-t border-white/5 pt-3">{order.notes}</p>
