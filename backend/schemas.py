@@ -44,6 +44,7 @@ class UserOut(BaseModel):
     worker_percentage: float
     is_vip: bool
     is_active: bool
+    telegram_id: Optional[int]
     last_seen_at: Optional[datetime]
     created_at: datetime
 
