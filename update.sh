@@ -7,13 +7,26 @@ cd $PROJECT
 git pull
 
 echo "==> Backend deps"
-pip install -r $PROJECT/backend/requirements.txt -q
+$PROJECT/backend/.venv/bin/pip install -r $PROJECT/backend/requirements.txt -q
 
 echo "==> Restart backend"
-pm2 restart uvicorn 2>/dev/null || pm2 start "uvicorn main:app --host 0.0.0.0 --port 8000" --name uvicorn --cwd $PROJECT/backend
+pm2 restart karagroup-backend 2>/dev/null || \
+  pm2 start $PROJECT/backend/.venv/bin/uvicorn \
+    --name karagroup-backend \
+    --interpreter none \
+    --cwd $PROJECT/backend \
+    -- main:app --host 127.0.0.1 --port 8000 --workers 2
+
+echo "==> Bot deps"
+$PROJECT/tg-bot/.venv/bin/pip install -r $PROJECT/tg-bot/requirements.txt -q
 
 echo "==> Restart bot"
-pm2 restart tg-bot 2>/dev/null || pm2 start "python3 bot.py" --name tg-bot --cwd $PROJECT/tg-bot
+pm2 restart karagroup-bot 2>/dev/null || \
+  pm2 start $PROJECT/tg-bot/.venv/bin/python \
+    --name karagroup-bot \
+    --interpreter none \
+    --cwd $PROJECT/tg-bot \
+    -- bot.py
 
 echo "==> Build web"
 cd $PROJECT/web
@@ -21,7 +34,8 @@ npm install --silent
 npm run build
 
 echo "==> Restart web"
-pm2 restart karashop-web 2>/dev/null || pm2 start "npm start" --name karashop-web --cwd $PROJECT/web
+pm2 restart karagroup-web 2>/dev/null || \
+  pm2 start npm --name karagroup-web --cwd $PROJECT/web -- start
 
 pm2 save --force
 
