@@ -108,7 +108,7 @@ section "4. Backend (FastAPI)"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/backend"
 [ -d ".venv" ] || python3.11 -m venv .venv --without-pip
-curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11 --quiet
+curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11
 .venv/bin/pip install --upgrade pip --quiet
 .venv/bin/pip install -r requirements.txt --quiet
 ok "Backend зависимости"
@@ -119,7 +119,7 @@ section "5. Telegram Bot"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/tg-bot"
 [ -d ".venv" ] || python3.11 -m venv .venv --without-pip
-curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11 --quiet
+curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11
 .venv/bin/pip install --upgrade pip --quiet
 .venv/bin/pip install -r requirements.txt --quiet
 
