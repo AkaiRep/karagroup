@@ -107,10 +107,10 @@ fi
 section "4. Backend (FastAPI)"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/backend"
-[ -d ".venv" ] || python3.11 -m venv .venv --without-pip
-curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11
-.venv/bin/pip install --upgrade pip --quiet
-.venv/bin/pip install -r requirements.txt --quiet
+python3.11 -m venv .venv
+.venv/bin/python3.11 -m ensurepip --upgrade
+.venv/bin/pip install --upgrade pip -q
+.venv/bin/pip install -r requirements.txt -q
 ok "Backend зависимости"
 
 
@@ -118,10 +118,10 @@ ok "Backend зависимости"
 section "5. Telegram Bot"
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cd "$APP_DIR/tg-bot"
-[ -d ".venv" ] || python3.11 -m venv .venv --without-pip
-curl -sS https://bootstrap.pypa.io/get-pip.py | .venv/bin/python3.11
-.venv/bin/pip install --upgrade pip --quiet
-.venv/bin/pip install -r requirements.txt --quiet
+python3.11 -m venv .venv
+.venv/bin/python3.11 -m ensurepip --upgrade
+.venv/bin/pip install --upgrade pip -q
+.venv/bin/pip install -r requirements.txt -q
 
 # Бот читает .env из backend
 [ -f ".env" ] || ln -s "$BACKEND_ENV" .env
