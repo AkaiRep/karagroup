@@ -60,8 +60,9 @@ async def create_payment(
         raise HTTPException(status_code=404, detail="Order not found")
     if order.status != models.OrderStatus.pending_payment:
         raise HTTPException(status_code=400, detail="Заказ не ожидает оплаты")
-    if current_user.role == models.UserRole.client and order.telegram_user_id != current_user.telegram_id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    if current_user.role != models.UserRole.admin:
+        if order.telegram_user_id != current_user.telegram_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
     return_url = os.getenv("PLATEGA_RETURN_URL", "https://t.me/")
     payment_method = body.payment_method or int(os.getenv("PLATEGA_PAYMENT_METHOD", "2"))

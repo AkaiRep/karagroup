@@ -1,9 +1,11 @@
 import os
 import hmac
 import hashlib
+import time
+from collections import defaultdict, deque
 from urllib.parse import parse_qsl
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
@@ -11,9 +13,25 @@ import models, schemas, auth as auth_utils
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+_auth_rate: dict[str, deque] = defaultdict(deque)
+AUTH_RATE_LIMIT = 10   # попыток
+AUTH_RATE_WINDOW = 60  # секунд
+
+
+def _check_auth_rate(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    dq = _auth_rate[ip]
+    while dq and dq[0] < now - AUTH_RATE_WINDOW:
+        dq.popleft()
+    if len(dq) >= AUTH_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Слишком много попыток. Подождите минуту.")
+    dq.append(now)
+
 
 @router.post("/login", response_model=schemas.TokenResponse)
-def login(data: schemas.LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, data: schemas.LoginRequest, db: Session = Depends(get_db)):
+    _check_auth_rate(request)
     user = db.query(models.User).filter(models.User.username == data.username).first()
     if not user or not auth_utils.verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -28,7 +46,8 @@ class TelegramWebAppAuthData(BaseModel):
 
 
 @router.post("/telegram-webapp", response_model=schemas.TokenResponse)
-def telegram_webapp_auth(data: TelegramWebAppAuthData, db: Session = Depends(get_db)):
+def telegram_webapp_auth(request: Request, data: TelegramWebAppAuthData, db: Session = Depends(get_db)):
+    _check_auth_rate(request)
     bot_token = os.getenv("BOT_TOKEN")
     if not bot_token:
         raise HTTPException(status_code=503, detail="Telegram auth not configured")
@@ -97,7 +116,8 @@ class TelegramAuthData(BaseModel):
 
 
 @router.post("/telegram", response_model=schemas.TokenResponse)
-def telegram_auth(data: TelegramAuthData, db: Session = Depends(get_db)):
+def telegram_auth(request: Request, data: TelegramAuthData, db: Session = Depends(get_db)):
+    _check_auth_rate(request)
     bot_token = os.getenv("BOT_TOKEN")
     if not bot_token:
         raise HTTPException(status_code=503, detail="Telegram auth not configured")

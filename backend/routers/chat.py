@@ -13,6 +13,19 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 UPLOAD_DIR = Path("uploads/chat")
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _check_order_access(order: models.Order, user: models.User):
+    """Raises 403 if user is not allowed to access this order's chat."""
+    if user.role == models.UserRole.admin:
+        return
+    if user.role == models.UserRole.worker:
+        if order.worker_id != user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+    else:  # client
+        if order.telegram_user_id != user.telegram_id:
+            raise HTTPException(status_code=403, detail="Access denied")
 
 # order_id -> list of websockets
 _connections: Dict[int, List[WebSocket]] = {}
@@ -93,6 +106,10 @@ async def mark_read(
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
     """Mark all messages in this order chat as read for current user."""
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    _check_order_access(order, current_user)
     now = datetime.now(timezone.utc)
     receipt = (
         db.query(models.ChatReadReceipt)
@@ -124,8 +141,7 @@ def get_messages(
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    if current_user.role == models.UserRole.worker and order.worker_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _check_order_access(order, current_user)
 
     # Get the other party's last_read_at to compute is_read
     other_receipt = (
@@ -165,8 +181,7 @@ async def send_message(
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    if current_user.role == models.UserRole.worker and order.worker_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _check_order_access(order, current_user)
 
     msg = models.ChatMessage(order_id=order_id, sender_id=current_user.id, content=data.content)
     db.add(msg)
@@ -191,8 +206,7 @@ async def upload_image(
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    if current_user.role == models.UserRole.worker and order.worker_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    _check_order_access(order, current_user)
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail="Only images (jpg, png, gif, webp) are allowed")
 
@@ -201,8 +215,11 @@ async def upload_image(
     filename = f"{order_id}_{int(datetime.now(timezone.utc).timestamp())}_{uuid.uuid4().hex[:8]}.{ext}"
     filepath = UPLOAD_DIR / filename
 
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Файл слишком большой. Максимум 10 МБ.")
     with open(filepath, "wb") as f:
-        f.write(await file.read())
+        f.write(contents)
 
     image_url = f"/uploads/chat/{filename}"
     msg = models.ChatMessage(
@@ -240,7 +257,11 @@ async def chat_websocket(order_id: int, websocket: WebSocket, token: str):
         if not order:
             await websocket.close(code=4004)
             return
+        # Ownership check
         if user.role == models.UserRole.worker and order.worker_id != user.id:
+            await websocket.close(code=4003)
+            return
+        if user.role == models.UserRole.client and order.telegram_user_id != user.telegram_id:
             await websocket.close(code=4003)
             return
 
