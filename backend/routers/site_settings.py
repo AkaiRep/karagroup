@@ -28,6 +28,11 @@ ALLOWED_KEYS = {
     "stat_3_num", "stat_3_label", "stat_3_desc",
     # Catalog
     "pinned_category_id",
+    # SEO
+    "seo_title",
+    "seo_description",
+    "seo_keywords",
+    "seo_og_image",
 }
 
 

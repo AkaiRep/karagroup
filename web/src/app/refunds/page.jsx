@@ -3,7 +3,11 @@ import LegalPage, { Section } from '@/components/LegalPage'
 const EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@karashop.ru'
 const MANAGER = process.env.NEXT_PUBLIC_MANAGER || ''
 
-export const metadata = { title: 'Возврат средств — KaraShop' }
+export const metadata = {
+  title: 'Возврат средств',
+  description: 'Условия и порядок возврата денежных средств за услуги KaraShop. Полный возврат до начала выполнения заказа.',
+  alternates: { canonical: '/refunds' },
+}
 
 export default function RefundsPage() {
   const supportLink = MANAGER

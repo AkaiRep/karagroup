@@ -6,7 +6,11 @@ const ADDRESS = process.env.NEXT_PUBLIC_LEGAL_ADDRESS || 'не указан'
 const INN = process.env.NEXT_PUBLIC_INN || ''
 const MANAGER = process.env.NEXT_PUBLIC_MANAGER || ''
 
-export const metadata = { title: 'Договор публичной оферты — KaraShop' }
+export const metadata = {
+  title: 'Договор публичной оферты',
+  description: 'Публичная оферта сервиса KaraShop — условия оказания услуг профессионального бустинга игровых аккаунтов.',
+  alternates: { canonical: '/offer' },
+}
 
 export default function OfferPage() {
   return (

@@ -38,6 +38,10 @@ const ALL_FIELDS = [
   { tab: 'stats',  key: 'stat_3_num',    label: 'Стата 3 — Цифра', type: 'text' },
   { tab: 'stats',  key: 'stat_3_label',  label: 'Стата 3 — Заголовок', type: 'text' },
   { tab: 'stats',  key: 'stat_3_desc',   label: 'Стата 3 — Описание', type: 'text' },
+  { tab: 'seo',    key: 'seo_title',       label: 'Заголовок сайта (title)', hint: 'Отображается в результатах поиска Яндекс/Google', type: 'text' },
+  { tab: 'seo',    key: 'seo_description', label: 'Описание сайта (description)', hint: 'Краткое описание под заголовком в поисковике (160 символов)', type: 'textarea', rows: 3 },
+  { tab: 'seo',    key: 'seo_keywords',    label: 'Ключевые слова (keywords)', hint: 'Через запятую: буст аккаунтов, буст, повышение ранга', type: 'text' },
+  { tab: 'seo',    key: 'seo_og_image',    label: 'OG-изображение (URL)', hint: 'Картинка при репосте ссылки в соцсетях/Telegram (1200×630)', type: 'text' },
 ]
 
 const TABS = [
@@ -48,6 +52,7 @@ const TABS = [
   { id: 'stats',   label: 'Статистика' },
   { id: 'catalog', label: 'Каталог' },
   { id: 'faq',     label: 'FAQ' },
+  { id: 'seo',     label: 'SEO' },
 ]
 
 const EMPTY_FAQ = { question: '', answer: '', order: 0, is_active: true }

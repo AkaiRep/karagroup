@@ -5,7 +5,11 @@ const MANAGER = process.env.NEXT_PUBLIC_MANAGER || ''
 const CHANNEL = process.env.NEXT_PUBLIC_BOT_CHANNEL || ''
 const TIKTOK = process.env.NEXT_PUBLIC_TIKTOK || ''
 
-export const metadata = { title: 'Контакты — KaraShop' }
+export const metadata = {
+  title: 'Контакты',
+  description: 'Свяжитесь с поддержкой KaraShop: Telegram, email. Работаем ежедневно с 10:00 до 22:00 МСК.',
+  alternates: { canonical: '/contacts' },
+}
 
 function ContactCard({ icon, title, subtitle, href, external = false }) {
   const inner = (
