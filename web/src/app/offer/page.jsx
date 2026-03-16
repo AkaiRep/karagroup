@@ -46,11 +46,8 @@ export default function OfferPage() {
       </Section>
 
       <Section title="5. Возврат и отмена">
-        <p>5.1. До начала выполнения заказа — полный возврат средств по запросу Заказчика.</p>
-        <p>5.2. После начала выполнения — возврат не производится, так как ресурсы Исполнителя уже задействованы.</p>
-        <p>5.3. Если выполнение невозможно по вине Исполнителя — полный возврат в течение 5 рабочих дней.</p>
-        <p>5.4. Для оформления возврата Заказчик обращается по адресу: <a href={`mailto:${EMAIL}`} className="text-green-400 hover:underline">{EMAIL}</a>{MANAGER && <> или {MANAGER} в Telegram</>}.</p>
-        <p>5.5. Возврат осуществляется тем же способом, что и оплата, в сроки платёжной системы.</p>
+        <p>5.1. Порядок, условия и сроки возврата денежных средств регулируются отдельным документом — <a href="/refunds" className="text-green-400 hover:underline">Политикой возврата</a>.</p>
+        <p>5.2. Для оформления возврата Заказчик обращается в поддержку: <a href={`mailto:${EMAIL}`} className="text-green-400 hover:underline">{EMAIL}</a>{MANAGER && <> или <a href={`https://t.me/${MANAGER.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">{MANAGER}</a> в Telegram</>}.</p>
       </Section>
 
       <Section title="6. Ответственность сторон">
