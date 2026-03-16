@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { getSiteSettings, updateSiteSetting } from '../api'
+import { getSiteSettings, updateSiteSetting, getFAQ, createFAQ, updateFAQ, deleteFAQ } from '../api'
 
 const DEFAULTS = {
   dev_banner_text: 'Сайт находится в разработке — возможны временные неполадки',
@@ -17,7 +17,6 @@ const DEFAULTS = {
   stat_3_num: '<2ч',  stat_3_label: 'Время отклика',       stat_3_desc: 'Начинаем работу быстро',
 }
 
-// Flat list of all fields for search
 const ALL_FIELDS = [
   { tab: 'banner', key: 'dev_banner_enabled', label: 'Показывать баннер', type: 'toggle' },
   { tab: 'banner', key: 'dev_banner_text',    label: 'Текст баннера', type: 'text' },
@@ -47,7 +46,129 @@ const TABS = [
   { id: 'hero',   label: 'Hero' },
   { id: 'about',  label: 'О нас' },
   { id: 'stats',  label: 'Статистика' },
+  { id: 'faq',    label: 'FAQ' },
 ]
+
+const EMPTY_FAQ = { question: '', answer: '', order: 0, is_active: true }
+
+function FAQTab() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState(EMPTY_FAQ)
+  const [saving, setSaving] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    getFAQ().then(setItems).catch(console.error).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const openNew = () => { setForm(EMPTY_FAQ); setEditing('new') }
+  const openEdit = (item) => { setForm({ question: item.question, answer: item.answer, order: item.order, is_active: item.is_active }); setEditing(item) }
+  const close = () => setEditing(null)
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      editing === 'new' ? await createFAQ(form) : await updateFAQ(editing.id, form)
+      load(); close()
+    } catch (e) { console.error(e) }
+    finally { setSaving(false) }
+  }
+
+  const remove = async (id) => {
+    if (!confirm('Удалить вопрос?')) return
+    await deleteFAQ(id); load()
+  }
+
+  if (loading) return <div className="text-slate-500 text-sm">Загрузка...</div>
+
+  return (
+    <div>
+      <div className="flex justify-end mb-4">
+        <button onClick={openNew} className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm transition-colors">
+          + Добавить вопрос
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {items.map(item => (
+          <div key={item.id} className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs text-slate-500">#{item.order}</span>
+                  {!item.is_active && <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-400">скрыт</span>}
+                </div>
+                <p className="font-medium text-white text-sm mb-1">{item.question}</p>
+                <p className="text-xs text-slate-400 line-clamp-2">{item.answer}</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button onClick={() => openEdit(item)} className="px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">Изменить</button>
+                <button onClick={() => remove(item.id)} className="px-3 py-1.5 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors">Удалить</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && <div className="text-slate-500 text-sm text-center py-8">Вопросов пока нет</div>}
+      </div>
+
+      {editing !== null && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-2xl p-6 w-full max-w-lg">
+            <h2 className="text-lg font-semibold mb-5">{editing === 'new' ? 'Новый вопрос' : 'Редактировать вопрос'}</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Вопрос</label>
+                <input
+                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50"
+                  value={form.question}
+                  onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
+                  placeholder="Как долго выполняется заказ?"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Ответ</label>
+                <textarea
+                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50 resize-none"
+                  rows={5}
+                  value={form.answer}
+                  onChange={e => setForm(f => ({ ...f, answer: e.target.value }))}
+                  placeholder="Обычно заказ выполняется в течение..."
+                />
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">Порядок</label>
+                  <input
+                    type="number"
+                    className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50"
+                    value={form.order}
+                    onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
+                    <span className="text-sm text-slate-300">Активен</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={close} className="flex-1 py-2 border border-slate-700 rounded-lg text-sm text-slate-400 hover:text-white transition-colors">Отмена</button>
+              <button onClick={save} disabled={saving || !form.question || !form.answer} className="flex-1 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded-lg text-sm text-white transition-colors">
+                {saving ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Settings() {
   const [settings, setSettings] = useState({})
@@ -58,9 +179,7 @@ export default function Settings() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    getSiteSettings()
-      .then(data => setSettings(data))
-      .finally(() => setLoading(false))
+    getSiteSettings().then(setSettings).finally(() => setLoading(false))
   }, [])
 
   const get = (key) => key in settings ? settings[key] : (DEFAULTS[key] ?? '')
@@ -98,35 +217,33 @@ export default function Settings() {
     <div className="p-8 max-w-2xl">
       <h1 className="text-2xl font-bold mb-6">Настройки сайта</h1>
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-        </svg>
-        <input
-          value={search}
-          onChange={e => { setSearch(e.target.value); setActiveTab('all') }}
-          placeholder="Поиск по настройкам..."
-          className="w-full bg-[#1a1f2e] border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50 transition-colors placeholder-slate-600"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
-            ✕
-          </button>
-        )}
-      </div>
+      {/* Search — скрываем на вкладке FAQ */}
+      {activeTab !== 'faq' && (
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          <input
+            value={search}
+            onChange={e => { setSearch(e.target.value); setActiveTab('all') }}
+            placeholder="Поиск по настройкам..."
+            className="w-full bg-[#1a1f2e] border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50 transition-colors placeholder-slate-600"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">✕</button>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       {!search && (
-        <div className="flex gap-1 mb-6 bg-[#1a1f2e] p-1 rounded-xl border border-slate-700/50">
+        <div className="flex gap-1 mb-6 bg-[#1a1f2e] p-1 rounded-xl border border-slate-700/50 flex-wrap">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-green-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                activeTab === tab.id ? 'bg-green-600 text-white' : 'text-slate-400 hover:text-white'
               }`}
             >
               {tab.label}
@@ -135,84 +252,68 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Fields */}
-      {visibleFields.length === 0 ? (
-        <div className="text-center py-12 text-slate-500">Ничего не найдено</div>
+      {/* FAQ tab */}
+      {activeTab === 'faq' ? (
+        <FAQTab />
       ) : (
-        <div className="space-y-3">
-          {visibleFields.map(field => (
-            <div key={field.key} className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-4">
-              {field.type === 'toggle' ? (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-200">{field.label}</p>
-                    {search && <p className="text-xs text-slate-500 mt-0.5">{TABS.find(t => t.id === field.tab)?.label}</p>}
-                  </div>
-                  <button
-                    onClick={() => toggle(field.key)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${get(field.key) === 'true' ? 'bg-amber-500' : 'bg-slate-600'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${get(field.key) === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <label className="text-sm font-medium text-slate-200">{field.label}</label>
-                      {search && <span className="ml-2 text-xs text-slate-500">{TABS.find(t => t.id === field.tab)?.label}</span>}
-                      {field.hint && <p className="text-xs text-slate-500 mt-0.5">{field.hint}</p>}
+        <>
+          {visibleFields.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">Ничего не найдено</div>
+          ) : (
+            <div className="space-y-3">
+              {visibleFields.map(field => (
+                <div key={field.key} className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-4">
+                  {field.type === 'toggle' ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-200">{field.label}</p>
+                        {search && <p className="text-xs text-slate-500 mt-0.5">{TABS.find(t => t.id === field.tab)?.label}</p>}
+                      </div>
+                      <button
+                        onClick={() => toggle(field.key)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${get(field.key) === 'true' ? 'bg-amber-500' : 'bg-slate-600'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${get(field.key) === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => save(field.key)}
-                      disabled={!dirty[field.key]}
-                      className={`ml-3 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
-                        saved[field.key] ? 'bg-green-500/20 text-green-400' :
-                        dirty[field.key] ? 'bg-green-600 hover:bg-green-500 text-white' :
-                        'bg-slate-700/40 text-slate-500 cursor-default'
-                      }`}
-                    >
-                      {saved[field.key] ? 'Сохранено!' : 'Сохранить'}
-                    </button>
-                  </div>
-                  {field.type === 'color' ? (
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="color"
-                        value={get(field.key) || '#fbbf24'}
-                        onChange={e => set(field.key, e.target.value)}
-                        className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0"
-                      />
-                      <input
-                        value={get(field.key) || '#fbbf24'}
-                        onChange={e => set(field.key, e.target.value)}
-                        placeholder="#fbbf24"
-                        className="flex-1 bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-green-500/50 transition-colors"
-                      />
-                      <div
-                        className="w-10 h-10 rounded-lg border border-white/10 flex-shrink-0"
-                        style={{ background: get(field.key) || '#fbbf24' }}
-                      />
-                    </div>
-                  ) : field.type === 'textarea' ? (
-                    <textarea
-                      value={get(field.key)}
-                      onChange={e => set(field.key, e.target.value)}
-                      rows={field.rows || 3}
-                      className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors resize-y"
-                    />
                   ) : (
-                    <input
-                      value={get(field.key)}
-                      onChange={e => set(field.key, e.target.value)}
-                      className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors"
-                    />
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <label className="text-sm font-medium text-slate-200">{field.label}</label>
+                          {search && <span className="ml-2 text-xs text-slate-500">{TABS.find(t => t.id === field.tab)?.label}</span>}
+                          {field.hint && <p className="text-xs text-slate-500 mt-0.5">{field.hint}</p>}
+                        </div>
+                        <button
+                          onClick={() => save(field.key)}
+                          disabled={!dirty[field.key]}
+                          className={`ml-3 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
+                            saved[field.key] ? 'bg-green-500/20 text-green-400' :
+                            dirty[field.key] ? 'bg-green-600 hover:bg-green-500 text-white' :
+                            'bg-slate-700/40 text-slate-500 cursor-default'
+                          }`}
+                        >
+                          {saved[field.key] ? 'Сохранено!' : 'Сохранить'}
+                        </button>
+                      </div>
+                      {field.type === 'color' ? (
+                        <div className="flex items-center gap-3">
+                          <input type="color" value={get(field.key) || '#fbbf24'} onChange={e => set(field.key, e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0" />
+                          <input value={get(field.key) || '#fbbf24'} onChange={e => set(field.key, e.target.value)} placeholder="#fbbf24" className="flex-1 bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-green-500/50 transition-colors" />
+                          <div className="w-10 h-10 rounded-lg border border-white/10 flex-shrink-0" style={{ background: get(field.key) || '#fbbf24' }} />
+                        </div>
+                      ) : field.type === 'textarea' ? (
+                        <textarea value={get(field.key)} onChange={e => set(field.key, e.target.value)} rows={field.rows || 3} className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors resize-y" />
+                      ) : (
+                        <input value={get(field.key)} onChange={e => set(field.key, e.target.value)} className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors" />
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )

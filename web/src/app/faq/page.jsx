@@ -40,8 +40,16 @@ export default function FAQPage() {
               </svg>
             </button>
             {open === item.id && (
-              <div className="px-5 pb-5 text-slate-400 text-sm leading-relaxed border-t border-white/5 pt-4 whitespace-pre-line">
-                {item.answer}
+              <div className="px-5 pb-5 text-slate-400 text-sm leading-relaxed border-t border-white/5 pt-4">
+                {item.answer.split('\n').map((line, i) => (
+                  <p key={i} className={i > 0 ? 'mt-2' : ''}>
+                    {line.split(/(https?:\/\/[^\s]+)/g).map((part, j) =>
+                      /^https?:\/\//.test(part)
+                        ? <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:text-green-300 underline underline-offset-2 break-all">{part}</a>
+                        : part
+                    )}
+                  </p>
+                ))}
               </div>
             )}
           </div>
