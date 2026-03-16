@@ -65,6 +65,14 @@ export default function CartDrawer({ open, onClose }) {
     }
   }
 
+  const handleCancelOrder = async () => {
+    try {
+      await api.cancelOrder(pendingOrderId)
+    } catch {}
+    setPendingOrderId(null)
+    setCheckoutState('idle')
+  }
+
   if (!open) return null
 
   return (
@@ -147,6 +155,14 @@ export default function CartDrawer({ open, onClose }) {
               </button>
             </div>
             {checkoutState === 'paying' && <p className="text-slate-500 text-sm">Создаём ссылку на оплату...</p>}
+            {checkoutState === 'method' && (
+              <button
+                onClick={handleCancelOrder}
+                className="text-sm text-slate-500 hover:text-red-400 transition-colors"
+              >
+                Отменить заказ
+              </button>
+            )}
           </div>
         )}
 

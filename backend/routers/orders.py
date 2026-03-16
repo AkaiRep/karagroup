@@ -456,6 +456,24 @@ async def ws_recent_orders(websocket: WebSocket):
         pass
 
 
+@router.post("/{order_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_order(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    """Клиент отменяет свой неоплаченный заказ."""
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != models.OrderStatus.pending_payment:
+        raise HTTPException(status_code=400, detail="Можно отменить только неоплаченный заказ")
+    if current_user.role != models.UserRole.admin and order.telegram_user_id != current_user.telegram_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    db.delete(order)
+    db.commit()
+
+
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_order(
     order_id: int,

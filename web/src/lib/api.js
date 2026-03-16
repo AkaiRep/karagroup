@@ -27,6 +27,7 @@ export const api = {
   // Orders
   getRecentOrders: () => client.get('/orders/recent').then(r => r.data),
   createOrder: (data) => client.post('/orders/', data).then(r => r.data),
+  cancelOrder: (orderId) => client.post(`/orders/${orderId}/cancel`).then(r => r.data),
   getMyOrders: (telegramUserId) => client.get('/orders/', { params: { telegram_user_id: telegramUserId, exclude_status: 'pending_payment' } }).then(r => r.data),
 
   // Payments
