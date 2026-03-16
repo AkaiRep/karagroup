@@ -23,6 +23,7 @@ backend/uploads/
 node_modules/
 dist-electron/
 out/
+web/.next/
 
 # Mac
 .DS_Store
