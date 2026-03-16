@@ -11,6 +11,7 @@ import GlobalChat from './pages/GlobalChat'
 import Media from './pages/Media'
 import Settings from './pages/Settings'
 import Health from './pages/Health'
+import FAQ from './pages/FAQ'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore()
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="media" element={<Media />} />
           <Route path="settings" element={<Settings />} />
           <Route path="health" element={<Health />} />
+          <Route path="faq" element={<FAQ />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -183,7 +183,7 @@ server {
     client_max_body_size 20M;
 
     # ── Backend API ──────────────────────────────────────
-    location ~ ^/(auth|categories|products|payments|chat|orders|users|financial|media|global-chat|reviews|site-settings|health) {
+    location ~ ^/(auth|categories|products|payments|chat|orders|users|financial|media|global-chat|reviews|site-settings|health|faq) {
         proxy_pass http://127.0.0.1:${BACKEND_PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;

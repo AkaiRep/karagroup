@@ -308,6 +308,31 @@ class TransactionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class FAQCreate(BaseModel):
+    question: str = Field(..., min_length=1, max_length=512)
+    answer: str = Field(..., min_length=1)
+    order: int = 0
+    is_active: bool = True
+
+
+class FAQUpdate(BaseModel):
+    question: Optional[str] = None
+    answer: Optional[str] = None
+    order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class FAQOut(BaseModel):
+    id: int
+    question: str
+    answer: str
+    order: int
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class DashboardStats(BaseModel):
     total_revenue: float
     avg_order_value: float

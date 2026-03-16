@@ -126,6 +126,12 @@ export const getHealth = () => api.get('/health/').then(r => r.data)
 export const getSiteSettings = () => api.get('/site-settings/').then(r => r.data)
 export const updateSiteSetting = (key, value) => api.patch(`/site-settings/${key}`, { value }).then(r => r.data)
 
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+export const getFAQ = () => api.get('/faq/all').then(r => r.data)
+export const createFAQ = (data) => api.post('/faq/', data).then(r => r.data)
+export const updateFAQ = (id, data) => api.patch(`/faq/${id}`, data).then(r => r.data)
+export const deleteFAQ = (id) => api.delete(`/faq/${id}`)
+
 // ── Financial ─────────────────────────────────────────────────────────────────
 export const getDashboard = () => api.get('/financial/dashboard').then((r) => r.data)
 export const getTransactions = (params) =>
