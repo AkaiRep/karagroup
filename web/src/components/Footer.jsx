@@ -8,7 +8,7 @@ export default function Footer() {
 
           {/* Legal links */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-xs text-slate-500">
-            <Link href="/faq" className="hover:text-slate-300 transition-colors">FAQ</Link>
+            <Link href="/questions" className="hover:text-slate-300 transition-colors">FAQ</Link>
             <Link href="/contacts" className="hover:text-slate-300 transition-colors">Контакты</Link>
             <Link href="/offer" className="hover:text-slate-300 transition-colors">Договор оферты</Link>
             <Link href="/privacy" className="hover:text-slate-300 transition-colors">Политика конфиденциальности</Link>

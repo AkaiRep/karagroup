@@ -25,7 +25,7 @@ export default function Header() {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6 text-sm text-slate-400">
             <Link href="/" className="hover:text-white transition-colors">Каталог</Link>
-            <Link href="/faq" className="hover:text-white transition-colors">FAQ</Link>
+            <Link href="/questions" className="hover:text-white transition-colors">FAQ</Link>
             <Link href="/contacts" className="hover:text-white transition-colors">Контакты</Link>
             {user && <Link href="/my-orders" className="hover:text-white transition-colors">Мои заказы</Link>}
           </nav>
