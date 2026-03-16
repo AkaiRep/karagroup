@@ -112,7 +112,13 @@ export default function CatalogPage() {
   const catPopularity = (catId) =>
     products.filter(p => p.category_id === catId).reduce((s, p) => s + (p.order_count || 0), 0)
 
-  const sortedCategories = [...categories].sort((a, b) => catPopularity(b.id) - catPopularity(a.id))
+  const pinnedCatId = s.pinned_category_id ? parseInt(s.pinned_category_id) : null
+
+  const sortedCategories = [...categories].sort((a, b) => {
+    if (a.id === pinnedCatId) return -1
+    if (b.id === pinnedCatId) return 1
+    return catPopularity(b.id) - catPopularity(a.id)
+  })
 
   // Most popular product per category
   const topProductIds = new Set(
@@ -293,7 +299,7 @@ export default function CatalogPage() {
         ) : activeCategory !== null ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
-              <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={topProductIds.has(product.id)} />
+              <ProductCard key={product.id} product={product} globalDiscount={activeCategory === pinnedCatId ? 0 : globalDiscount} isTop={activeCategory !== pinnedCatId && topProductIds.has(product.id)} />
             ))}
           </div>
         ) : (
@@ -301,22 +307,25 @@ export default function CatalogPage() {
             {sortedCategories
               .filter(cat => products.some(p => p.category_id === cat.id))
               .map(cat => {
+                const isPinned = cat.id === pinnedCatId
                 const catProducts = products.filter(p => p.category_id === cat.id)
                 const visible = getVisible(cat.id)
                 const shown = catProducts.slice(0, visible)
                 const hasMore = catProducts.length > visible
+                const catDiscount = isPinned ? 0 : globalDiscount
                 return (
                   <div key={cat.id}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                       <span className="text-sm font-semibold text-green-400 uppercase tracking-widest px-2">
                         {cat.name}
+                        {isPinned && <span className="ml-2 text-xs text-yellow-400/80 normal-case tracking-normal">⭐ закреп</span>}
                       </span>
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {shown.map(product => (
-                        <ProductCard key={product.id} product={product} globalDiscount={globalDiscount} isTop={topProductIds.has(product.id)} />
+                        <ProductCard key={product.id} product={product} globalDiscount={catDiscount} isTop={!isPinned && topProductIds.has(product.id)} />
                       ))}
                     </div>
                     {hasMore && (

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { getSiteSettings, updateSiteSetting, getFAQ, createFAQ, updateFAQ, deleteFAQ } from '../api'
+import { getSiteSettings, updateSiteSetting, getFAQ, createFAQ, updateFAQ, deleteFAQ, getCategories } from '../api'
 
 const DEFAULTS = {
   dev_banner_text: 'Сайт находится в разработке — возможны временные неполадки',
@@ -41,15 +41,63 @@ const ALL_FIELDS = [
 ]
 
 const TABS = [
-  { id: 'all',    label: 'Все' },
-  { id: 'banner', label: 'Баннер' },
-  { id: 'hero',   label: 'Hero' },
-  { id: 'about',  label: 'О нас' },
-  { id: 'stats',  label: 'Статистика' },
-  { id: 'faq',    label: 'FAQ' },
+  { id: 'all',     label: 'Все' },
+  { id: 'banner',  label: 'Баннер' },
+  { id: 'hero',    label: 'Hero' },
+  { id: 'about',   label: 'О нас' },
+  { id: 'stats',   label: 'Статистика' },
+  { id: 'catalog', label: 'Каталог' },
+  { id: 'faq',     label: 'FAQ' },
 ]
 
 const EMPTY_FAQ = { question: '', answer: '', order: 0, is_active: true }
+
+function CatalogTab({ settings, onSave }) {
+  const [categories, setCategories] = useState([])
+  const [pinnedId, setPinnedId] = useState(settings.pinned_category_id || '')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(console.error)
+  }, [])
+
+  const save = async () => {
+    await onSave('pinned_category_id', pinnedId)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <label className="text-sm font-medium text-slate-200">Закреплённая категория</label>
+            <p className="text-xs text-slate-500 mt-0.5">Отображается первой · глобальная скидка не применяется · сортировка по популярности отключена</p>
+          </div>
+          <button
+            onClick={save}
+            className={`ml-3 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
+              saved ? 'bg-green-500/20 text-green-400' : 'bg-green-600 hover:bg-green-500 text-white'
+            }`}
+          >
+            {saved ? 'Сохранено!' : 'Сохранить'}
+          </button>
+        </div>
+        <select
+          value={pinnedId}
+          onChange={e => setPinnedId(e.target.value)}
+          className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50"
+        >
+          <option value="">— Без закрепа —</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
 
 function FAQTab() {
   const [items, setItems] = useState([])
@@ -252,9 +300,11 @@ export default function Settings() {
         </div>
       )}
 
-      {/* FAQ tab */}
+      {/* Special tabs */}
       {activeTab === 'faq' ? (
         <FAQTab />
+      ) : activeTab === 'catalog' ? (
+        <CatalogTab settings={settings} onSave={async (key, val) => { await updateSiteSetting(key, val); setSettings(s => ({ ...s, [key]: val })) }} />
       ) : (
         <>
           {visibleFields.length === 0 ? (

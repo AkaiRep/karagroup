@@ -26,6 +26,8 @@ ALLOWED_KEYS = {
     "stat_1_num", "stat_1_label", "stat_1_desc",
     "stat_2_num", "stat_2_label", "stat_2_desc",
     "stat_3_num", "stat_3_label", "stat_3_desc",
+    # Catalog
+    "pinned_category_id",
 }
 
 
