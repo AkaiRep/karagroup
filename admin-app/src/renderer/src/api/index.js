@@ -132,6 +132,12 @@ export const createFAQ = (data) => api.post('/faq/', data).then(r => r.data)
 export const updateFAQ = (id, data) => api.patch(`/faq/${id}`, data).then(r => r.data)
 export const deleteFAQ = (id) => api.delete(`/faq/${id}`)
 
+// ── Blog ──────────────────────────────────────────────────────────────────────
+export const getBlogPosts = () => api.get('/blog/all').then(r => r.data)
+export const createBlogPost = (data) => api.post('/blog/', data).then(r => r.data)
+export const updateBlogPost = (id, data) => api.patch(`/blog/${id}`, data).then(r => r.data)
+export const deleteBlogPost = (id) => api.delete(`/blog/${id}`)
+
 // ── Financial ─────────────────────────────────────────────────────────────────
 export const getDashboard = () => api.get('/financial/dashboard').then((r) => r.data)
 export const getTransactions = (params) =>

@@ -240,6 +240,20 @@ class FAQ(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(256), nullable=False)
+    slug = Column(String(256), unique=True, nullable=False, index=True)
+    excerpt = Column(Text, nullable=True)
+    content = Column(Text, nullable=False)
+    cover_image_url = Column(String(512), nullable=True)
+    is_published = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Review(Base):
     __tablename__ = "reviews"
 

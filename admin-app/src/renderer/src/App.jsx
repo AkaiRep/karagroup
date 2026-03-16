@@ -12,6 +12,7 @@ import Media from './pages/Media'
 import Settings from './pages/Settings'
 import Health from './pages/Health'
 import FAQ from './pages/FAQ'
+import Blog from './pages/Blog'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore()
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="settings" element={<Settings />} />
           <Route path="health" element={<Health />} />
           <Route path="faq" element={<FAQ />} />
+          <Route path="blog" element={<Blog />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

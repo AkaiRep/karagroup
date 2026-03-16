@@ -333,6 +333,38 @@ class FAQOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PostCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=256)
+    slug: str = Field(..., min_length=1, max_length=256)
+    excerpt: Optional[str] = None
+    content: str = Field(..., min_length=1)
+    cover_image_url: Optional[str] = None
+    is_published: bool = False
+
+
+class PostUpdate(BaseModel):
+    title: Optional[str] = None
+    slug: Optional[str] = None
+    excerpt: Optional[str] = None
+    content: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    is_published: Optional[bool] = None
+
+
+class PostOut(BaseModel):
+    id: int
+    title: str
+    slug: str
+    excerpt: Optional[str]
+    content: str
+    cover_image_url: Optional[str]
+    is_published: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class DashboardStats(BaseModel):
     total_revenue: float
     avg_order_value: float

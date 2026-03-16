@@ -32,6 +32,7 @@ export default function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6 text-sm text-slate-400">
+            <Link href="/blog" className="hover:text-white transition-colors">Блог</Link>
             <Link href="/faq" className="hover:text-white transition-colors">FAQ</Link>
             <Link href="/contacts" className="hover:text-white transition-colors">Контакты</Link>
             {user && <Link href="/orders" className="hover:text-white transition-colors">Мои заказы</Link>}
@@ -103,6 +104,7 @@ export default function Header() {
           className="md:hidden"
         >
           <div ref={menuRef} className="border-t border-white/5 bg-[#07080d]/95 px-4 py-4 flex flex-col gap-3">
+            <Link href="/blog" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Блог</Link>
             <Link href="/faq" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">FAQ</Link>
             <Link href="/contacts" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Контакты</Link>
             {user && <Link href="/orders" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Мои заказы</Link>}

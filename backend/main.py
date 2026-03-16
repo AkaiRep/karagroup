@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import engine, Base
 import models  # noqa: F401
-from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews, site_settings, health, faq
+from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews, site_settings, health, faq, blog
 
 # Ensure uploads directory exists
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
@@ -78,6 +78,23 @@ def run_migrations():
         if "tg_expiry_warned" not in order_cols:
             conn.execute(text("ALTER TABLE orders ADD COLUMN tg_expiry_warned BOOLEAN NOT NULL DEFAULT 0"))
             conn.commit()
+        # Create posts table if missing
+        if "posts" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE posts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title VARCHAR(256) NOT NULL,
+                    slug VARCHAR(256) NOT NULL UNIQUE,
+                    excerpt TEXT,
+                    content TEXT NOT NULL,
+                    cover_image_url VARCHAR(512),
+                    is_published BOOLEAN NOT NULL DEFAULT 0,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                )
+            """))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_posts_slug ON posts (slug)"))
+            conn.commit()
 
 
 run_migrations()
@@ -109,6 +126,7 @@ app.include_router(reviews.router)
 app.include_router(site_settings.router)
 app.include_router(health.router)
 app.include_router(faq.router)
+app.include_router(blog.router)
 
 
 @app.get("/")
