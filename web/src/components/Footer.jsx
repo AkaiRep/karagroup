@@ -8,9 +8,11 @@ export default function Footer() {
 
           {/* Legal links */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-xs text-slate-500">
+            <Link href="/contacts" className="hover:text-slate-300 transition-colors">Контакты</Link>
             <Link href="/offer" className="hover:text-slate-300 transition-colors">Договор оферты</Link>
             <Link href="/privacy" className="hover:text-slate-300 transition-colors">Политика конфиденциальности</Link>
             <Link href="/legal" className="hover:text-slate-300 transition-colors">Правовая информация</Link>
+            <Link href="/refunds" className="hover:text-slate-300 transition-colors">Возврат средств</Link>
           </div>
 
           {/* Bottom row */}
