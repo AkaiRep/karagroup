@@ -92,6 +92,8 @@ export default function Header() {
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden border-t border-white/5 bg-[#07080d]/95 px-4 py-4 flex flex-col gap-3">
+            <Link href="/faq" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">FAQ</Link>
+            <Link href="/contacts" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Контакты</Link>
             {user && <Link href="/orders" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Мои заказы</Link>}
             <div className="pt-2 border-t border-white/5">
               {user ? (
