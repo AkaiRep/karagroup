@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
@@ -8,6 +9,7 @@ import TelegramLoginButton from '@/components/TelegramLoginButton'
 export default function CartDrawer({ open, onClose }) {
   const { cart, promo, setPromo, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount, hasPinnedItems } = useCart()
   const { user } = useAuth()
+  const router = useRouter()
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
@@ -194,13 +196,23 @@ export default function CartDrawer({ open, onClose }) {
                 href={paymentUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => { onClose(); router.push('/orders') }}
                 className="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium text-center transition-colors"
               >
                 Перейти к оплате
               </a>
             )}
-            <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-              Закрыть
+            <button
+              onClick={() => { onClose(); router.push('/orders') }}
+              className="text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              Мои заказы
+            </button>
+            <button
+              onClick={handleCancelOrder}
+              className="text-sm text-slate-500 hover:text-red-400 transition-colors"
+            >
+              Отменить заказ
             </button>
           </div>
         )}
