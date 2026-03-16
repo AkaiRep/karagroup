@@ -14,7 +14,7 @@ export default async function sitemap() {
   let posts = []
   try {
     const res = await fetch(`${API_URL}/blog/`, { next: { revalidate: 3600 } })
-    posts = await res.json()
+    if (res.ok) posts = await res.json()
   } catch {}
 
   const post_pages = posts.map(post => ({
