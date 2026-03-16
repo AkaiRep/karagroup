@@ -1,5 +1,7 @@
 import os
 import logging
+import time
+from collections import defaultdict, deque
 from typing import Optional
 
 import httpx
@@ -13,6 +15,21 @@ import models, auth as auth_utils
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["payments"])
+
+# Rate limiter: 5 payment creation requests per user per 60 seconds
+_payment_rate: dict[int, deque] = defaultdict(deque)
+RATE_LIMIT = 5
+RATE_WINDOW = 60
+
+
+def _check_rate_limit(user_id: int):
+    now = time.monotonic()
+    dq = _payment_rate[user_id]
+    while dq and dq[0] < now - RATE_WINDOW:
+        dq.popleft()
+    if len(dq) >= RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Слишком много запросов. Попробуйте через минуту.")
+    dq.append(now)
 
 PLATEGA_BASE = "https://app.platega.io"
 
@@ -36,6 +53,8 @@ async def create_payment(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
+    _check_rate_limit(current_user.id)
+
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
