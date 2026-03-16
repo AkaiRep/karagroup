@@ -84,6 +84,30 @@ export default function CartDrawer({ open, onClose }) {
           </button>
         </div>
 
+        {/* Error state (after order created but payment failed) */}
+        {checkoutState === 'error' && pendingOrderId && (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Ошибка оплаты</h3>
+              <p className="text-slate-400 text-sm">{errorMsg || 'Не удалось создать платёж'}</p>
+            </div>
+            <button
+              onClick={() => setCheckoutState('method')}
+              className="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition-colors"
+            >
+              Попробовать снова
+            </button>
+            <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
+              Закрыть
+            </button>
+          </div>
+        )}
+
         {/* Method selection */}
         {(checkoutState === 'method' || checkoutState === 'paying') && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
@@ -155,7 +179,7 @@ export default function CartDrawer({ open, onClose }) {
         )}
 
         {/* Empty */}
-        {checkoutState !== 'done' && items.length === 0 && (
+        {checkoutState !== 'done' && !(checkoutState === 'error' && pendingOrderId) && items.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-3">
             <svg className="w-16 h-16 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
@@ -166,7 +190,7 @@ export default function CartDrawer({ open, onClose }) {
         )}
 
         {/* Items */}
-        {checkoutState !== 'done' && items.length > 0 && (
+        {checkoutState !== 'done' && !(checkoutState === 'error' && pendingOrderId) && items.length > 0 && (
           <>
             <div className="flex-1 overflow-y-auto p-5 space-y-3">
               {items.map(item => {
@@ -270,7 +294,7 @@ export default function CartDrawer({ open, onClose }) {
                 <span className="text-green-400">{finalTotal.toLocaleString('ru-RU')} ₽</span>
               </div>
 
-              {checkoutState === 'error' && (
+              {checkoutState === 'error' && !pendingOrderId && (
                 <p className="text-red-400 text-sm">{errorMsg}</p>
               )}
 
