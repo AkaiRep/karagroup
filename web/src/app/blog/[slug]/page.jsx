@@ -8,7 +8,7 @@ async function getPost(slug) {
   try {
     const res = await fetch(`${API_URL}/blog/${slug}`, { next: { revalidate: 300 } })
     if (!res.ok) return null
-    return res.json()
+    return await res.json()
   } catch {
     return null
   }

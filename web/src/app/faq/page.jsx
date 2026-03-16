@@ -11,7 +11,8 @@ export const metadata = {
 async function getFAQ() {
   try {
     const res = await fetch(`${API_URL}/faq/`, { next: { revalidate: 300 } })
-    return res.json()
+    if (!res.ok) return []
+    return await res.json()
   } catch {
     return []
   }
