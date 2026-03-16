@@ -55,8 +55,8 @@ def list_orders(
 
     if status is not None:
         q = q.filter(models.Order.status == status)
-    elif telegram_user_id is None:
-        # По умолчанию скрываем неоплаченные заказы (кроме запросов от бота по telegram_user_id)
+    elif telegram_user_id is None and current_user.role != models.UserRole.admin:
+        # По умолчанию скрываем неоплаченные заказы (кроме запросов от бота по telegram_user_id и от админа)
         q = q.filter(models.Order.status != models.OrderStatus.pending_payment)
     if exclude_status is not None:
         q = q.filter(models.Order.status != exclude_status)
