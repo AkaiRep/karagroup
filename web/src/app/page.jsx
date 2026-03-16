@@ -112,13 +112,7 @@ export default function CatalogPage() {
   const catPopularity = (catId) =>
     products.filter(p => p.category_id === catId).reduce((s, p) => s + (p.order_count || 0), 0)
 
-  const pinnedCatId = s.pinned_category_id ? parseInt(s.pinned_category_id) : null
-
-  const sortedCategories = [...categories].sort((a, b) => {
-    if (a.id === pinnedCatId) return -1
-    if (b.id === pinnedCatId) return 1
-    return catPopularity(b.id) - catPopularity(a.id)
-  })
+  const sortedCategories = [...categories].sort((a, b) => catPopularity(b.id) - catPopularity(a.id))
 
   // Most popular product per category
   const topProductIds = new Set(
@@ -143,6 +137,16 @@ export default function CatalogPage() {
     { num: s.stat_2_num || DEFAULT_STATS[1].num, label: s.stat_2_label || DEFAULT_STATS[1].label, desc: s.stat_2_desc || DEFAULT_STATS[1].desc },
     { num: s.stat_3_num || DEFAULT_STATS[2].num, label: s.stat_3_label || DEFAULT_STATS[2].label, desc: s.stat_3_desc || DEFAULT_STATS[2].desc },
   ]
+
+  const pinnedCatId = s.pinned_category_id ? parseInt(s.pinned_category_id) : null
+
+  const sortedCategoriesFinal = pinnedCatId
+    ? [...sortedCategories].sort((a, b) => {
+        if (a.id === pinnedCatId) return -1
+        if (b.id === pinnedCatId) return 1
+        return 0
+      })
+    : sortedCategories
 
   const channel = process.env.NEXT_PUBLIC_BOT_CHANNEL
   const manager = process.env.NEXT_PUBLIC_MANAGER
@@ -257,7 +261,7 @@ export default function CatalogPage() {
           <p className="text-slate-400 mt-1 text-sm md:text-base">Выберите нужную услугу и добавьте в корзину</p>
         </div>
 
-        {sortedCategories.length > 0 && (
+        {sortedCategoriesFinal.length > 0 && (
           <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar px-4 pb-1">
             <button
               onClick={() => switchCategory(null)}
@@ -269,7 +273,7 @@ export default function CatalogPage() {
             >
               Все
             </button>
-            {sortedCategories.map(cat => (
+            {sortedCategoriesFinal.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => switchCategory(cat.id)}
@@ -304,7 +308,7 @@ export default function CatalogPage() {
           </div>
         ) : (
           <div className="px-4 space-y-8">
-            {sortedCategories
+            {sortedCategoriesFinal
               .filter(cat => products.some(p => p.category_id === cat.id))
               .map(cat => {
                 const isPinned = cat.id === pinnedCatId

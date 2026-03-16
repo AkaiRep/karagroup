@@ -54,6 +54,7 @@ export default function Orders() {
   const [filterDateTo, setFilterDateTo] = useState('')
   const [filterPriceMin, setFilterPriceMin] = useState('')
   const [filterPriceMax, setFilterPriceMax] = useState('')
+  const [filterHideUnpaid, setFilterHideUnpaid] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
 
   const { unread, markRead, closeChat, setActiveChatOrderId } = useChatStore()
@@ -79,6 +80,7 @@ export default function Orders() {
     if (filterDateTo) p.date_to = filterDateTo
     if (filterPriceMin) p.price_min = filterPriceMin
     if (filterPriceMax) p.price_max = filterPriceMax
+    if (filterHideUnpaid) p.exclude_status = 'pending_payment'
     return p
   }
 
@@ -94,7 +96,7 @@ export default function Orders() {
     setWorkers(u.filter((u) => u.role === 'worker'))
     setGlobalDiscountState(gd.value)
     setLoading(false)
-  }, [filterStatus, filterSource, filterWorker, filterSearch, filterDateFrom, filterDateTo, filterPriceMin, filterPriceMax])
+  }, [filterStatus, filterSource, filterWorker, filterSearch, filterDateFrom, filterDateTo, filterPriceMin, filterPriceMax, filterHideUnpaid])
 
   useEffect(() => {
     load()
@@ -207,6 +209,13 @@ export default function Orders() {
           <h1 className="text-2xl font-bold">Заказы</h1>
           <div className="flex gap-2">
             <button
+              onClick={() => setFilterHideUnpaid((v) => !v)}
+              className={`text-sm px-4 py-2 rounded-lg border transition-colors ${filterHideUnpaid ? 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-600' : 'border-yellow-500 text-yellow-400 bg-yellow-500/10'}`}
+              title={filterHideUnpaid ? 'Не оплаченные скрыты — нажмите чтобы показать' : 'Показаны все заказы — нажмите чтобы скрыть не оплаченные'}
+            >
+              {filterHideUnpaid ? 'Скрыты: не оплачены' : 'Все заказы'}
+            </button>
+            <button
               onClick={() => setShowFilters((v) => !v)}
               className={`relative text-sm px-4 py-2 rounded-lg border transition-colors ${showFilters || activeFiltersCount > 0 ? 'border-brand-500 text-brand-400 bg-brand-500/10' : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'}`}
             >
@@ -291,6 +300,7 @@ export default function Orders() {
                   setFilterStatus(''); setFilterSource(''); setFilterWorker('')
                   setFilterSearch(''); setFilterDateFrom(''); setFilterDateTo('')
                   setFilterPriceMin(''); setFilterPriceMax('')
+                  setFilterHideUnpaid(true)
                 }}
                 className="mt-3 text-xs text-red-400 hover:text-red-300 transition-colors"
               >
