@@ -24,6 +24,7 @@ export default function Workers() {
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({ username: '', password: '', worker_percentage: 70, is_vip: false })
+  const [hidePercentages, setHidePercentages] = useState(true)
 
   const loadStats = () =>
     getWorkersStats().then((list) => {
@@ -89,12 +90,20 @@ export default function Workers() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Качеры</h1>
-        <button
-          onClick={() => { resetForm(); setShowForm(true) }}
-          className="bg-brand-500 hover:bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-        >
-          + Добавить качера
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setHidePercentages(v => !v)}
+            className={`text-xs px-3 py-2 rounded-lg border transition-colors font-medium ${hidePercentages ? 'bg-slate-700 border-slate-600 text-slate-300' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}
+          >
+            {hidePercentages ? '🙈 Проценты скрыты' : '👁 Проценты видны'}
+          </button>
+          <button
+            onClick={() => { resetForm(); setShowForm(true) }}
+            className="bg-brand-500 hover:bg-brand-600 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          >
+            + Добавить качера
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -196,7 +205,10 @@ export default function Workers() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <span className="text-green-400 font-medium">{w.worker_percentage}%</span>
+                    {hidePercentages
+                      ? <span className="text-slate-600 text-xs select-none">••••</span>
+                      : <span className="text-green-400 font-medium">{w.worker_percentage}%</span>
+                    }
                   </td>
                   <td className="px-5 py-3 text-center">
                     <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${isOnline ? 'bg-green-400/15 text-green-400' : 'bg-slate-700 text-slate-500'}`}>
