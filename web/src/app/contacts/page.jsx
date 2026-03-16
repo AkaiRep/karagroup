@@ -23,8 +23,6 @@ function ContactCard({ icon, title, subtitle, href, external = false }) {
     </div>
   )
 
-  if (!href) return <div className="flex items-center gap-4 bg-[#111318] border border-white/5 rounded-2xl p-5">{inner.props.children}</div>
-
   if (external) return <a href={href} target="_blank" rel="noopener noreferrer">{inner}</a>
   return <Link href={href}>{inner}</Link>
 }
@@ -37,45 +35,57 @@ export default function ContactsPage() {
         <p className="text-slate-400">Мы всегда на связи — выберите удобный способ</p>
       </div>
 
-      <div className="space-y-3 mb-10">
+      <div className="space-y-6 mb-10">
 
-        {MANAGER && (
-          <ContactCard
-            icon="💬"
-            title="Поддержка в Telegram"
-            subtitle={MANAGER}
-            href={`https://t.me/${MANAGER.replace('@', '')}`}
-            external
-          />
+        {/* Support */}
+        <div>
+          <h2 className="text-xs text-slate-500 uppercase tracking-wider mb-3">Поддержка</h2>
+          <div className="space-y-2">
+            {MANAGER && (
+              <ContactCard
+                icon="💬"
+                title="Написать в Telegram"
+                subtitle={MANAGER}
+                href={`https://t.me/${MANAGER.replace('@', '')}`}
+                external
+              />
+            )}
+            <ContactCard
+              icon="✉️"
+              title="Написать на почту"
+              subtitle={EMAIL}
+              href={`mailto:${EMAIL}`}
+              external
+            />
+          </div>
+        </div>
+
+        {/* Socials */}
+        {(CHANNEL || TIKTOK) && (
+          <div>
+            <h2 className="text-xs text-slate-500 uppercase tracking-wider mb-3">Социальные сети</h2>
+            <div className="space-y-2">
+              {CHANNEL && (
+                <ContactCard
+                  icon="📢"
+                  title="Telegram-канал"
+                  subtitle="Новости и обновления"
+                  href={CHANNEL}
+                  external
+                />
+              )}
+              {TIKTOK && (
+                <ContactCard
+                  icon="🎵"
+                  title="TikTok"
+                  subtitle={TIKTOK.startsWith('@') ? TIKTOK : `@${TIKTOK}`}
+                  href={`https://tiktok.com/@${TIKTOK.replace('@', '')}`}
+                  external
+                />
+              )}
+            </div>
+          </div>
         )}
-
-        {CHANNEL && (
-          <ContactCard
-            icon="📢"
-            title="Официальный канал Telegram"
-            subtitle="Новости и обновления"
-            href={CHANNEL}
-            external
-          />
-        )}
-
-        {TIKTOK && (
-          <ContactCard
-            icon="🎵"
-            title="TikTok"
-            subtitle={TIKTOK.startsWith('@') ? TIKTOK : `@${TIKTOK}`}
-            href={`https://tiktok.com/@${TIKTOK.replace('@', '')}`}
-            external
-          />
-        )}
-
-        <ContactCard
-          icon="✉️"
-          title="Электронная почта"
-          subtitle={EMAIL}
-          href={`mailto:${EMAIL}`}
-          external
-        />
 
       </div>
 
