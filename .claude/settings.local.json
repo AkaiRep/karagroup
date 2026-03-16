@@ -18,7 +18,8 @@
       "Bash(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\")",
       "Bash(cd /Users/daniilsnajder/Documents/karagroup/web && npm run build 2>&1 | tail -30)",
       "Bash(npx next:*)",
-      "Bash(./node_modules/.bin/next build:*)"
+      "Bash(./node_modules/.bin/next build:*)",
+      "Bash(ls /Users/daniilsnajder/Documents/karagroup/web/src/components/Footer* 2>&1)"
     ]
   }
 }
