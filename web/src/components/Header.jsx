@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
@@ -13,6 +13,14 @@ export default function Header() {
   const [authOpen, setAuthOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const isTMA = typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData
+  const menuRef = useRef(null)
+  const [menuHeight, setMenuHeight] = useState(0)
+
+  useEffect(() => {
+    if (menuRef.current) {
+      setMenuHeight(menuOpen ? menuRef.current.scrollHeight : 0)
+    }
+  }, [menuOpen])
 
   return (
     <>
@@ -90,8 +98,11 @@ export default function Header() {
         </div>
 
         {/* Mobile menu */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-white/5 bg-[#07080d]/95 px-4 py-4 flex flex-col gap-3">
+        <div
+          style={{ height: menuHeight, transition: 'height 0.25s ease', overflow: 'hidden' }}
+          className="md:hidden"
+        >
+          <div ref={menuRef} className="border-t border-white/5 bg-[#07080d]/95 px-4 py-4 flex flex-col gap-3">
             <Link href="/faq" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">FAQ</Link>
             <Link href="/contacts" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Контакты</Link>
             {user && <Link href="/orders" onClick={() => setMenuOpen(false)} className="text-slate-300 hover:text-white py-2 transition-colors">Мои заказы</Link>}
@@ -118,7 +129,7 @@ export default function Header() {
               )}
             </div>
           </div>
-        )}
+        </div>
       </header>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />

@@ -1,12 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import TelegramLoginButton from '@/components/TelegramLoginButton'
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, promo, setPromo, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount } = useCart()
+  const { cart, promo, setPromo, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount, hasPinnedItems } = useCart()
   const { user } = useAuth()
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
@@ -17,6 +17,17 @@ export default function CartDrawer({ open, onClose }) {
   const [errorMsg, setErrorMsg] = useState('')
 
   const items = Object.values(cart)
+
+  // Блокировка скролла страницы когда корзина открыта
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
 
   const applyPromo = async () => {
     if (!promoInput.trim()) return
@@ -79,7 +90,7 @@ export default function CartDrawer({ open, onClose }) {
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="w-full max-w-md bg-[#0d0f15] border-l border-white/5 flex flex-col h-full overflow-hidden">
+      <div className="w-full max-w-md bg-[#0d0f15] border-l border-white/5 flex flex-col h-[100dvh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <h2 className="text-lg font-semibold">
@@ -208,7 +219,7 @@ export default function CartDrawer({ open, onClose }) {
         {/* Items */}
         {checkoutState !== 'done' && !(checkoutState === 'error' && pendingOrderId) && items.length > 0 && (
           <>
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
               {items.map(item => {
                 const disc = effectiveDiscount(item)
                 const unitPrice = item.price * (1 - disc / 100)
@@ -254,7 +265,9 @@ export default function CartDrawer({ open, onClose }) {
 
             {/* Promo */}
             <div className="px-5 pb-3">
-              {promo ? (
+              {hasPinnedItems ? (
+                <p className="text-xs text-slate-500 text-center py-1">Промокод недоступен для товаров этой категории</p>
+              ) : promo ? (
                 <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
                   <div>
                     <p className="text-green-400 text-sm font-medium">{promo.code}</p>

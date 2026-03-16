@@ -31,7 +31,7 @@ export default function Providers({ children }) {
         <NoCopy />
         <Header />
         <div className="relative">
-        {pathname !== '/faq' && <Snow />}
+        {pathname === '/' && <Snow />}
         <main className="min-h-screen pt-16">
           {children}
         </main>
