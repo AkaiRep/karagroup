@@ -13,6 +13,7 @@
   --brand-900: 19 33 110;
   --bg-base:    15 17 23;
   --bg-surface: 26 31 46;
+  --border:     46 54 82;
 }
 
 * { box-sizing: border-box; }

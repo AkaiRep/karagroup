@@ -210,14 +210,14 @@ export default function Orders() {
           <div className="flex gap-2">
             <button
               onClick={() => setFilterHideUnpaid((v) => !v)}
-              className={`text-sm px-4 py-2 rounded-lg border transition-colors ${filterHideUnpaid ? 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-600' : 'border-yellow-500 text-yellow-400 bg-yellow-500/10'}`}
+              className={`text-sm px-4 py-2 rounded-lg border transition-colors ${filterHideUnpaid ? 'border-border text-slate-400 hover:text-white hover:border-border' : 'border-yellow-500 text-yellow-400 bg-yellow-500/10'}`}
               title={filterHideUnpaid ? 'Не оплаченные скрыты — нажмите чтобы показать' : 'Показаны все заказы — нажмите чтобы скрыть не оплаченные'}
             >
               {filterHideUnpaid ? 'Скрыты: не оплачены' : 'Все заказы'}
             </button>
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className={`relative text-sm px-4 py-2 rounded-lg border transition-colors ${showFilters || activeFiltersCount > 0 ? 'border-brand-500 text-brand-400 bg-brand-500/10' : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'}`}
+              className={`relative text-sm px-4 py-2 rounded-lg border transition-colors ${showFilters || activeFiltersCount > 0 ? 'border-brand-500 text-brand-400 bg-brand-500/10' : 'border-border text-slate-400 hover:text-white hover:border-border'}`}
             >
               Фильтры
               {activeFiltersCount > 0 && (
@@ -237,12 +237,12 @@ export default function Orders() {
 
         {/* Filters panel */}
         {showFilters && (
-          <div className="bg-surface border border-slate-700/50 rounded-xl p-4 mb-4 flex-shrink-0">
+          <div className="bg-surface border border-border/50 rounded-xl p-4 mb-4 flex-shrink-0">
             <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Статус</label>
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500">
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500">
                   <option value="">Все</option>
                   {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
@@ -250,7 +250,7 @@ export default function Orders() {
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Источник</label>
                 <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500">
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500">
                   <option value="">Все</option>
                   <option value="funpay">FunPay</option>
                   <option value="telegram">Telegram</option>
@@ -260,7 +260,7 @@ export default function Orders() {
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Качер</label>
                 <select value={filterWorker} onChange={(e) => setFilterWorker(e.target.value)}
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500">
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500">
                   <option value="">Все</option>
                   {workers.map((w) => <option key={w.id} value={w.id}>{w.username}</option>)}
                 </select>
@@ -269,29 +269,29 @@ export default function Orders() {
                 <label className="block text-xs text-slate-500 mb-1">Поиск (ID / клиент)</label>
                 <input value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)}
                   placeholder="FP-123 или ник"
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500" />
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Дата от</label>
                 <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500" />
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Дата до</label>
                 <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500" />
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-brand-500" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Цена от (₽)</label>
                 <input type="number" min="0" value={filterPriceMin} onChange={(e) => setFilterPriceMin(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500" />
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500" />
               </div>
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Цена до (₽)</label>
                 <input type="number" min="0" value={filterPriceMax} onChange={(e) => setFilterPriceMax(e.target.value)}
                   placeholder="∞"
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500" />
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500" />
               </div>
             </div>
             {activeFiltersCount > 0 && (
@@ -312,14 +312,14 @@ export default function Orders() {
 
         {/* Create form */}
         {showForm && (
-          <div className="bg-surface border border-slate-700/50 rounded-xl p-5 mb-4 flex-shrink-0">
+          <div className="bg-surface border border-border/50 rounded-xl p-5 mb-4 flex-shrink-0">
             <div className="text-sm font-medium text-slate-300 mb-4">Новый заказ</div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">ID заказа (вручную)</label>
                   <input
-                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                     value={form.external_id}
                     onChange={(e) => setForm({ ...form, external_id: e.target.value })}
                     placeholder="FP-12345"
@@ -328,7 +328,7 @@ export default function Orders() {
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Источник</label>
                   <select
-                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                     value={form.source}
                     onChange={(e) => setForm({ ...form, source: e.target.value })}
                   >
@@ -344,7 +344,7 @@ export default function Orders() {
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     placeholder="Авто при выборе услуг"
@@ -353,7 +353,7 @@ export default function Orders() {
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Клиент</label>
                   <input
-                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                     value={form.client_info}
                     onChange={(e) => setForm({ ...form, client_info: e.target.value })}
                     placeholder="Ник или контакт"
@@ -362,7 +362,7 @@ export default function Orders() {
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Заметки</label>
                   <input
-                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   />
@@ -370,7 +370,7 @@ export default function Orders() {
                 <div>
                   <label className="block text-xs text-slate-500 mb-1">Ссылка на клиента</label>
                   <input
-                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                    className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                     value={form.client_url}
                     onChange={(e) => setForm({ ...form, client_url: e.target.value })}
                     placeholder="https://funpay.com/..."
@@ -383,7 +383,7 @@ export default function Orders() {
                 <label className="block text-xs text-slate-500 mb-1">Промокод</label>
                 <div className="flex items-center gap-2">
                   <input
-                    className="bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 uppercase w-40"
+                    className="bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 uppercase w-40"
                     value={promoInput}
                     onChange={(e) => { setPromoInput(e.target.value.toUpperCase()); setPromoInfo(null); setPromoError('') }}
                     placeholder="VASYA10"
@@ -413,7 +413,7 @@ export default function Orders() {
                   Услуги <span className="text-slate-600">(скидка % применяется к базовой цене)</span>
                 </label>
                 <input
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 mb-2"
+                  className="w-full bg-base border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 mb-2"
                   placeholder="Поиск услуги..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
@@ -433,7 +433,7 @@ export default function Orders() {
                         className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                           selected
                             ? 'bg-brand-500/20 border-brand-500 text-brand-400'
-                            : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'
+                            : 'border-border text-slate-400 hover:border-slate-500 hover:text-white'
                         }`}
                       >
                         {p.name} — {shownPrice} ₽{effDisc > 0 && <span className="ml-1 text-amber-400">-{effDisc}%</span>}
@@ -460,7 +460,7 @@ export default function Orders() {
                               type="number" min="1" step="1"
                               value={quantity}
                               onChange={(e) => setItemField(product_id, 'quantity', e.target.value)}
-                              className="w-14 bg-surface border border-slate-700 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-brand-500 text-center"
+                              className="w-14 bg-surface border border-border rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-brand-500 text-center"
                             />
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -469,7 +469,7 @@ export default function Orders() {
                               type="number" min="0" max="100" step="1"
                               value={discount}
                               onChange={(e) => setItemField(product_id, 'discount', e.target.value)}
-                              className="w-14 bg-surface border border-slate-700 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-brand-500 text-center"
+                              className="w-14 bg-surface border border-border rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-brand-500 text-center"
                             />
                             <span className="text-xs text-slate-500">%</span>
                           </div>
@@ -499,10 +499,10 @@ export default function Orders() {
         {loading ? (
           <div className="text-slate-500">Загрузка...</div>
         ) : (
-          <div className="bg-surface border border-slate-700/50 rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border/50 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-slate-500 text-xs uppercase border-b border-slate-700/50">
+                <tr className="text-slate-500 text-xs uppercase border-b border-border/50">
                   <th className="text-left px-4 py-3">ID</th>
                   <th className="text-left px-4 py-3">Источник</th>
                   <th className="text-left px-4 py-3">Услуги</th>
@@ -516,7 +516,7 @@ export default function Orders() {
               </thead>
               <tbody>
                 {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-slate-700/30 hover:bg-slate-700/10">
+                  <tr key={order.id} className="border-b border-border/30 hover:bg-slate-700/10">
                     <td className="px-4 py-3 text-slate-400">
                       <div>#{order.id}</div>
                       {order.external_id && <div className="text-xs text-slate-600">{order.external_id}</div>}
@@ -638,7 +638,7 @@ export default function Orders() {
 
       {/* Chat panel */}
       {chatOrderId && (
-        <div className="w-80 flex-shrink-0 border-l border-slate-700/50 sticky top-0 h-screen">
+        <div className="w-80 flex-shrink-0 border-l border-border/50 sticky top-0 h-screen">
           <ChatPanel orderId={chatOrderId} onClose={() => { setChatOrderId(null); closeChat() }} />
         </div>
       )}

@@ -16,6 +16,7 @@ export default {
         },
         base:    'rgb(var(--bg-base) / <alpha-value>)',
         surface: 'rgb(var(--bg-surface) / <alpha-value>)',
+        border:  'rgb(var(--border) / <alpha-value>)',
       }
     }
   },

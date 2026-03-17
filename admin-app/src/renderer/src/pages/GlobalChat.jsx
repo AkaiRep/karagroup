@@ -132,7 +132,7 @@ export default function GlobalChat() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-700/50 flex-shrink-0 flex items-center gap-3">
+      <div className="px-6 py-4 border-b border-border/50 flex-shrink-0 flex items-center gap-3">
         <div>
           <h1 className="text-xl font-bold">Общий чат</h1>
           <div className="text-xs text-slate-500 mt-0.5">Все пользователи видят эти сообщения</div>
@@ -214,7 +214,7 @@ export default function GlobalChat() {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="px-6 py-4 border-t border-slate-700/50 flex-shrink-0">
+      <form onSubmit={handleSend} className="px-6 py-4 border-t border-border/50 flex-shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -233,7 +233,7 @@ export default function GlobalChat() {
             onChange={handleImagePick}
           />
           <input
-            className="flex-1 bg-surface border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
+            className="flex-1 bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onPaste={handlePaste}

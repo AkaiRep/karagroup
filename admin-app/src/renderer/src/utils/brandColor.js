@@ -49,9 +49,10 @@ export function applyBrandColor(hex) {
     900: hslToRgb(h, Math.min(s + 12, 100), 22),
   }
 
-  // Background tones — same hue, very low saturation, very dark
+  // Background and border tones — same hue, very low saturation, very dark
   const bgBase    = hslToRgb(h, Math.min(s * 0.12, 18), 7)
   const bgSurface = hslToRgb(h, Math.min(s * 0.18, 22), 12)
+  const borderCol = hslToRgb(h, Math.min(s * 0.28, 30), 20)
 
   const root = document.documentElement
   for (const [shade, [rv, gv, bv]] of Object.entries(brandShades)) {
@@ -59,4 +60,5 @@ export function applyBrandColor(hex) {
   }
   root.style.setProperty('--bg-base',    `${bgBase[0]} ${bgBase[1]} ${bgBase[2]}`)
   root.style.setProperty('--bg-surface', `${bgSurface[0]} ${bgSurface[1]} ${bgSurface[2]}`)
+  root.style.setProperty('--border',     `${borderCol[0]} ${borderCol[1]} ${borderCol[2]}`)
 }

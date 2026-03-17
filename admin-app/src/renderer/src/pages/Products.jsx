@@ -187,7 +187,7 @@ export default function Products() {
       </div>
 
       {/* Global discount */}
-      <div className="bg-surface border border-slate-700/50 rounded-xl p-4 mb-5">
+      <div className="bg-surface border border-border/50 rounded-xl p-4 mb-5">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-sm font-medium text-slate-300">Глобальная скидка</div>
@@ -200,7 +200,7 @@ export default function Products() {
                 min="0"
                 max="100"
                 step="0.1"
-                className="w-24 bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 pr-7"
+                className="w-24 bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 pr-7"
                 value={globalDiscountInput}
                 onChange={(e) => setGlobalDiscountInput(e.target.value)}
               />
@@ -224,7 +224,7 @@ export default function Products() {
 
       {/* Category form */}
       {showCatForm && (
-        <div className="bg-surface border border-slate-700/50 rounded-xl p-4 mb-4">
+        <div className="bg-surface border border-border/50 rounded-xl p-4 mb-4">
           <div className="text-sm font-medium text-slate-300 mb-3">
             {editCatId ? 'Редактировать категорию' : 'Новая категория'}
           </div>
@@ -234,7 +234,7 @@ export default function Products() {
                 <label className="block text-xs text-slate-500 mb-1">Название *</label>
                 <input
                   required
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                  className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                   value={catName}
                   onChange={(e) => setCatName(e.target.value)}
                   placeholder="Например: World of Warcraft"
@@ -243,7 +243,7 @@ export default function Products() {
               <div>
                 <label className="block text-xs text-slate-500 mb-1">Описание <span className="text-slate-600">(показывается в TG-боте)</span></label>
                 <input
-                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                  className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                   value={catDescription}
                   onChange={(e) => setCatDescription(e.target.value)}
                   placeholder="Необязательно"
@@ -316,7 +316,7 @@ export default function Products() {
 
       {/* Product form */}
       {showForm && (
-        <div className="bg-surface border border-slate-700/50 rounded-xl p-5 mb-5">
+        <div className="bg-surface border border-border/50 rounded-xl p-5 mb-5">
           <div className="text-sm font-medium text-slate-300 mb-4">
             {editId ? 'Редактировать услугу' : 'Новая услуга'}
           </div>
@@ -325,7 +325,7 @@ export default function Products() {
               <label className="block text-xs text-slate-500 mb-1">Название *</label>
               <input
                 required
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Прокачка 1-60"
@@ -338,7 +338,7 @@ export default function Products() {
                 type="number"
                 min="0"
                 step="0.01"
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                 placeholder="1500"
@@ -351,7 +351,7 @@ export default function Products() {
                 min="0"
                 max="100"
                 step="0.1"
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.discount_percent}
                 onChange={(e) => setForm({ ...form, discount_percent: e.target.value })}
                 placeholder="0"
@@ -360,7 +360,7 @@ export default function Products() {
             <div>
               <label className="block text-xs text-slate-500 mb-1">Категория</label>
               <select
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.category_id}
                 onChange={(e) => setForm({ ...form, category_id: e.target.value })}
               >
@@ -373,7 +373,7 @@ export default function Products() {
             <div className="col-span-4">
               <label className="block text-xs text-slate-500 mb-1">Описание</label>
               <input
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="Необязательно"
@@ -402,7 +402,7 @@ export default function Products() {
             ? Math.round(p.price * (1 - effectiveDiscount / 100) * 100) / 100
             : null
           return (
-          <div key={p.id} className={`bg-surface border rounded-xl overflow-hidden transition-opacity ${p.is_active ? 'border-slate-700/50' : 'border-slate-700/20 opacity-50'}`}>
+          <div key={p.id} className={`bg-surface border rounded-xl overflow-hidden transition-opacity ${p.is_active ? 'border-border/50' : 'border-border/20 opacity-50'}`}>
             {/* Image */}
             <div className="relative h-28 bg-base group">
               {p.image_url ? (

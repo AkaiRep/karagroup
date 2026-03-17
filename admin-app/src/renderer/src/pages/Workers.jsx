@@ -93,7 +93,7 @@ export default function Workers() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setHidePercentages(v => !v)}
-            className={`text-xs px-3 py-2 rounded-lg border transition-colors font-medium ${hidePercentages ? 'bg-slate-700 border-slate-600 text-slate-300' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}
+            className={`text-xs px-3 py-2 rounded-lg border transition-colors font-medium ${hidePercentages ? 'bg-slate-700 border-border text-slate-300' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}
           >
             {hidePercentages ? '🙈 Проценты скрыты' : '👁 Проценты видны'}
           </button>
@@ -107,7 +107,7 @@ export default function Workers() {
       </div>
 
       {showForm && (
-        <div className="bg-surface border border-slate-700/50 rounded-xl p-5 mb-5">
+        <div className="bg-surface border border-border/50 rounded-xl p-5 mb-5">
           <div className="text-sm font-medium text-slate-300 mb-4">
             {editId ? 'Редактировать качера' : 'Новый качер'}
           </div>
@@ -117,7 +117,7 @@ export default function Workers() {
               <input
                 required={!editId}
                 disabled={!!editId}
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 disabled:opacity-50"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 disabled:opacity-50"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
               />
@@ -129,7 +129,7 @@ export default function Workers() {
               <input
                 required={!editId}
                 type="password"
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
@@ -138,7 +138,7 @@ export default function Workers() {
               <label className="block text-xs text-slate-500 mb-1">Процент качера (%)</label>
               <input
                 type="number" min="0" max="100" step="0.5"
-                className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={form.worker_percentage}
                 onChange={(e) => setForm({ ...form, worker_percentage: e.target.value })}
               />
@@ -165,10 +165,10 @@ export default function Workers() {
         </div>
       )}
 
-      <div className="bg-surface border border-slate-700/50 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border/50 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-slate-500 text-xs uppercase border-b border-slate-700/50">
+            <tr className="text-slate-500 text-xs uppercase border-b border-border/50">
               <th className="text-left px-5 py-3">Качер</th>
               <th className="text-center px-5 py-3">VIP</th>
               <th className="text-right px-5 py-3">Процент</th>
@@ -185,7 +185,7 @@ export default function Workers() {
               const s = stats[w.id]
               const isOnline = s?.is_online ?? false
               return (
-                <tr key={w.id} className="border-b border-slate-700/30 hover:bg-slate-700/10">
+                <tr key={w.id} className="border-b border-border/30 hover:bg-slate-700/10">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isOnline ? 'bg-green-400' : 'bg-slate-600'}`} />

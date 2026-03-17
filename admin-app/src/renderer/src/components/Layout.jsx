@@ -72,8 +72,8 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-base overflow-hidden">
-      <aside className="w-56 bg-surface border-r border-slate-700/50 flex flex-col">
-        <div className="px-5 py-5 border-b border-slate-700/50">
+      <aside className="w-56 bg-surface border-r border-border/50 flex flex-col">
+        <div className="px-5 py-5 border-b border-border/50">
           <div className="text-xl font-bold text-brand-500">KaraGroup</div>
           <div className="text-xs text-slate-500 mt-0.5">Admin</div>
         </div>
@@ -117,7 +117,7 @@ export default function Layout() {
           </NavLink>
         </nav>
 
-        <div className="px-4 py-4 border-t border-slate-700/50">
+        <div className="px-4 py-4 border-t border-border/50">
           <div className="text-sm text-slate-400 mb-2 truncate">{user?.username}</div>
           <button
             onClick={() => { logout(); navigate('/login') }}

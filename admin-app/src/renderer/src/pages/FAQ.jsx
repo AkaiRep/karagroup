@@ -60,7 +60,7 @@ export default function FAQPage() {
 
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.id} className="bg-surface border border-slate-700/50 rounded-xl p-4">
+          <div key={item.id} className="bg-surface border border-border/50 rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -91,14 +91,14 @@ export default function FAQPage() {
       {/* Modal */}
       {editing !== null && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface border border-slate-700/50 rounded-2xl p-6 w-full max-w-lg">
+          <div className="bg-surface border border-border/50 rounded-2xl p-6 w-full max-w-lg">
             <h2 className="text-lg font-semibold mb-5">{editing === 'new' ? 'Новый вопрос' : 'Редактировать вопрос'}</h2>
 
             <div className="space-y-4">
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Вопрос</label>
                 <input
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
+                  className="w-full bg-[#0f1117] border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
                   value={form.question}
                   onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
                   placeholder="Как долго выполняется заказ?"
@@ -107,7 +107,7 @@ export default function FAQPage() {
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Ответ</label>
                 <textarea
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-none"
+                  className="w-full bg-[#0f1117] border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-none"
                   rows={5}
                   value={form.answer}
                   onChange={e => setForm(f => ({ ...f, answer: e.target.value }))}
@@ -119,7 +119,7 @@ export default function FAQPage() {
                   <label className="text-xs text-slate-400 mb-1 block">Порядок (чем меньше — тем выше)</label>
                   <input
                     type="number"
-                    className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
+                    className="w-full bg-[#0f1117] border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
                     value={form.order}
                     onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))}
                   />
@@ -139,7 +139,7 @@ export default function FAQPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button onClick={close} className="flex-1 py-2 border border-slate-700 rounded-lg text-sm text-slate-400 hover:text-white transition-colors">
+              <button onClick={close} className="flex-1 py-2 border border-border rounded-lg text-sm text-slate-400 hover:text-white transition-colors">
                 Отмена
               </button>
               <button onClick={save} disabled={saving || !form.question || !form.answer} className="flex-1 py-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 rounded-lg text-sm text-white transition-colors">

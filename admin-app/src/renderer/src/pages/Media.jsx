@@ -119,7 +119,7 @@ export default function Media() {
       </div>
 
       {showMediaForm && (
-        <div className="bg-surface border border-slate-700/50 rounded-xl p-5 mb-5">
+        <div className="bg-surface border border-border/50 rounded-xl p-5 mb-5">
           <div className="text-sm font-medium text-slate-300 mb-3">
             {editMediaId ? 'Редактировать медиа' : 'Новое медиа'}
           </div>
@@ -128,7 +128,7 @@ export default function Media() {
               <label className="block text-xs text-slate-500 mb-1">Имя / Никнейм</label>
               <input
                 required
-                className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                className="w-full bg-[#0f1117] border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
                 value={mediaForm.name}
                 onChange={(e) => setMediaForm({ name: e.target.value })}
                 placeholder="Блогер Вася"
@@ -156,9 +156,9 @@ export default function Media() {
           {media.map((m) => {
             const pf = promoForms[m.id] || {}
             return (
-              <div key={m.id} className={`bg-surface border rounded-xl overflow-hidden ${m.is_active ? 'border-slate-700/50' : 'border-slate-700/20 opacity-60'}`}>
+              <div key={m.id} className={`bg-surface border rounded-xl overflow-hidden ${m.is_active ? 'border-border/50' : 'border-border/20 opacity-60'}`}>
                 {/* Media header */}
-                <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-700/30">
+                <div className="flex items-center gap-4 px-5 py-4 border-b border-border/30">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-white text-base">{m.name}</span>
@@ -187,7 +187,7 @@ export default function Media() {
 
                 {/* Promo code form */}
                 {pf.open && (
-                  <div className="px-5 py-4 bg-[#0f1117] border-b border-slate-700/30">
+                  <div className="px-5 py-4 bg-[#0f1117] border-b border-border/30">
                     <div className="text-xs text-slate-400 mb-3">{pf.editId ? 'Редактировать промокод' : 'Новый промокод'}</div>
                     <form onSubmit={(e) => handlePromoSubmit(e, m.id)} className="flex flex-wrap items-end gap-3">
                       <div>
@@ -195,7 +195,7 @@ export default function Media() {
                         <input
                           required
                           disabled={!!pf.editId}
-                          className="bg-surface border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 uppercase w-36 disabled:opacity-50"
+                          className="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 uppercase w-36 disabled:opacity-50"
                           value={pf.code}
                           onChange={(e) => setPromoField(m.id, 'code', e.target.value.toUpperCase())}
                           placeholder="VASYA10"
@@ -205,7 +205,7 @@ export default function Media() {
                         <label className="block text-xs text-slate-500 mb-1">Скидка клиенту (%)</label>
                         <input
                           type="number" min="0" max="100" step="0.5"
-                          className="bg-surface border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
+                          className="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
                           value={pf.discount_percent}
                           onChange={(e) => setPromoField(m.id, 'discount_percent', e.target.value)}
                         />
@@ -214,7 +214,7 @@ export default function Media() {
                         <label className="block text-xs text-slate-500 mb-1">% медиа с заказа</label>
                         <input
                           type="number" min="0" max="100" step="0.5"
-                          className="bg-surface border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
+                          className="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
                           value={pf.media_percent}
                           onChange={(e) => setPromoField(m.id, 'media_percent', e.target.value)}
                         />
@@ -235,7 +235,7 @@ export default function Media() {
                 {m.promo_codes.length > 0 ? (
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-slate-500 text-xs uppercase border-b border-slate-700/30">
+                      <tr className="text-slate-500 text-xs uppercase border-b border-border/30">
                         <th className="text-left px-5 py-2">Промокод</th>
                         <th className="text-center px-4 py-2">Скидка</th>
                         <th className="text-center px-4 py-2">% медиа</th>
@@ -247,7 +247,7 @@ export default function Media() {
                     </thead>
                     <tbody>
                       {m.promo_codes.map((p) => (
-                        <tr key={p.id} className={`border-b border-slate-700/20 hover:bg-slate-700/10 ${!p.is_active ? 'opacity-50' : ''}`}>
+                        <tr key={p.id} className={`border-b border-border/20 hover:bg-slate-700/10 ${!p.is_active ? 'opacity-50' : ''}`}>
                           <td className="px-5 py-2.5">
                             <span className="font-mono text-brand-400 font-semibold tracking-wider">{p.code}</span>
                           </td>
