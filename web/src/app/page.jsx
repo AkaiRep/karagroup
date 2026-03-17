@@ -173,24 +173,24 @@ export default function CatalogPage() {
 
         {/* Left character — desktop only */}
         {heroCharLeft && (
-          <div className="hidden lg:block absolute left-0 bottom-0 z-10 pointer-events-none select-none" style={{ height: '90%', maxWidth: '22%' }}>
+          <div className="hidden lg:flex absolute left-0 inset-y-0 z-10 pointer-events-none select-none items-center justify-center" style={{ width: '22%' }}>
             <img
               src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${heroCharLeft}`}
               alt=""
-              className="h-full w-full object-contain object-bottom"
-              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))' }}
+              className="max-h-full max-w-full object-contain"
+              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))' }}
             />
           </div>
         )}
 
         {/* Right character — desktop only */}
         {heroCharRight && (
-          <div className="hidden lg:block absolute right-0 bottom-0 z-10 pointer-events-none select-none" style={{ height: '90%', maxWidth: '22%' }}>
+          <div className="hidden lg:flex absolute right-0 inset-y-0 z-10 pointer-events-none select-none items-center justify-center" style={{ width: '22%' }}>
             <img
               src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${heroCharRight}`}
               alt=""
-              className="h-full w-full object-contain object-bottom"
-              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))' }}
+              className="max-h-full max-w-full object-contain"
+              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))' }}
             />
           </div>
         )}
