@@ -313,7 +313,7 @@ export default function CatalogPage() {
               .map(cat => {
                 const isPinned = cat.id === pinnedCatId
                 const catProducts = products.filter(p => p.category_id === cat.id)
-                const visible = getVisible(cat.id)
+                const visible = (isPinned && !isMobile) ? catProducts.length : getVisible(cat.id)
                 const shown = catProducts.slice(0, visible)
                 const hasMore = catProducts.length > visible
                 const catDiscount = isPinned ? 0 : globalDiscount
