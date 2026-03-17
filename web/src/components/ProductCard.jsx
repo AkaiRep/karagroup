@@ -8,8 +8,10 @@ const DESC_THRESHOLD = 110
 export default function ProductCard({ product, globalDiscount = 0, isTop = false, animationDelay = 0 }) {
   const { cart, addItem, setQty } = useCart()
   const [descExpanded, setDescExpanded] = useState(false)
+  const [clamped, setClamped] = useState(true)
   const [collapsedHeight, setCollapsedHeight] = useState(null)
   const descRef = useRef(null)
+  const collapseTimer = useRef(null)
   const item = cart[product.id]
   const inCart = !!item
   const qty = item?.quantity || 0
@@ -78,13 +80,23 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
                   ? { maxHeight: descRef.current?.scrollHeight + 'px' }
                   : collapsedHeight ? { maxHeight: collapsedHeight } : {}}
               >
-                <p ref={descRef} className={`text-xs md:text-sm text-slate-400 leading-relaxed ${!descExpanded ? 'line-clamp-2 md:line-clamp-3' : ''}`}>
+                <p ref={descRef} className={`text-xs md:text-sm text-slate-400 leading-relaxed ${clamped ? 'line-clamp-2 md:line-clamp-3' : ''}`}>
                   {product.description}
                 </p>
               </div>
               {product.description.length > DESC_THRESHOLD && (
                 <button
-                  onClick={e => { e.stopPropagation(); setDescExpanded(v => !v) }}
+                  onClick={e => {
+                    e.stopPropagation()
+                    clearTimeout(collapseTimer.current)
+                    if (descExpanded) {
+                      setDescExpanded(false)
+                      collapseTimer.current = setTimeout(() => setClamped(true), 300)
+                    } else {
+                      setClamped(false)
+                      setDescExpanded(true)
+                    }
+                  }}
                   className="text-[11px] text-green-400/80 hover:text-green-400 mt-1 transition-colors"
                 >
                   {descExpanded ? 'Скрыть ↑' : 'Подробнее ↓'}
