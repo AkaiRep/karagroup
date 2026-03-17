@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useCart } from '@/context/CartContext'
 import { BASE } from '@/lib/api'
 
@@ -8,6 +8,7 @@ const DESC_THRESHOLD = 110
 export default function ProductCard({ product, globalDiscount = 0, isTop = false }) {
   const { cart, addItem, setQty } = useCart()
   const [descExpanded, setDescExpanded] = useState(false)
+  const descRef = useRef(null)
   const item = cart[product.id]
   const inCart = !!item
   const qty = item?.quantity || 0
@@ -57,9 +58,17 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
           </h3>
           {product.description && (
             <div>
-              <p className={`text-xs md:text-sm text-slate-400 leading-relaxed ${descExpanded ? '' : 'line-clamp-3'}`}>
-                {product.description}
-              </p>
+              <div
+                style={{
+                  maxHeight: descExpanded ? descRef.current?.scrollHeight + 'px' : '3.6rem',
+                  overflow: 'hidden',
+                  transition: 'max-height 0.3s ease',
+                }}
+              >
+                <p ref={descRef} className="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
               {product.description.length > DESC_THRESHOLD && (
                 <button
                   onClick={e => { e.stopPropagation(); setDescExpanded(v => !v) }}
