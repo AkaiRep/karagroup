@@ -8,7 +8,7 @@
     "build": "electron-vite build",
     "dist:win": "electron-vite build && electron-builder --win --x64",
     "dist:mac": "electron-vite build && electron-builder --mac",
-    "dist:all": "electron-vite build && electron-builder --win --mac"
+    "dist:all": "electron-vite build && electron-builder --win --x64 --mac"
   },
   "dependencies": {
     "@tiptap/react": "^2.9.0",

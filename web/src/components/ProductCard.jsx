@@ -1,9 +1,13 @@
 'use client'
+import { useState } from 'react'
 import { useCart } from '@/context/CartContext'
 import { BASE } from '@/lib/api'
 
+const DESC_THRESHOLD = 110
+
 export default function ProductCard({ product, globalDiscount = 0, isTop = false }) {
   const { cart, addItem, setQty } = useCart()
+  const [descExpanded, setDescExpanded] = useState(false)
   const item = cart[product.id]
   const inCart = !!item
   const qty = item?.quantity || 0
@@ -52,9 +56,19 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
             {product.name}
           </h3>
           {product.description && (
-            <p className="text-xs md:text-sm text-slate-400 leading-relaxed line-clamp-2 md:line-clamp-3">
-              {product.description}
-            </p>
+            <div>
+              <p className={`text-xs md:text-sm text-slate-400 leading-relaxed ${descExpanded ? '' : 'line-clamp-3'}`}>
+                {product.description}
+              </p>
+              {product.description.length > DESC_THRESHOLD && (
+                <button
+                  onClick={e => { e.stopPropagation(); setDescExpanded(v => !v) }}
+                  className="text-[11px] text-green-400/80 hover:text-green-400 mt-1 transition-colors"
+                >
+                  {descExpanded ? 'Скрыть ↑' : 'Подробнее ↓'}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
