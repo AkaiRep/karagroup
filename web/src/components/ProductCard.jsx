@@ -5,7 +5,7 @@ import { BASE } from '@/lib/api'
 
 const DESC_THRESHOLD = 110
 
-export default function ProductCard({ product, globalDiscount = 0, isTop = false }) {
+export default function ProductCard({ product, globalDiscount = 0, isTop = false, animationDelay = 0 }) {
   const { cart, addItem, setQty } = useCart()
   const [descExpanded, setDescExpanded] = useState(false)
   const descRef = useRef(null)
@@ -21,7 +21,10 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
   const displayPrice = discountedPrice ?? product.price
 
   return (
-    <div className="relative overflow-hidden bg-[#111318] border border-white/5 rounded-2xl flex flex-col hover:border-green-500/30 transition-all duration-200 group">
+    <div
+      className="relative overflow-hidden bg-[#111318] border border-white/5 rounded-2xl flex flex-col hover:border-green-500/30 transition-all duration-200 group"
+      style={{ animation: `fadeInUp 0.35s ease both`, animationDelay: `${animationDelay}ms` }}
+    >
       {/* Background image */}
       {(() => {
         const imgUrl = product.image_url

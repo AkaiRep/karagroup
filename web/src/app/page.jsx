@@ -328,8 +328,8 @@ export default function CatalogPage() {
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {shown.map(product => (
-                        <ProductCard key={product.id} product={product} globalDiscount={catDiscount} isTop={!isPinned && topProductIds.has(product.id)} />
+                      {shown.map((product, i) => (
+                        <ProductCard key={product.id} product={product} globalDiscount={catDiscount} isTop={!isPinned && topProductIds.has(product.id)} animationDelay={i >= (visible - PAGE_MORE) ? (i - (visible - PAGE_MORE)) * 50 : 0} />
                       ))}
                     </div>
                     {hasMore && (
