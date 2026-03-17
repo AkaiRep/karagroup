@@ -137,6 +137,11 @@ export const getBlogPosts = () => api.get('/blog/all').then(r => r.data)
 export const createBlogPost = (data) => api.post('/blog/', data).then(r => r.data)
 export const updateBlogPost = (id, data) => api.patch(`/blog/${id}`, data).then(r => r.data)
 export const deleteBlogPost = (id) => api.delete(`/blog/${id}`)
+export const uploadBlogImage = (file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return api.post('/blog/upload-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+}
 
 // ── Financial ─────────────────────────────────────────────────────────────────
 export const getDashboard = () => api.get('/financial/dashboard').then((r) => r.data)

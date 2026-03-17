@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost } from '../api'
+import RichEditor from '../components/RichEditor'
 
 const EMPTY = { title: '', slug: '', excerpt: '', content: '', cover_image_url: '', is_published: false }
 
@@ -176,13 +177,11 @@ export default function Blog() {
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Текст статьи * <span className="text-slate-600">(пустая строка = новый абзац)</span></label>
-                <textarea
-                  className="w-full bg-base border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-y font-mono"
-                  rows={12}
+                <label className="text-xs text-slate-400 mb-1 block">Текст статьи *</label>
+                <RichEditor
+                  key={editing === 'new' ? 'new' : editing?.id}
                   value={form.content}
-                  onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
-                  placeholder="Текст статьи..."
+                  onChange={html => setForm(f => ({ ...f, content: html }))}
                 />
               </div>
               <div>
@@ -208,7 +207,7 @@ export default function Blog() {
               <button onClick={close} className="flex-1 py-2 border border-border rounded-lg text-sm text-slate-400 hover:text-white transition-colors">Отмена</button>
               <button
                 onClick={save}
-                disabled={saving || !form.title || !form.slug || !form.content}
+                disabled={saving || !form.title || !form.slug}
                 className="flex-1 py-2 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 rounded-lg text-sm text-white transition-colors"
               >
                 {saving ? 'Сохранение...' : 'Сохранить'}

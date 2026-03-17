@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
+from pathlib import Path
+import shutil, uuid as uuid_lib
 from database import get_db
 import models, schemas, auth as auth_utils
 
@@ -62,3 +64,16 @@ def delete_post(post_id: int, db: Session = Depends(get_db), _=Depends(auth_util
     db.delete(post)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/upload-image")
+async def upload_blog_image(file: UploadFile = File(...), _=Depends(auth_utils.require_admin)):
+    ext = (file.filename or '').rsplit('.', 1)[-1].lower()
+    if ext not in ('jpg', 'jpeg', 'png', 'gif', 'webp'):
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+    fname = f"{uuid_lib.uuid4().hex}.{ext}"
+    dest = Path(f"uploads/blog/{fname}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with dest.open('wb') as out:
+        shutil.copyfileobj(file.file, out)
+    return {"url": f"/uploads/blog/{fname}"}

@@ -15,16 +15,20 @@ async function getPost(slug) {
   }
 }
 
+function stripHtml(html) {
+  return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+}
+
 export async function generateMetadata({ params }) {
   const post = await getPost(params.slug)
   if (!post) return {}
   return {
     title: post.title,
-    description: post.excerpt || post.content.slice(0, 160),
+    description: post.excerpt || stripHtml(post.content).slice(0, 160),
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       title: post.title,
-      description: post.excerpt || post.content.slice(0, 160),
+      description: post.excerpt || stripHtml(post.content).slice(0, 160),
       ...(post.cover_image_url && { images: [{ url: post.cover_image_url, width: 1200, height: 630 }] }),
     },
   }
@@ -42,7 +46,7 @@ export default async function BlogPostPage({ params }) {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
-    description: post.excerpt || post.content.slice(0, 160),
+    description: post.excerpt || stripHtml(post.content).slice(0, 160),
     datePublished: post.created_at,
     dateModified: post.updated_at,
     publisher: { '@type': 'Organization', name: 'KaraShop', url: SITE_URL },
@@ -58,8 +62,6 @@ export default async function BlogPostPage({ params }) {
       { '@type': 'ListItem', position: 3, name: post.title, item: `${SITE_URL}/blog/${post.slug}` },
     ],
   }
-
-  const paragraphs = post.content.split(/\n\n+/).filter(Boolean)
 
   return (
     <>
@@ -86,13 +88,10 @@ export default async function BlogPostPage({ params }) {
         <time className="text-xs text-slate-500 mb-3 block">{formatDate(post.created_at)}</time>
         <h1 className="text-3xl font-bold mb-8">{post.title}</h1>
 
-        <div className="prose-custom space-y-4 text-slate-300 leading-relaxed">
-          {paragraphs.map((para, i) => (
-            <p key={i}>{para.split('\n').map((line, j) => (
-              <span key={j}>{line}{j < para.split('\n').length - 1 && <br />}</span>
-            ))}</p>
-          ))}
-        </div>
+        <div
+          className="blog-content text-slate-300 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
       </div>
     </>
   )
