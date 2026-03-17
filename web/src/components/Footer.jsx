@@ -19,6 +19,8 @@ const cols = [
       { href: '/orders', label: 'Мои заказы' },
       { href: '/refunds', label: 'Возврат средств' },
       { href: '/offer', label: 'Публичная оферта' },
+      { href: '/privacy', label: 'Политика конфиденциальности' },
+      { href: '/legal', label: 'Правовая информация' },
       { href: '/sitemap-page', label: 'Карта сайта' },
     ],
   },
