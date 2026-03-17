@@ -15,6 +15,7 @@ const DEFAULTS = {
   stat_1_num: '500+', stat_1_label: 'Выполненных заказов', stat_1_desc: 'За всё время работы',
   stat_2_num: '100%', stat_2_label: 'Гарантия результата', stat_2_desc: 'Или вернём деньги',
   stat_3_num: '<2ч',  stat_3_label: 'Время отклика',       stat_3_desc: 'Начинаем работу быстро',
+  accent_color: '#22c55e',
 }
 
 const ALL_FIELDS = [
@@ -42,6 +43,7 @@ const ALL_FIELDS = [
   { tab: 'seo',    key: 'seo_description', label: 'Описание сайта (description)', hint: 'Краткое описание под заголовком в поисковике (160 символов)', type: 'textarea', rows: 3 },
   { tab: 'seo',    key: 'seo_keywords',    label: 'Ключевые слова (keywords)', hint: 'Через запятую: буст аккаунтов, буст, повышение ранга', type: 'text' },
   { tab: 'seo',    key: 'seo_og_image',    label: 'OG-изображение (URL)', hint: 'Картинка при репосте ссылки в соцсетях/Telegram (1200×630)', type: 'text' },
+  { tab: 'design', key: 'accent_color',    label: 'Цвет акцента', hint: 'Основной цвет кнопок, ссылок и элементов интерфейса сайта', type: 'color' },
 ]
 
 const TABS = [
@@ -53,6 +55,7 @@ const TABS = [
   { id: 'catalog', label: 'Каталог' },
   { id: 'faq',     label: 'FAQ' },
   { id: 'seo',     label: 'SEO' },
+  { id: 'design',  label: 'Дизайн' },
 ]
 
 const EMPTY_FAQ = { question: '', answer: '', order: 0, is_active: true }
