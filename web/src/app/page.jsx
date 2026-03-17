@@ -319,13 +319,20 @@ export default function CatalogPage() {
                 const catDiscount = isPinned ? 0 : globalDiscount
                 return (
                   <div key={cat.id}>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
-                      <span className="text-sm font-semibold text-green-400 uppercase tracking-widest px-2">
-                        {cat.name}
-                        {isPinned && <span className="ml-2 text-xs text-yellow-400/80 normal-case tracking-normal">⭐ закреп</span>}
-                      </span>
-                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+                    <div className="mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+                        <span className="text-sm font-semibold text-green-400 uppercase tracking-widest px-2">
+                          {cat.name}
+                          {isPinned && <span className="ml-2 text-xs text-yellow-400/80 normal-case tracking-normal">⭐ закреп</span>}
+                        </span>
+                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
+                      </div>
+                      {isPinned && cat.description && (
+                        <p className="text-slate-400 text-sm text-center mt-2 max-w-2xl mx-auto leading-relaxed">
+                          {cat.description}
+                        </p>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {shown.map((product, i) => (
