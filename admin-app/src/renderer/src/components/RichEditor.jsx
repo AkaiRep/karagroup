@@ -56,7 +56,7 @@ export default function RichEditor({ value, onChange }) {
     try {
       const { url } = await uploadBlogImage(file)
       const src = url.startsWith('/') ? `${getApiBase()}${url}` : url
-      editor.chain().focus().setImage({ src }).run()
+      editor.chain().focus().setImage({ src }).insertContentAt(editor.state.selection.to + 1, { type: 'paragraph' }).run()
     } catch {
       alert('Ошибка загрузки изображения')
     }
