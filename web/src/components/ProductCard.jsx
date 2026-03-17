@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useCart } from '@/context/CartContext'
 import { BASE } from '@/lib/api'
 
@@ -8,10 +8,18 @@ const DESC_THRESHOLD = 110
 export default function ProductCard({ product, globalDiscount = 0, isTop = false, animationDelay = 0 }) {
   const { cart, addItem, setQty } = useCart()
   const [descExpanded, setDescExpanded] = useState(false)
+  const [collapsedHeight, setCollapsedHeight] = useState(null)
   const descRef = useRef(null)
   const item = cart[product.id]
   const inCart = !!item
   const qty = item?.quantity || 0
+
+  useEffect(() => {
+    if (!descRef.current) return
+    const lh = parseFloat(getComputedStyle(descRef.current).lineHeight)
+    const lines = window.innerWidth >= 768 ? 3 : 2
+    setCollapsedHeight(`${lh * lines}px`)
+  }, [])
 
   const effectiveDiscount = Math.max(product.discount_percent || 0, globalDiscount)
   const discountedPrice = effectiveDiscount > 0
@@ -63,7 +71,9 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
             <div>
               <div
                 className={descExpanded ? 'desc-expanded' : 'desc-collapsed'}
-                style={descExpanded ? { maxHeight: descRef.current?.scrollHeight + 'px' } : {}}
+                style={descExpanded
+                  ? { maxHeight: descRef.current?.scrollHeight + 'px' }
+                  : collapsedHeight ? { maxHeight: collapsedHeight } : {}}
               >
                 <p ref={descRef} className="text-xs md:text-sm text-slate-400 leading-relaxed">
                   {product.description}
