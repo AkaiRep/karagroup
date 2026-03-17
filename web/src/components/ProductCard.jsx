@@ -59,11 +59,8 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
           {product.description && (
             <div>
               <div
-                style={{
-                  maxHeight: descExpanded ? descRef.current?.scrollHeight + 'px' : '3.6rem',
-                  overflow: 'hidden',
-                  transition: 'max-height 0.3s ease',
-                }}
+                className={descExpanded ? 'desc-expanded' : 'desc-collapsed'}
+                style={descExpanded ? { maxHeight: descRef.current?.scrollHeight + 'px' } : {}}
               >
                 <p ref={descRef} className="text-xs md:text-sm text-slate-400 leading-relaxed">
                   {product.description}

@@ -75,6 +75,21 @@ body {
   animation: carousel-scroll var(--carousel-duration, 40s) linear infinite;
 }
 
+.desc-collapsed {
+  max-height: 2.6rem; /* 2 строки на мобиле (text-xs + leading-relaxed) */
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+@media (min-width: 768px) {
+  .desc-collapsed {
+    max-height: 4.3rem; /* 3 строки на десктопе (text-sm + leading-relaxed) */
+  }
+}
+.desc-expanded {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
 /* ── Blog content (rendered HTML from TipTap) ─────────────────────── */
 .blog-content > * + * { margin-top: 0.875rem; }
 .blog-content p { line-height: 1.8; }
