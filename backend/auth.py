@@ -19,6 +19,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24 * 7  # 7 days
 
 bearer_scheme = HTTPBearer()
+optional_bearer = HTTPBearer(auto_error=False)
 
 
 def _prehash(password: str) -> bytes:
@@ -63,6 +64,21 @@ def get_current_user(
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
     return user
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer),
+    db: Session = Depends(get_db),
+) -> Optional[models.User]:
+    if not credentials:
+        return None
+    payload = decode_token(credentials.credentials)
+    if not payload:
+        return None
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+    return db.query(models.User).filter(models.User.id == int(user_id)).first()
 
 
 def require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:

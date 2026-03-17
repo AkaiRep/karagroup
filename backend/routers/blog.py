@@ -19,6 +19,43 @@ def list_posts_all(db: Session = Depends(get_db), _=Depends(auth_utils.require_a
     return db.query(models.Post).order_by(models.Post.created_at.desc()).all()
 
 
+# Admin comment endpoints — MUST be before /{slug} to avoid slug-matching "admin"
+@router.get("/admin/comments")
+def list_pending_comments(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+    comments = db.query(models.BlogComment).filter(models.BlogComment.is_approved == False).order_by(models.BlogComment.created_at.desc()).all()
+    result = []
+    for c in comments:
+        result.append({
+            "id": c.id,
+            "post_id": c.post_id,
+            "post_title": c.post.title if c.post else "",
+            "text": c.text,
+            "author_name": c.user.username if c.user else "?",
+            "created_at": c.created_at.isoformat(),
+        })
+    return result
+
+
+@router.patch("/admin/comments/{comment_id}/approve")
+def approve_comment(comment_id: int, db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+    c = db.query(models.BlogComment).filter(models.BlogComment.id == comment_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Not found")
+    c.is_approved = True
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/comments/{comment_id}")
+def delete_comment(comment_id: int, db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+    c = db.query(models.BlogComment).filter(models.BlogComment.id == comment_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(c)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/{slug}", response_model=schemas.PostOut)
 def get_post(slug: str, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
@@ -77,3 +114,65 @@ async def upload_blog_image(file: UploadFile = File(...), _=Depends(auth_utils.r
     with dest.open('wb') as out:
         shutil.copyfileobj(file.file, out)
     return {"url": f"/uploads/blog/{fname}"}
+
+
+@router.post("/{slug}/view")
+def increment_view(slug: str, db: Session = Depends(get_db)):
+    post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
+    if post:
+        post.views = (post.views or 0) + 1
+        db.commit()
+    return {"ok": True}
+
+
+@router.get("/{slug}/social")
+def get_social(slug: str, db: Session = Depends(get_db), current_user=Depends(auth_utils.get_optional_user)):
+    post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Not found")
+    likes_count = db.query(models.BlogLike).filter(models.BlogLike.post_id == post.id).count()
+    liked_by_me = False
+    if current_user:
+        liked_by_me = db.query(models.BlogLike).filter(models.BlogLike.post_id == post.id, models.BlogLike.user_id == current_user.id).first() is not None
+    comments = db.query(models.BlogComment).filter(models.BlogComment.post_id == post.id, models.BlogComment.is_approved == True).order_by(models.BlogComment.created_at.asc()).all()
+    result_comments = []
+    for c in comments:
+        result_comments.append({
+            "id": c.id,
+            "post_id": c.post_id,
+            "user_id": c.user_id,
+            "text": c.text,
+            "is_approved": c.is_approved,
+            "created_at": c.created_at,
+            "author_name": c.user.username if c.user else "Аноним",
+            "author_photo": getattr(c.user, 'photo_url', None),
+        })
+    return {"views": post.views or 0, "likes": likes_count, "liked_by_me": liked_by_me, "comments": result_comments}
+
+
+@router.post("/{slug}/like")
+def toggle_like(slug: str, db: Session = Depends(get_db), current_user: models.User = Depends(auth_utils.get_current_user)):
+    post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Not found")
+    existing = db.query(models.BlogLike).filter(models.BlogLike.post_id == post.id, models.BlogLike.user_id == current_user.id).first()
+    if existing:
+        db.delete(existing)
+        liked = False
+    else:
+        db.add(models.BlogLike(post_id=post.id, user_id=current_user.id))
+        liked = True
+    db.commit()
+    likes_count = db.query(models.BlogLike).filter(models.BlogLike.post_id == post.id).count()
+    return {"liked": liked, "likes": likes_count}
+
+
+@router.post("/{slug}/comments")
+def add_comment(slug: str, data: schemas.BlogCommentCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth_utils.get_current_user)):
+    post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Not found")
+    comment = models.BlogComment(post_id=post.id, user_id=current_user.id, text=data.text)
+    db.add(comment)
+    db.commit()
+    return {"ok": True, "message": "Комментарий отправлен на модерацию"}

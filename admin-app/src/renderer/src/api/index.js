@@ -143,6 +143,11 @@ export const uploadBlogImage = (file) => {
   return api.post('/api/blog/upload-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
 }
 
+// Blog comments moderation
+export const getBlogPendingComments = () => api.get('/api/blog/admin/comments').then(r => r.data)
+export const approveBlogComment = (id) => api.patch(`/api/blog/admin/comments/${id}/approve`).then(r => r.data)
+export const deleteBlogComment = (id) => api.delete(`/api/blog/admin/comments/${id}`).then(r => r.data)
+
 // ── Hero char images ──────────────────────────────────────────────────────────
 export const uploadHeroChar = (side, file) => {
   const fd = new FormData()

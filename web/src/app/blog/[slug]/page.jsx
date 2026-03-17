@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import BlogInteractions from '@/components/BlogInteractions'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://karashop.ru'
@@ -92,6 +93,7 @@ export default async function BlogPostPage({ params }) {
           className="blog-content text-slate-300 leading-relaxed"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+        <BlogInteractions slug={post.slug} />
       </div>
     </>
   )

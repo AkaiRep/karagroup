@@ -365,6 +365,30 @@ class PostOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class BlogCommentCreate(BaseModel):
+    text: str = Field(..., min_length=1, max_length=2000)
+
+
+class BlogCommentOut(BaseModel):
+    id: int
+    post_id: int
+    user_id: int
+    text: str
+    is_approved: bool
+    created_at: datetime
+    author_name: Optional[str] = None
+    author_photo: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class BlogSocialOut(BaseModel):
+    views: int
+    likes: int
+    liked_by_me: bool
+    comments: List["BlogCommentOut"]
+
+
 class DashboardStats(BaseModel):
     total_revenue: float
     avg_order_value: float

@@ -250,8 +250,40 @@ class Post(Base):
     content = Column(Text, nullable=False)
     cover_image_url = Column(String(512), nullable=True)
     is_published = Column(Boolean, default=False, nullable=False)
+    views = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    likes = relationship("BlogLike", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("BlogComment", back_populates="post", cascade="all, delete-orphan")
+
+
+class BlogLike(Base):
+    __tablename__ = "blog_likes"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("post_id", "user_id"),)
+
+    post = relationship("Post", back_populates="likes")
+    user = relationship("User")
+
+
+class BlogComment(Base):
+    __tablename__ = "blog_comments"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    text = Column(Text, nullable=False)
+    is_approved = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    post = relationship("Post", back_populates="comments")
+    user = relationship("User")
 
 
 class Review(Base):
