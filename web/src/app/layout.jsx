@@ -41,7 +41,7 @@ export async function generateMetadata() {
       images: [ogImage],
     },
     robots: { index: true, follow: true },
-    verification: { google: 'Zqikt1B5bG_zk3U-54dhvDUKJF3i1iYjOBUBC-7T_xk' },
+    verification: { google: 'Zqikt1B5bG_zk3U-54dhvDUKJF3i1iYjOBUBC-7T_xk', yandex: 'your-yandex-verification-code' },
   }
 }
 
@@ -54,11 +54,24 @@ const orgJsonLd = {
   contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', availableLanguage: 'Russian' },
 }
 
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'KaraShop',
+  url: SITE_URL,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/?q={search_term_string}` },
+    'query-input': 'required name=search_term_string',
+  },
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="ru">
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
         <Script id="yandex-metrika" strategy="afterInteractive">{`
           (function(m,e,t,r,i,k,a){

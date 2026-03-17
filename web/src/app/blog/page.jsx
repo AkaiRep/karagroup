@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -41,11 +42,15 @@ export default async function BlogPage() {
           <Link key={post.id} href={`/blog/${post.slug}`} className="block group">
             <article className="bg-[#111318] border border-white/5 hover:border-green-500/20 rounded-2xl overflow-hidden transition-colors">
               {post.cover_image_url && (
-                <img
-                  src={post.cover_image_url}
-                  alt={post.title}
-                  className="w-full h-48 object-cover"
-                />
+                <div className="relative w-full h-48">
+                  <Image
+                    src={post.cover_image_url}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 768px"
+                  />
+                </div>
               )}
               <div className="p-6">
                 <time className="text-xs text-slate-500 mb-2 block">{formatDate(post.created_at)}</time>
