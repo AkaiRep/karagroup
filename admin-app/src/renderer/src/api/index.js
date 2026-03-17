@@ -156,3 +156,5 @@ export const getTransactions = (params) =>
   api.get('/financial/transactions', { params }).then((r) => r.data)
 export const payTransaction = (id) =>
   api.patch(`/financial/transactions/${id}/pay`).then((r) => r.data)
+export const unpayTransaction = (id) =>
+  api.patch(`/financial/transactions/${id}/unpay`).then((r) => r.data)

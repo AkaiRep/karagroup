@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getTransactions, payTransaction, getUsers } from '../api'
+import { getTransactions, payTransaction, unpayTransaction, getUsers } from '../api'
 
 const TX_STATUS = { pending: 'К выплате', paid: 'Выплачено' }
 
@@ -27,6 +27,12 @@ export default function Financial() {
 
   const handlePay = async (id) => {
     await payTransaction(id)
+    load()
+  }
+
+  const handleUnpay = async (id) => {
+    if (!window.confirm('Вернуть выплату в статус «Ожидает»?')) return
+    await unpayTransaction(id)
     load()
   }
 
@@ -120,14 +126,24 @@ export default function Financial() {
                   {tx.paid_at && <div>Выплачено: {new Date(tx.paid_at).toLocaleDateString('ru-RU')}</div>}
                 </td>
                 <td className="px-5 py-3 text-center">
-                  {tx.status === 'pending' && (
-                    <button
-                      onClick={() => handlePay(tx.id)}
-                      className="text-xs bg-green-500/15 hover:bg-green-500/25 text-green-400 px-3 py-1 rounded transition-colors"
-                    >
-                      Выплатить
-                    </button>
-                  )}
+                  <div className="flex items-center justify-center gap-2">
+                    {tx.status === 'pending' && (
+                      <button
+                        onClick={() => handlePay(tx.id)}
+                        className="text-xs bg-green-500/15 hover:bg-green-500/25 text-green-400 px-3 py-1 rounded transition-colors"
+                      >
+                        Выплатить
+                      </button>
+                    )}
+                    {tx.status === 'paid' && (
+                      <button
+                        onClick={() => handleUnpay(tx.id)}
+                        className="text-xs bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-400 px-3 py-1 rounded transition-colors"
+                      >
+                        Вернуть
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

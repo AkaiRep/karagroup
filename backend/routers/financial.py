@@ -170,3 +170,21 @@ def pay_transaction(
     db.commit()
     db.refresh(tx)
     return tx
+
+
+@router.patch("/transactions/{tx_id}/unpay", response_model=schemas.TransactionOut)
+def unpay_transaction(
+    tx_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    tx = db.query(models.Transaction).filter(models.Transaction.id == tx_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    if tx.status != models.TransactionStatus.paid:
+        raise HTTPException(status_code=400, detail="Transaction is not paid")
+    tx.status = models.TransactionStatus.pending
+    tx.paid_at = None
+    db.commit()
+    db.refresh(tx)
+    return tx
