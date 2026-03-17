@@ -93,7 +93,7 @@ export default function Blog() {
 
       <div className="space-y-3">
         {posts.map(post => (
-          <div key={post.id} className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-4">
+          <div key={post.id} className="bg-surface border border-slate-700/50 rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -121,13 +121,13 @@ export default function Blog() {
 
       {editing !== null && (
         <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-2xl p-6 w-full max-w-2xl my-8">
+          <div className="bg-surface border border-slate-700/50 rounded-2xl p-6 w-full max-w-2xl my-8">
             <h2 className="text-lg font-semibold mb-5">{editing === 'new' ? 'Новая статья' : 'Редактировать статью'}</h2>
             <div className="space-y-4">
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Заголовок *</label>
                 <input
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
                   value={form.title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="Как работает буст в Valorant"
@@ -136,7 +136,7 @@ export default function Blog() {
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Slug (URL) *</label>
                 <input
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-brand-500"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-brand-500"
                   value={form.slug}
                   onChange={e => { setSlugManual(true); setForm(f => ({ ...f, slug: e.target.value })) }}
                   placeholder="kak-rabotaet-boost-valorant"
@@ -146,7 +146,7 @@ export default function Blog() {
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Краткое описание</label>
                 <textarea
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-none"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-none"
                   rows={2}
                   value={form.excerpt}
                   onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))}
@@ -156,7 +156,7 @@ export default function Blog() {
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Текст статьи * <span className="text-slate-600">(пустая строка = новый абзац)</span></label>
                 <textarea
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-y font-mono"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 resize-y font-mono"
                   rows={12}
                   value={form.content}
                   onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
@@ -166,7 +166,7 @@ export default function Blog() {
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">URL обложки</label>
                 <input
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
                   value={form.cover_image_url}
                   onChange={e => setForm(f => ({ ...f, cover_image_url: e.target.value }))}
                   placeholder="https://..."

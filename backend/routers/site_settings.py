@@ -33,8 +33,6 @@ ALLOWED_KEYS = {
     "seo_description",
     "seo_keywords",
     "seo_og_image",
-    # Design
-    "accent_color",
 }
 
 

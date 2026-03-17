@@ -66,19 +66,10 @@ const websiteJsonLd = {
   },
 }
 
-export default async function RootLayout({ children }) {
-  let accentColor = '#22c55e'
-  try {
-    const res = await fetch(`${API_URL}/site-settings/`, { next: { revalidate: 300 } })
-    if (res.ok) {
-      const s = await res.json()
-      if (s.accent_color) accentColor = s.accent_color
-    }
-  } catch {}
-
+export default function RootLayout({ children }) {
   return (
     <html lang="ru">
-      <body style={{ '--accent': accentColor }}>
+      <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />

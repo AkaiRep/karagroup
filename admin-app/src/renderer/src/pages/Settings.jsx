@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { getSiteSettings, updateSiteSetting, getFAQ, createFAQ, updateFAQ, deleteFAQ, getCategories } from '../api'
+import { applyBrandColor } from '../utils/brandColor'
 
 const DEFAULTS = {
   dev_banner_text: 'Сайт находится в разработке — возможны временные неполадки',
@@ -15,7 +16,6 @@ const DEFAULTS = {
   stat_1_num: '500+', stat_1_label: 'Выполненных заказов', stat_1_desc: 'За всё время работы',
   stat_2_num: '100%', stat_2_label: 'Гарантия результата', stat_2_desc: 'Или вернём деньги',
   stat_3_num: '<2ч',  stat_3_label: 'Время отклика',       stat_3_desc: 'Начинаем работу быстро',
-  accent_color: '#22c55e',
 }
 
 const ALL_FIELDS = [
@@ -43,7 +43,6 @@ const ALL_FIELDS = [
   { tab: 'seo',    key: 'seo_description', label: 'Описание сайта (description)', hint: 'Краткое описание под заголовком в поисковике (160 символов)', type: 'textarea', rows: 3 },
   { tab: 'seo',    key: 'seo_keywords',    label: 'Ключевые слова (keywords)', hint: 'Через запятую: буст аккаунтов, буст, повышение ранга', type: 'text' },
   { tab: 'seo',    key: 'seo_og_image',    label: 'OG-изображение (URL)', hint: 'Картинка при репосте ссылки в соцсетях/Telegram (1200×630)', type: 'text' },
-  { tab: 'design', key: 'accent_color',    label: 'Цвет акцента', hint: 'Основной цвет кнопок, ссылок и элементов интерфейса сайта', type: 'color' },
 ]
 
 const TABS = [
@@ -77,7 +76,7 @@ function CatalogTab({ settings, onSave }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-4">
+      <div className="bg-surface rounded-xl border border-slate-700/50 p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
             <label className="text-sm font-medium text-slate-200">Закреплённая категория</label>
@@ -95,7 +94,7 @@ function CatalogTab({ settings, onSave }) {
         <select
           value={pinnedId}
           onChange={e => setPinnedId(e.target.value)}
-          className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50"
+          className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-green-500/50"
         >
           <option value="">— Без закрепа —</option>
           {categories.map(cat => (
@@ -151,7 +150,7 @@ function FAQTab() {
 
       <div className="space-y-3">
         {items.map(item => (
-          <div key={item.id} className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-4">
+          <div key={item.id} className="bg-surface border border-slate-700/50 rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -173,13 +172,13 @@ function FAQTab() {
 
       {editing !== null && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-2xl p-6 w-full max-w-lg">
+          <div className="bg-surface border border-slate-700/50 rounded-2xl p-6 w-full max-w-lg">
             <h2 className="text-lg font-semibold mb-5">{editing === 'new' ? 'Новый вопрос' : 'Редактировать вопрос'}</h2>
             <div className="space-y-4">
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Вопрос</label>
                 <input
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50"
                   value={form.question}
                   onChange={e => setForm(f => ({ ...f, question: e.target.value }))}
                   placeholder="Как долго выполняется заказ?"
@@ -188,7 +187,7 @@ function FAQTab() {
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Ответ</label>
                 <textarea
-                  className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50 resize-none"
+                  className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50 resize-none"
                   rows={5}
                   value={form.answer}
                   onChange={e => setForm(f => ({ ...f, answer: e.target.value }))}
@@ -200,7 +199,7 @@ function FAQTab() {
                   <label className="text-xs text-slate-400 mb-1 block">Порядок</label>
                   <input
                     type="number"
-                    className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50"
+                    className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50"
                     value={form.order}
                     onChange={e => setForm(f => ({ ...f, order: parseInt(e.target.value) || 0 }))}
                   />
@@ -222,6 +221,60 @@ function FAQTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+const DEFAULT_COLOR = '#4f73f5'
+
+function DesignTab() {
+  const [color, setColor] = useState(() => localStorage.getItem('adminAccentColor') || DEFAULT_COLOR)
+
+  const apply = (hex) => {
+    setColor(hex)
+    localStorage.setItem('adminAccentColor', hex)
+    applyBrandColor(hex)
+  }
+
+  const reset = () => apply(DEFAULT_COLOR)
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-surface rounded-xl border border-slate-700/50 p-4">
+        <label className="text-sm font-medium text-slate-200">Цвет акцента интерфейса</label>
+        <p className="text-xs text-slate-500 mt-0.5 mb-4">Хранится локально на этом устройстве — не влияет на сайт</p>
+        <div className="flex items-center gap-3">
+          <input
+            type="color"
+            value={color}
+            onChange={e => apply(e.target.value)}
+            className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0 flex-shrink-0"
+          />
+          <input
+            value={color}
+            onChange={e => apply(e.target.value)}
+            placeholder="#4f73f5"
+            className="flex-1 bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-brand-500/50 transition-colors"
+          />
+          <div className="w-10 h-10 rounded-lg border border-white/10 flex-shrink-0" style={{ background: color }} />
+        </div>
+        <button onClick={reset} className="mt-3 text-xs text-slate-500 hover:text-slate-300 transition-colors">
+          ↩ Сбросить к стандартному
+        </button>
+      </div>
+
+      <div className="bg-surface rounded-xl border border-slate-700/50 p-4">
+        <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-3">Предпросмотр</p>
+        <div className="flex flex-wrap gap-2 items-center">
+          <button className="px-4 py-2 bg-brand-500 text-white rounded-lg text-sm font-medium">Кнопка</button>
+          <button className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium">Тёмнее</button>
+          <span className="px-3 py-1.5 bg-brand-500/20 text-brand-200 rounded-lg text-sm">Бейдж</span>
+          <span className="px-3 py-1.5 border border-brand-500/40 text-brand-200 rounded-lg text-sm">Рамка</span>
+          <span className="w-3 h-3 rounded-full bg-brand-500 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-brand-200 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-brand-900 inline-block" />
+        </div>
+      </div>
     </div>
   )
 }
@@ -273,8 +326,8 @@ export default function Settings() {
     <div className="p-8 max-w-2xl">
       <h1 className="text-2xl font-bold mb-6">Настройки сайта</h1>
 
-      {/* Search — скрываем на вкладке FAQ */}
-      {activeTab !== 'faq' && (
+      {/* Search — скрываем на вкладках без полей */}
+      {activeTab !== 'faq' && activeTab !== 'design' && (
         <div className="relative mb-4">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -283,7 +336,7 @@ export default function Settings() {
             value={search}
             onChange={e => { setSearch(e.target.value); setActiveTab('all') }}
             placeholder="Поиск по настройкам..."
-            className="w-full bg-[#1a1f2e] border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50 transition-colors placeholder-slate-600"
+            className="w-full bg-surface border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-green-500/50 transition-colors placeholder-slate-600"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">✕</button>
@@ -293,7 +346,7 @@ export default function Settings() {
 
       {/* Tabs */}
       {!search && (
-        <div className="flex gap-1 mb-6 bg-[#1a1f2e] p-1 rounded-xl border border-slate-700/50 flex-wrap">
+        <div className="flex gap-1 mb-6 bg-surface p-1 rounded-xl border border-slate-700/50 flex-wrap">
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -313,6 +366,8 @@ export default function Settings() {
         <FAQTab />
       ) : activeTab === 'catalog' ? (
         <CatalogTab settings={settings} onSave={async (key, val) => { await updateSiteSetting(key, val); setSettings(s => ({ ...s, [key]: val })) }} />
+      ) : activeTab === 'design' ? (
+        <DesignTab />
       ) : (
         <>
           {visibleFields.length === 0 ? (
@@ -320,7 +375,7 @@ export default function Settings() {
           ) : (
             <div className="space-y-3">
               {visibleFields.map(field => (
-                <div key={field.key} className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-4">
+                <div key={field.key} className="bg-surface rounded-xl border border-slate-700/50 p-4">
                   {field.type === 'toggle' ? (
                     <div className="flex items-center justify-between">
                       <div>
@@ -357,13 +412,13 @@ export default function Settings() {
                       {field.type === 'color' ? (
                         <div className="flex items-center gap-3">
                           <input type="color" value={get(field.key) || '#fbbf24'} onChange={e => set(field.key, e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent p-0" />
-                          <input value={get(field.key) || '#fbbf24'} onChange={e => set(field.key, e.target.value)} placeholder="#fbbf24" className="flex-1 bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-green-500/50 transition-colors" />
+                          <input value={get(field.key) || '#fbbf24'} onChange={e => set(field.key, e.target.value)} placeholder="#fbbf24" className="flex-1 bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-green-500/50 transition-colors" />
                           <div className="w-10 h-10 rounded-lg border border-white/10 flex-shrink-0" style={{ background: get(field.key) || '#fbbf24' }} />
                         </div>
                       ) : field.type === 'textarea' ? (
-                        <textarea value={get(field.key)} onChange={e => set(field.key, e.target.value)} rows={field.rows || 3} className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors resize-y" />
+                        <textarea value={get(field.key)} onChange={e => set(field.key, e.target.value)} rows={field.rows || 3} className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors resize-y" />
                       ) : (
-                        <input value={get(field.key)} onChange={e => set(field.key, e.target.value)} className="w-full bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors" />
+                        <input value={get(field.key)} onChange={e => set(field.key, e.target.value)} className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors" />
                       )}
                     </div>
                   )}

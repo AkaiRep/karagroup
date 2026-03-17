@@ -13,8 +13,8 @@ function StatusDot({ ok }) {
 
 function Card({ title, icon, children }) {
   return (
-    <div className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-700/50 bg-[#151922] flex items-center gap-2">
+    <div className="bg-surface rounded-xl border border-slate-700/50 overflow-hidden">
+      <div className="px-5 py-3 border-b border-slate-700/50 bg-base flex items-center gap-2">
         {icon && <span>{icon}</span>}
         <h2 className="font-semibold text-slate-200 text-sm">{title}</h2>
       </div>
@@ -49,7 +49,7 @@ const CHART_THEME = {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#1a1f2e] border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-xl">
+    <div className="bg-surface border border-slate-600 rounded-lg px-3 py-2 text-xs shadow-xl">
       <p className="text-slate-400 mb-1">{label}</p>
       {payload.map(p => (
         <p key={p.name} style={{ color: p.color }}>
@@ -103,7 +103,7 @@ export default function Health() {
         <button
           onClick={() => load(true)}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1a1f2e] border border-slate-700 hover:border-green-500/40 rounded-xl text-sm transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 bg-surface border border-slate-700 hover:border-green-500/40 rounded-xl text-sm transition-colors disabled:opacity-50"
         >
           <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -115,7 +115,7 @@ export default function Health() {
       {loading && (
         <div className="space-y-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-[#1a1f2e] rounded-xl h-32 animate-pulse border border-slate-700/50" />
+            <div key={i} className="bg-surface rounded-xl h-32 animate-pulse border border-slate-700/50" />
           ))}
         </div>
       )}
@@ -250,7 +250,7 @@ export default function Health() {
           )}
 
           {data.history && data.history.length <= 1 && (
-            <div className="bg-[#1a1f2e] rounded-xl border border-slate-700/50 p-6 text-center text-slate-500 text-sm">
+            <div className="bg-surface rounded-xl border border-slate-700/50 p-6 text-center text-slate-500 text-sm">
               Графики появятся после нескольких обновлений (обновляй страницу)
             </div>
           )}

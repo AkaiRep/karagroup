@@ -5,15 +5,17 @@ export default {
     extend: {
       colors: {
         brand: {
-          50:  '#f0f4ff',
-          100: '#dde6ff',
-          200: '#c3d1ff',
-          500: '#4f73f5',
-          600: '#3b5de0',
-          700: '#2d47c4',
-          800: '#1e3099',
-          900: '#13216e',
-        }
+          50:  'rgb(var(--brand-50) / <alpha-value>)',
+          100: 'rgb(var(--brand-100) / <alpha-value>)',
+          200: 'rgb(var(--brand-200) / <alpha-value>)',
+          500: 'rgb(var(--brand-500) / <alpha-value>)',
+          600: 'rgb(var(--brand-600) / <alpha-value>)',
+          700: 'rgb(var(--brand-700) / <alpha-value>)',
+          800: 'rgb(var(--brand-800) / <alpha-value>)',
+          900: 'rgb(var(--brand-900) / <alpha-value>)',
+        },
+        base:    'rgb(var(--bg-base) / <alpha-value>)',
+        surface: 'rgb(var(--bg-surface) / <alpha-value>)',
       }
     }
   },

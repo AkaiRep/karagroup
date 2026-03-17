@@ -71,8 +71,8 @@ export default function Layout() {
   }, [globalIsOpen])
 
   return (
-    <div className="flex h-screen bg-[#0f1117] overflow-hidden">
-      <aside className="w-56 bg-[#1a1f2e] border-r border-slate-700/50 flex flex-col">
+    <div className="flex h-screen bg-base overflow-hidden">
+      <aside className="w-56 bg-surface border-r border-slate-700/50 flex flex-col">
         <div className="px-5 py-5 border-b border-slate-700/50">
           <div className="text-xl font-bold text-brand-500">KaraGroup</div>
           <div className="text-xs text-slate-500 mt-0.5">Admin</div>

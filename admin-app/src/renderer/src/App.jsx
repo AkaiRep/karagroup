@@ -1,5 +1,7 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuthStore } from './store'
+import { applyBrandColor } from './utils/brandColor'
 import Login from './pages/Login'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
@@ -20,6 +22,11 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    const saved = localStorage.getItem('adminAccentColor')
+    if (saved) applyBrandColor(saved)
+  }, [])
+
   return (
     <HashRouter>
       <Routes>

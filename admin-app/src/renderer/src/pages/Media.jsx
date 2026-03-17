@@ -119,7 +119,7 @@ export default function Media() {
       </div>
 
       {showMediaForm && (
-        <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5 mb-5">
+        <div className="bg-surface border border-slate-700/50 rounded-xl p-5 mb-5">
           <div className="text-sm font-medium text-slate-300 mb-3">
             {editMediaId ? 'Редактировать медиа' : 'Новое медиа'}
           </div>
@@ -156,7 +156,7 @@ export default function Media() {
           {media.map((m) => {
             const pf = promoForms[m.id] || {}
             return (
-              <div key={m.id} className={`bg-[#1a1f2e] border rounded-xl overflow-hidden ${m.is_active ? 'border-slate-700/50' : 'border-slate-700/20 opacity-60'}`}>
+              <div key={m.id} className={`bg-surface border rounded-xl overflow-hidden ${m.is_active ? 'border-slate-700/50' : 'border-slate-700/20 opacity-60'}`}>
                 {/* Media header */}
                 <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-700/30">
                   <div className="flex-1">
@@ -195,7 +195,7 @@ export default function Media() {
                         <input
                           required
                           disabled={!!pf.editId}
-                          className="bg-[#1a1f2e] border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 uppercase w-36 disabled:opacity-50"
+                          className="bg-surface border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 uppercase w-36 disabled:opacity-50"
                           value={pf.code}
                           onChange={(e) => setPromoField(m.id, 'code', e.target.value.toUpperCase())}
                           placeholder="VASYA10"
@@ -205,7 +205,7 @@ export default function Media() {
                         <label className="block text-xs text-slate-500 mb-1">Скидка клиенту (%)</label>
                         <input
                           type="number" min="0" max="100" step="0.5"
-                          className="bg-[#1a1f2e] border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
+                          className="bg-surface border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
                           value={pf.discount_percent}
                           onChange={(e) => setPromoField(m.id, 'discount_percent', e.target.value)}
                         />
@@ -214,7 +214,7 @@ export default function Media() {
                         <label className="block text-xs text-slate-500 mb-1">% медиа с заказа</label>
                         <input
                           type="number" min="0" max="100" step="0.5"
-                          className="bg-[#1a1f2e] border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
+                          className="bg-surface border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand-500 w-28"
                           value={pf.media_percent}
                           onChange={(e) => setPromoField(m.id, 'media_percent', e.target.value)}
                         />

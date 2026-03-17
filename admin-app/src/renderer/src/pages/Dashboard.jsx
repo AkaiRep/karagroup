@@ -23,7 +23,7 @@ const SOURCE_COLORS = { funpay: '#ff6b35', telegram: '#229ed9', other: '#64748b'
 
 function StatCard({ label, value, sub, color = 'text-white' }) {
   return (
-    <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5">
+    <div className="bg-surface border border-slate-700/50 rounded-xl p-5">
       <div className="text-xs text-slate-500 uppercase tracking-wider mb-1">{label}</div>
       <div className={`text-3xl font-bold ${color}`}>{value}</div>
       {sub && <div className="text-xs text-slate-500 mt-1">{sub}</div>}
@@ -112,7 +112,7 @@ export default function Dashboard() {
       {/* Charts row 1 */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         {/* Revenue by day */}
-        <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5">
+        <div className="bg-surface border border-slate-700/50 rounded-xl p-5">
           <div className="text-sm font-medium text-slate-300 mb-4">Выручка по дням</div>
           {stats.revenue_by_day.length === 0 ? (
             <div className="text-slate-500 text-sm text-center py-8">Нет данных</div>
@@ -133,7 +133,7 @@ export default function Dashboard() {
         </div>
 
         {/* Orders by status */}
-        <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5">
+        <div className="bg-surface border border-slate-700/50 rounded-xl p-5">
           <div className="text-sm font-medium text-slate-300 mb-4">Заказы по статусам</div>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
@@ -151,7 +151,7 @@ export default function Dashboard() {
       {/* Charts row 2 */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         {/* Source pie */}
-        <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5">
+        <div className="bg-surface border border-slate-700/50 rounded-xl p-5">
           <div className="text-sm font-medium text-slate-300 mb-4">Источники заказов</div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
@@ -167,7 +167,7 @@ export default function Dashboard() {
         </div>
 
         {/* Top products */}
-        <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5 col-span-2">
+        <div className="bg-surface border border-slate-700/50 rounded-xl p-5 col-span-2">
           <div className="text-sm font-medium text-slate-300 mb-4">Топ услуг</div>
           {stats.top_products.length === 0 ? (
             <div className="text-slate-500 text-sm text-center py-8">Нет данных</div>
@@ -186,7 +186,7 @@ export default function Dashboard() {
       </div>
 
       {/* Workers table */}
-      <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-5">
+      <div className="bg-surface border border-slate-700/50 rounded-xl p-5">
         <div className="text-sm font-medium text-slate-300 mb-4">Статистика качеров</div>
         <table className="w-full text-sm">
           <thead>

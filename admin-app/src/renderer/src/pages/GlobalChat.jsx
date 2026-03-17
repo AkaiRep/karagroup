@@ -169,7 +169,7 @@ export default function GlobalChat() {
                 </div>
 
                 {/* Bubble */}
-                <div className={`rounded-2xl ${isMe ? 'rounded-tr-sm bg-brand-500 text-white' : 'rounded-tl-sm bg-[#1a1f2e] text-slate-200'} ${msg.image_url ? 'p-1.5' : 'px-4 py-2.5'}`}>
+                <div className={`rounded-2xl ${isMe ? 'rounded-tr-sm bg-brand-500 text-white' : 'rounded-tl-sm bg-surface text-slate-200'} ${msg.image_url ? 'p-1.5' : 'px-4 py-2.5'}`}>
                   {msg.image_url ? (
                     <div className="relative group/img">
                       <img
@@ -233,7 +233,7 @@ export default function GlobalChat() {
             onChange={handleImagePick}
           />
           <input
-            className="flex-1 bg-[#1a1f2e] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
+            className="flex-1 bg-surface border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onPaste={handlePaste}

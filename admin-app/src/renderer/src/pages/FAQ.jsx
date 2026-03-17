@@ -60,7 +60,7 @@ export default function FAQPage() {
 
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.id} className="bg-[#1a1f2e] border border-slate-700/50 rounded-xl p-4">
+          <div key={item.id} className="bg-surface border border-slate-700/50 rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -91,7 +91,7 @@ export default function FAQPage() {
       {/* Modal */}
       {editing !== null && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1f2e] border border-slate-700/50 rounded-2xl p-6 w-full max-w-lg">
+          <div className="bg-surface border border-slate-700/50 rounded-2xl p-6 w-full max-w-lg">
             <h2 className="text-lg font-semibold mb-5">{editing === 'new' ? 'Новый вопрос' : 'Редактировать вопрос'}</h2>
 
             <div className="space-y-4">

@@ -164,7 +164,7 @@ export default function ChatPanel({ orderId, onClose }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#1a1f2e] border-l border-slate-700/50">
+    <div className="flex flex-col h-full bg-surface border-l border-slate-700/50">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50 flex-shrink-0">
         <div className="text-sm font-medium text-slate-300">Чат — Заказ #{orderId}</div>
@@ -192,7 +192,7 @@ export default function ChatPanel({ orderId, onClose }) {
                     {msg.sender?.username || 'Unknown'}
                   </div>
                 )}
-                <div className={`rounded-xl ${isMe ? 'bg-brand-500 text-white' : 'bg-[#0f1117] text-slate-200'} ${msg.image_url ? 'p-1.5' : 'px-3 py-2'}`}>
+                <div className={`rounded-xl ${isMe ? 'bg-brand-500 text-white' : 'bg-base text-slate-200'} ${msg.image_url ? 'p-1.5' : 'px-3 py-2'}`}>
                   {msg.image_url ? (
                     <ImageMessage
                       msg={msg}
@@ -250,7 +250,7 @@ export default function ChatPanel({ orderId, onClose }) {
             onChange={handleImagePick}
           />
           <input
-            className="flex-1 bg-[#0f1117] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
+            className="flex-1 bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
             value={text}
             onChange={(e) => setText(e.target.value)}
             onPaste={handlePaste}
