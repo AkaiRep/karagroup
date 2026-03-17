@@ -11,7 +11,7 @@ export const metadata = {
 
 async function getPosts() {
   try {
-    const res = await fetch(`${API_URL}/blog/`, { next: { revalidate: 300 } })
+    const res = await fetch(`${API_URL}/api/blog/`, { next: { revalidate: 300 } })
     if (!res.ok) return []
     return await res.json()
   } catch {

@@ -19,7 +19,8 @@
       "Bash(cd /Users/daniilsnajder/Documents/karagroup/web && npm run build 2>&1 | tail -30)",
       "Bash(npx next:*)",
       "Bash(./node_modules/.bin/next build:*)",
-      "Bash(ls /Users/daniilsnajder/Documents/karagroup/web/src/components/Footer* 2>&1)"
+      "Bash(ls /Users/daniilsnajder/Documents/karagroup/web/src/components/Footer* 2>&1)",
+      "Bash(perl -pi -e 's|\\\\$\\\\{API_URL\\\\}/blog/|\\\\${API_URL}/api/blog/|g' \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/blog/page.jsx \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/sitemap.js \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/sitemap-page/page.jsx)"
     ]
   }
 }

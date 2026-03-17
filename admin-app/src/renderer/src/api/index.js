@@ -133,14 +133,14 @@ export const updateFAQ = (id, data) => api.patch(`/faq/${id}`, data).then(r => r
 export const deleteFAQ = (id) => api.delete(`/faq/${id}`)
 
 // ── Blog ──────────────────────────────────────────────────────────────────────
-export const getBlogPosts = () => api.get('/blog/all').then(r => r.data)
-export const createBlogPost = (data) => api.post('/blog/', data).then(r => r.data)
-export const updateBlogPost = (id, data) => api.patch(`/blog/${id}`, data).then(r => r.data)
-export const deleteBlogPost = (id) => api.delete(`/blog/${id}`)
+export const getBlogPosts = () => api.get('/api/blog/all').then(r => r.data)
+export const createBlogPost = (data) => api.post('/api/blog/', data).then(r => r.data)
+export const updateBlogPost = (id, data) => api.patch(`/api/blog/${id}`, data).then(r => r.data)
+export const deleteBlogPost = (id) => api.delete(`/api/blog/${id}`)
 export const uploadBlogImage = (file) => {
   const fd = new FormData()
   fd.append('file', file)
-  return api.post('/blog/upload-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+  return api.post('/api/blog/upload-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
 }
 
 // ── Financial ─────────────────────────────────────────────────────────────────

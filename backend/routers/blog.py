@@ -6,7 +6,7 @@ import shutil, uuid as uuid_lib
 from database import get_db
 import models, schemas, auth as auth_utils
 
-router = APIRouter(prefix="/blog", tags=["blog"])
+router = APIRouter(prefix="/api/blog", tags=["blog"])
 
 
 @router.get("/", response_model=List[schemas.PostOut])

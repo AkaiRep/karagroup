@@ -7,7 +7,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://karashop.ru'
 
 async function getPost(slug) {
   try {
-    const res = await fetch(`${API_URL}/blog/${slug}`, { next: { revalidate: 300 } })
+    const res = await fetch(`${API_URL}/api/blog/${slug}`, { next: { revalidate: 300 } })
     if (!res.ok) return null
     return await res.json()
   } catch {
