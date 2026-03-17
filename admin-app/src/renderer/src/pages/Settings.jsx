@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
-import { getSiteSettings, updateSiteSetting, getFAQ, createFAQ, updateFAQ, deleteFAQ, getCategories } from '../api'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { getSiteSettings, updateSiteSetting, getFAQ, createFAQ, updateFAQ, deleteFAQ, getCategories, uploadHeroChar, getApiBase } from '../api'
 import { applyBrandColor } from '../utils/brandColor'
 
 const DEFAULTS = {
@@ -225,6 +225,131 @@ function FAQTab() {
   )
 }
 
+function HeroCharUploader({ side, label, currentUrl, onUploaded }) {
+  const inputRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = async (file) => {
+    if (!file) return
+    setUploading(true)
+    try {
+      const { url } = await uploadHeroChar(side, file)
+      onUploaded(url)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const imgSrc = currentUrl ? `${getApiBase()}${currentUrl}` : null
+
+  return (
+    <div className="flex-1 bg-base rounded-xl border border-border/50 p-4 flex flex-col gap-3">
+      <p className="text-sm font-medium text-slate-200">{label}</p>
+      <div
+        className="relative h-48 rounded-lg border-2 border-dashed border-border/60 flex items-center justify-center overflow-hidden cursor-pointer hover:border-green-500/40 transition-colors bg-surface/50"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => e.preventDefault()}
+        onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }}
+      >
+        {imgSrc ? (
+          <img src={imgSrc} alt={label} className="h-full w-full object-contain" />
+        ) : (
+          <div className="text-center text-slate-500 text-sm px-4">
+            <div className="text-3xl mb-2">🖼</div>
+            Нажмите или перетащите PNG
+          </div>
+        )}
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <span className="text-white text-sm">Загрузка...</span>
+          </div>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-medium transition-colors"
+        >
+          {currentUrl ? 'Заменить' : 'Загрузить'}
+        </button>
+        {currentUrl && (
+          <button
+            onClick={() => onUploaded('')}
+            className="px-3 py-1.5 border border-border hover:border-red-500/40 text-slate-400 hover:text-red-400 rounded-lg text-xs transition-colors"
+          >
+            Удалить
+          </button>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/png,image/webp,image/gif" className="hidden" onChange={e => handleFile(e.target.files[0])} />
+    </div>
+  )
+}
+
+function HeroTab({ settings, onSave, get, set, dirty, saved, saveField }) {
+  const heroFields = ALL_FIELDS.filter(f => f.tab === 'hero')
+
+  const saveChar = async (side, url) => {
+    const key = `hero_char_${side}`
+    await updateSiteSetting(key, url)
+    onSave(key, url)
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Text fields */}
+      {heroFields.map(field => (
+        <div key={field.key} className="bg-surface rounded-xl border border-border/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <label className="text-sm font-medium text-slate-200">{field.label}</label>
+              {field.hint && <p className="text-xs text-slate-500 mt-0.5">{field.hint}</p>}
+            </div>
+            <button
+              onClick={() => saveField(field.key)}
+              disabled={!dirty[field.key]}
+              className={`ml-3 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
+                saved[field.key] ? 'bg-green-500/20 text-green-400' :
+                dirty[field.key] ? 'bg-green-600 hover:bg-green-500 text-white' :
+                'bg-slate-700/40 text-slate-500 cursor-default'
+              }`}
+            >
+              {saved[field.key] ? 'Сохранено!' : 'Сохранить'}
+            </button>
+          </div>
+          {field.type === 'textarea' ? (
+            <textarea value={get(field.key)} onChange={e => set(field.key, e.target.value)} rows={field.rows || 3} className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors resize-y" />
+          ) : (
+            <input value={get(field.key)} onChange={e => set(field.key, e.target.value)} className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors" />
+          )}
+        </div>
+      ))}
+
+      {/* Character images */}
+      <div className="bg-surface rounded-xl border border-border/50 p-4">
+        <p className="text-sm font-medium text-slate-200 mb-1">Персонажи Hero-секции</p>
+        <p className="text-xs text-slate-500 mb-4">Отображаются по бокам заголовка только на десктопе. Рекомендуем PNG с прозрачным фоном.</p>
+        <div className="flex gap-3">
+          <HeroCharUploader
+            side="left"
+            label="Левый персонаж"
+            currentUrl={get('hero_char_left')}
+            onUploaded={url => saveChar('left', url)}
+          />
+          <HeroCharUploader
+            side="right"
+            label="Правый персонаж"
+            currentUrl={get('hero_char_right')}
+            onUploaded={url => saveChar('right', url)}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const DEFAULT_COLOR = '#4f73f5'
 
 function DesignTab() {
@@ -327,7 +452,7 @@ export default function Settings() {
       <h1 className="text-2xl font-bold mb-6">Настройки сайта</h1>
 
       {/* Search — скрываем на вкладках без полей */}
-      {activeTab !== 'faq' && activeTab !== 'design' && (
+      {activeTab !== 'faq' && activeTab !== 'design' && activeTab !== 'hero' && (
         <div className="relative mb-4">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -368,6 +493,13 @@ export default function Settings() {
         <CatalogTab settings={settings} onSave={async (key, val) => { await updateSiteSetting(key, val); setSettings(s => ({ ...s, [key]: val })) }} />
       ) : activeTab === 'design' ? (
         <DesignTab />
+      ) : activeTab === 'hero' ? (
+        <HeroTab
+          settings={settings}
+          onSave={(key, val) => setSettings(s => ({ ...s, [key]: val }))}
+          get={get} set={set} dirty={dirty} saved={saved}
+          saveField={save}
+        />
       ) : (
         <>
           {visibleFields.length === 0 ? (

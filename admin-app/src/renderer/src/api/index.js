@@ -143,6 +143,13 @@ export const uploadBlogImage = (file) => {
   return api.post('/api/blog/upload-image', fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
 }
 
+// ── Hero char images ──────────────────────────────────────────────────────────
+export const uploadHeroChar = (side, file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return api.post(`/site-settings/upload-hero-char/${side}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+}
+
 // ── Financial ─────────────────────────────────────────────────────────────────
 export const getDashboard = () => api.get('/financial/dashboard').then((r) => r.data)
 export const getTransactions = (params) =>

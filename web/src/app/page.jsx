@@ -138,6 +138,9 @@ export default function CatalogPage() {
     { num: s.stat_3_num || DEFAULT_STATS[2].num, label: s.stat_3_label || DEFAULT_STATS[2].label, desc: s.stat_3_desc || DEFAULT_STATS[2].desc },
   ]
 
+  const heroCharLeft  = s.hero_char_left  || null
+  const heroCharRight = s.hero_char_right || null
+
   const pinnedCatId = s.pinned_category_id ? parseInt(s.pinned_category_id) : null
 
   const sortedCategoriesFinal = pinnedCatId
@@ -167,6 +170,30 @@ export default function CatalogPage() {
         />
         <div className="absolute inset-0 bg-[#07080d]/75" />
         <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#07080d] via-[#07080d]/60 to-transparent" />
+
+        {/* Left character — desktop only */}
+        {heroCharLeft && (
+          <div className="hidden lg:block absolute left-0 bottom-0 z-10 pointer-events-none select-none" style={{ height: '90%', maxWidth: '22%' }}>
+            <img
+              src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${heroCharLeft}`}
+              alt=""
+              className="h-full w-full object-contain object-bottom"
+              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))' }}
+            />
+          </div>
+        )}
+
+        {/* Right character — desktop only */}
+        {heroCharRight && (
+          <div className="hidden lg:block absolute right-0 bottom-0 z-10 pointer-events-none select-none" style={{ height: '90%', maxWidth: '22%' }}>
+            <img
+              src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${heroCharRight}`}
+              alt=""
+              className="h-full w-full object-contain object-bottom"
+              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 60%, rgba(0,0,0,0))' }}
+            />
+          </div>
+        )}
 
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-1.5 rounded-full mb-6 font-medium">

@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+import shutil
+import uuid as uuid_lib
+from pathlib import Path
+from fastapi import APIRouter, Depends, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Any, Optional
@@ -33,6 +36,9 @@ ALLOWED_KEYS = {
     "seo_description",
     "seo_keywords",
     "seo_og_image",
+    # Hero characters
+    "hero_char_left",
+    "hero_char_right",
 }
 
 
@@ -72,3 +78,25 @@ def update_setting(
         raise HTTPException(status_code=400, detail="Unknown setting key")
     _set(db, key, str(body.value))
     return {"key": key, "value": str(body.value)}
+
+
+@router.post("/upload-hero-char/{side}")
+async def upload_hero_char(
+    side: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    from fastapi import HTTPException
+    if side not in ("left", "right"):
+        raise HTTPException(status_code=400, detail="side must be 'left' or 'right'")
+    ext = (file.filename or "png").rsplit(".", 1)[-1].lower() or "png"
+    fname = f"hero_char_{side}_{uuid_lib.uuid4().hex[:8]}.{ext}"
+    dest = Path(f"uploads/hero/{fname}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with dest.open("wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = f"/uploads/hero/{fname}"
+    key = f"hero_char_{side}"
+    _set(db, key, url)
+    return {"url": url}

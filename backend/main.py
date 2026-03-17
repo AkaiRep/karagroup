@@ -13,6 +13,7 @@ from routers import auth, users, orders, products, financial, chat, global_chat,
 # Ensure uploads directory exists
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
 Path("uploads/products").mkdir(parents=True, exist_ok=True)
+Path("uploads/hero").mkdir(parents=True, exist_ok=True)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
