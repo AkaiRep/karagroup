@@ -178,7 +178,7 @@ export default function CatalogPage() {
               src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${heroCharLeft}`}
               alt=""
               className="max-h-full max-w-full object-contain"
-              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))' }}
+              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0))' }}
             />
           </div>
         )}
@@ -190,7 +190,7 @@ export default function CatalogPage() {
               src={`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${heroCharRight}`}
               alt=""
               className="max-h-full max-w-full object-contain"
-              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 55%, rgba(0,0,0,0))' }}
+              style={{ maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0))', WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0))' }}
             />
           </div>
         )}
