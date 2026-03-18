@@ -148,20 +148,31 @@ def get_social(slug: str, db: Session = Depends(get_db), current_user=Depends(au
     liked_by_me = False
     if current_user:
         liked_by_me = db.query(models.BlogLike).filter(models.BlogLike.post_id == post.id, models.BlogLike.user_id == current_user.id).first() is not None
-    comments = db.query(models.BlogComment).filter(models.BlogComment.post_id == post.id, models.BlogComment.is_approved == True).order_by(models.BlogComment.created_at.asc()).all()
-    result_comments = []
-    for c in comments:
-        result_comments.append({
-            "id": c.id,
-            "post_id": c.post_id,
-            "user_id": c.user_id,
-            "text": c.text,
-            "is_approved": c.is_approved,
-            "created_at": c.created_at,
+    all_comments = db.query(models.BlogComment).filter(
+        models.BlogComment.post_id == post.id,
+        models.BlogComment.is_approved == True,
+    ).order_by(models.BlogComment.created_at.asc()).all()
+
+    def fmt(c):
+        return {
+            "id": c.id, "post_id": c.post_id, "user_id": c.user_id,
+            "parent_id": c.parent_id, "text": c.text,
+            "is_approved": c.is_approved, "created_at": c.created_at,
             "author_name": c.user.username if c.user else "Аноним",
-            "author_photo": getattr(c.user, 'photo_url', None),
-        })
-    return {"views": post.views or 0, "likes": likes_count, "liked_by_me": liked_by_me, "comments": result_comments}
+            "author_photo": getattr(c.user, "photo_url", None),
+            "replies": [],
+        }
+
+    by_id = {c.id: fmt(c) for c in all_comments}
+    roots = []
+    for c in all_comments:
+        node = by_id[c.id]
+        if c.parent_id and c.parent_id in by_id:
+            by_id[c.parent_id]["replies"].append(node)
+        else:
+            roots.append(node)
+
+    return {"views": post.views or 0, "likes": likes_count, "liked_by_me": liked_by_me, "comments": roots}
 
 
 @router.post("/{slug}/like")
@@ -186,7 +197,11 @@ def add_comment(slug: str, data: schemas.BlogCommentCreate, db: Session = Depend
     post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
     if not post:
         raise HTTPException(status_code=404, detail="Not found")
-    comment = models.BlogComment(post_id=post.id, user_id=current_user.id, text=data.text)
+    if data.parent_id:
+        parent = db.query(models.BlogComment).filter(models.BlogComment.id == data.parent_id, models.BlogComment.post_id == post.id).first()
+        if not parent:
+            raise HTTPException(status_code=400, detail="Parent comment not found")
+    comment = models.BlogComment(post_id=post.id, user_id=current_user.id, text=data.text, parent_id=data.parent_id)
     db.add(comment)
     db.commit()
     return {"ok": True, "message": "Комментарий отправлен на модерацию"}

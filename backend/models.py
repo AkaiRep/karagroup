@@ -3,7 +3,7 @@ from sqlalchemy import (
     Column, Integer, String, Float, Boolean,
     DateTime, ForeignKey, Enum as SAEnum, Text, UniqueConstraint
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from database import Base
 import enum
 
@@ -278,12 +278,14 @@ class BlogComment(Base):
     id = Column(Integer, primary_key=True)
     post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    parent_id = Column(Integer, ForeignKey("blog_comments.id", ondelete="CASCADE"), nullable=True)
     text = Column(Text, nullable=False)
     is_approved = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     post = relationship("Post", back_populates="comments")
     user = relationship("User")
+    replies = relationship("BlogComment", cascade="all, delete-orphan", backref=backref("parent", remote_side="BlogComment.id"))
 
 
 class BlogViewLog(Base):

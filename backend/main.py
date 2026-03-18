@@ -127,6 +127,12 @@ def run_migrations():
                 )
             """))
             conn.commit()
+        # Add parent_id to blog_comments if missing
+        if "blog_comments" in inspector.get_table_names():
+            comment_cols = [c["name"] for c in inspector.get_columns("blog_comments")]
+            if "parent_id" not in comment_cols:
+                conn.execute(text("ALTER TABLE blog_comments ADD COLUMN parent_id INTEGER REFERENCES blog_comments(id) ON DELETE CASCADE"))
+                conn.commit()
         # Create blog_view_log table if missing
         if "blog_view_log" not in inspector.get_table_names():
             conn.execute(text("""

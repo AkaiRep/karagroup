@@ -4,22 +4,114 @@ import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import TelegramLoginButton from '@/components/TelegramLoginButton'
 
+function CommentForm({ slug, parentId = null, onSubmitted, placeholder = 'Написать комментарий...', autoFocus = false }) {
+  const [text, setText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!text.trim()) return
+    setSubmitting(true)
+    try {
+      await api.addComment(slug, text.trim(), parentId)
+      setText('')
+      setSubmitted(true)
+      onSubmitted?.()
+      setTimeout(() => setSubmitted(false), 4000)
+    } catch {}
+    finally { setSubmitting(false) }
+  }
+
+  if (submitted) return (
+    <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+      Отправлено на модерацию — появится после проверки.
+    </div>
+  )
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2">
+      <textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        autoFocus={autoFocus}
+        className="w-full bg-[#111318] border border-white/8 rounded-xl px-3 py-2.5 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-green-500/40 resize-none transition-colors"
+      />
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={submitting || !text.trim()}
+          className="px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors"
+        >
+          {submitting ? 'Отправка...' : 'Отправить'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function Comment({ comment, slug, user, depth = 0 }) {
+  const [replying, setReplying] = useState(false)
+
+  return (
+    <div className={depth > 0 ? 'border-l-2 border-white/5 pl-4' : ''}>
+      <div className="flex gap-3">
+        <div className={`rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 font-medium text-green-400 ${depth > 0 ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm'}`}>
+          {(comment.author_name || '?')[0].toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-sm font-medium text-slate-300">{comment.author_name}</span>
+            <span className="text-xs text-slate-600">
+              {new Date(comment.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+            </span>
+          </div>
+          <p className="text-sm text-slate-400 leading-relaxed break-words">{comment.text}</p>
+          {user && depth === 0 && (
+            <button
+              onClick={() => setReplying(v => !v)}
+              className="mt-1.5 text-xs text-slate-600 hover:text-green-400 transition-colors"
+            >
+              {replying ? 'Отмена' : '↩ Ответить'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Replies */}
+      {(comment.replies?.length > 0 || replying) && (
+        <div className="mt-3 ml-11 space-y-3">
+          {comment.replies?.map(r => (
+            <Comment key={r.id} comment={r} slug={slug} user={user} depth={depth + 1} />
+          ))}
+          {replying && user && (
+            <CommentForm
+              slug={slug}
+              parentId={comment.id}
+              placeholder={`Ответить ${comment.author_name}...`}
+              autoFocus
+              onSubmitted={() => setReplying(false)}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function BlogInteractions({ slug }) {
   const { user } = useAuth()
   const [social, setSocial] = useState(null)
-  const [commentText, setCommentText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
 
   const load = () => api.getBlogSocial(slug).then(setSocial).catch(() => {})
 
   useEffect(() => {
-    // increment view once
     api.incrementView(slug).catch(() => {})
     load()
   }, [slug])
 
-  // reload social when user logs in
   useEffect(() => {
     if (user) load()
   }, [user])
@@ -30,18 +122,7 @@ export default function BlogInteractions({ slug }) {
     setSocial(s => ({ ...s, likes: res.likes, liked_by_me: res.liked }))
   }
 
-  const handleComment = async (e) => {
-    e.preventDefault()
-    if (!commentText.trim()) return
-    setSubmitting(true)
-    try {
-      await api.addComment(slug, commentText.trim())
-      setCommentText('')
-      setSubmitted(true)
-      setTimeout(() => setSubmitted(false), 4000)
-    } catch {}
-    finally { setSubmitting(false) }
-  }
+  const totalComments = (comments) => comments.reduce((n, c) => n + 1 + (c.replies?.length || 0), 0)
 
   if (!social) return null
 
@@ -70,7 +151,7 @@ export default function BlogInteractions({ slug }) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
           </svg>
-          {social.comments.length}
+          {totalComments(social.comments)}
         </span>
       </div>
 
@@ -79,55 +160,17 @@ export default function BlogInteractions({ slug }) {
         <h3 className="text-base font-semibold text-slate-200 mb-4">Комментарии</h3>
 
         {social.comments.length > 0 ? (
-          <div className="space-y-4 mb-6">
+          <div className="space-y-5 mb-6">
             {social.comments.map(c => (
-              <div key={c.id} className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 text-sm font-medium text-green-400">
-                  {(c.author_name || '?')[0].toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-sm font-medium text-slate-300">{c.author_name}</span>
-                    <span className="text-xs text-slate-600">
-                      {new Date(c.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-slate-400 leading-relaxed">{c.text}</p>
-                </div>
-              </div>
+              <Comment key={c.id} comment={c} slug={slug} user={user} />
             ))}
           </div>
         ) : (
           <p className="text-sm text-slate-600 mb-6">Пока нет комментариев. Будьте первым!</p>
         )}
 
-        {/* Comment form */}
         {user ? (
-          submitted ? (
-            <div className="text-sm text-green-400 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
-              Комментарий отправлен на модерацию — появится после проверки.
-            </div>
-          ) : (
-            <form onSubmit={handleComment} className="space-y-3">
-              <textarea
-                value={commentText}
-                onChange={e => setCommentText(e.target.value)}
-                placeholder="Написать комментарий..."
-                rows={3}
-                className="w-full bg-[#111318] border border-white/8 rounded-xl px-4 py-3 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-green-500/40 resize-none transition-colors"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-600">Комментарий как: <span className="text-slate-400">{user.username}</span></span>
-                <button
-                  type="submit"
-                  disabled={submitting || !commentText.trim()}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  {submitting ? 'Отправка...' : 'Отправить'}
-                </button>
-              </div>
-            </form>
-          )
+          <CommentForm slug={slug} onSubmitted={load} />
         ) : (
           <div className="flex items-center gap-4 bg-[#111318] border border-white/8 rounded-xl p-4">
             <p className="text-sm text-slate-400 flex-1">Войдите через Telegram чтобы оставить комментарий или поставить лайк</p>

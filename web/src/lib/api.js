@@ -43,5 +43,5 @@ export const api = {
   getBlogSocial: (slug) => client.get(`/api/blog/${slug}/social`).then(r => r.data),
   incrementView: (slug) => client.post(`/api/blog/${slug}/view`).then(r => r.data),
   toggleLike: (slug) => client.post(`/api/blog/${slug}/like`).then(r => r.data),
-  addComment: (slug, text) => client.post(`/api/blog/${slug}/comments`, { text }).then(r => r.data),
+  addComment: (slug, text, parentId = null) => client.post(`/api/blog/${slug}/comments`, { text, parent_id: parentId }).then(r => r.data),
 }

@@ -367,17 +367,20 @@ class PostOut(BaseModel):
 
 class BlogCommentCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=2000)
+    parent_id: Optional[int] = None
 
 
 class BlogCommentOut(BaseModel):
     id: int
     post_id: int
     user_id: int
+    parent_id: Optional[int] = None
     text: str
     is_approved: bool
     created_at: datetime
     author_name: Optional[str] = None
     author_photo: Optional[str] = None
+    replies: List["BlogCommentOut"] = []
 
     model_config = {"from_attributes": True}
 
