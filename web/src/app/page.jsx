@@ -416,44 +416,76 @@ export default function CatalogPage() {
       {/* Latest blog posts */}
       {blogPosts.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 pb-16">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold">Блог</h2>
-            <p className="text-slate-400 mt-1 text-sm">Полезные статьи и новости</p>
-            <a href="/blog" className="inline-block mt-2 text-sm text-green-400 hover:text-green-300 transition-colors">
-              Все статьи →
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <p className="text-xs text-green-400 uppercase tracking-widest font-semibold mb-1">Блог</p>
+              <h2 className="text-2xl md:text-3xl font-bold">Полезные статьи</h2>
+            </div>
+            <a href="/blog" className="hidden md:inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-green-400 transition-colors border border-white/8 hover:border-green-500/30 px-4 py-2 rounded-xl">
+              Все статьи
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
             </a>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {blogPosts.map(post => (
-              <a
-                key={post.id}
-                href={`/blog/${post.slug}`}
-                className="group bg-[#111318] border border-white/5 rounded-2xl overflow-hidden hover:border-green-500/30 transition-all duration-200 flex flex-col"
-              >
-                {post.cover_image_url && (
-                  <div className="h-40 overflow-hidden">
-                    <img
-                      src={`${BASE.replace(/\/$/, '')}${post.cover_image_url.startsWith('/') ? post.cover_image_url : '/' + post.cover_image_url}`}
-                      alt={post.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
+
+          {/* Featured (first) + side cards */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* Featured post */}
+            <a
+              href={`/blog/${blogPosts[0].slug}`}
+              className="group md:col-span-3 relative rounded-2xl overflow-hidden min-h-[280px] flex flex-col justify-end border border-white/5 hover:border-green-500/30 transition-all duration-300"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center scale-100 group-hover:scale-105 transition-transform duration-500"
+                style={{ backgroundImage: blogPosts[0].cover_image_url ? `url('${BASE.replace(/\/$/, '')}${blogPosts[0].cover_image_url}')` : "url('/card-bg.jpg')" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#07080d] via-[#07080d]/60 to-transparent" />
+              <div className="relative z-10 p-6">
+                <time className="text-xs text-green-400/80 mb-2 block">
+                  {new Date(blogPosts[0].created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </time>
+                <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-green-300 transition-colors leading-snug mb-2">
+                  {blogPosts[0].title}
+                </h3>
+                {blogPosts[0].excerpt && (
+                  <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">{blogPosts[0].excerpt}</p>
                 )}
-                <div className="p-4 flex flex-col flex-1">
-                  <time className="text-xs text-slate-600 mb-2 block">
-                    {new Date(post.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </time>
-                  <h3 className="text-sm font-semibold text-white group-hover:text-green-300 transition-colors leading-snug mb-2">
-                    {post.title}
-                  </h3>
-                  {post.excerpt && (
-                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">{post.excerpt}</p>
-                  )}
-                  <span className="mt-3 text-xs text-green-400 group-hover:text-green-300 transition-colors">Читать →</span>
-                </div>
-              </a>
-            ))}
+                <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-green-400 group-hover:gap-2.5 transition-all">
+                  Читать статью
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                </span>
+              </div>
+            </a>
+
+            {/* Side posts */}
+            <div className="md:col-span-2 flex flex-col gap-4">
+              {blogPosts.slice(1).map(post => (
+                <a
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className="group relative rounded-2xl overflow-hidden flex-1 min-h-[128px] flex flex-col justify-end border border-white/5 hover:border-green-500/30 transition-all duration-300"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center scale-100 group-hover:scale-105 transition-transform duration-500"
+                    style={{ backgroundImage: post.cover_image_url ? `url('${BASE.replace(/\/$/, '')}${post.cover_image_url}')` : "url('/card-bg.jpg')" }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#07080d] via-[#07080d]/50 to-transparent" />
+                  <div className="relative z-10 p-4">
+                    <time className="text-[10px] text-green-400/70 mb-1 block">
+                      {new Date(post.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                    </time>
+                    <h3 className="text-sm font-semibold text-white group-hover:text-green-300 transition-colors leading-snug line-clamp-2">
+                      {post.title}
+                    </h3>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
+
+          <a href="/blog" className="md:hidden mt-4 flex items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-green-400 transition-colors border border-white/8 hover:border-green-500/30 py-2.5 rounded-xl w-full">
+            Все статьи
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+          </a>
         </section>
       )}
 
