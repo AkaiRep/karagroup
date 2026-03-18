@@ -90,11 +90,42 @@ def run_migrations():
                     content TEXT NOT NULL,
                     cover_image_url VARCHAR(512),
                     is_published BOOLEAN NOT NULL DEFAULT 0,
+                    views INTEGER NOT NULL DEFAULT 0,
                     created_at DATETIME,
                     updated_at DATETIME
                 )
             """))
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_posts_slug ON posts (slug)"))
+            conn.commit()
+        else:
+            post_cols = [c["name"] for c in inspector.get_columns("posts")]
+            if "views" not in post_cols:
+                conn.execute(text("ALTER TABLE posts ADD COLUMN views INTEGER NOT NULL DEFAULT 0"))
+                conn.commit()
+        # Create blog_likes table if missing
+        if "blog_likes" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE blog_likes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at DATETIME,
+                    UNIQUE(post_id, user_id)
+                )
+            """))
+            conn.commit()
+        # Create blog_comments table if missing
+        if "blog_comments" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE blog_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    text TEXT NOT NULL,
+                    is_approved BOOLEAN NOT NULL DEFAULT 0,
+                    created_at DATETIME
+                )
+            """))
             conn.commit()
 
 
