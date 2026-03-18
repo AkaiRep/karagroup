@@ -40,7 +40,10 @@ function stripHtml(html) {
 export async function generateMetadata({ params }) {
   const post = await getPost(params.slug)
   if (!post) return {}
-  const description = post.excerpt || stripHtml(post.content).slice(0, 160)
+  const contentPreview = stripHtml(post.content).slice(0, 80).trimEnd()
+  const description = post.excerpt
+    ? `${post.excerpt} — ${contentPreview}...`
+    : `${contentPreview}...`
   const pageUrl = `${SITE_URL}/blog/${post.slug}`
   const imageUrl = post.cover_image_url
     ? post.cover_image_url.startsWith('http')
@@ -48,13 +51,13 @@ export async function generateMetadata({ params }) {
       : `${API_URL}${post.cover_image_url}`
     : `${SITE_URL}/favpic.png`
   return {
-    title: post.title,
+    title: `${post.title} — KaraShop Блог`,
     description,
     alternates: { canonical: pageUrl },
     openGraph: {
       type: 'article',
       url: pageUrl,
-      title: post.title,
+      title: `${post.title} — KaraShop Блог`,
       description,
       images: [{ url: imageUrl, width: 1200, height: 630, alt: post.title }],
     },
