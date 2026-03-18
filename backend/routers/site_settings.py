@@ -39,6 +39,20 @@ ALLOWED_KEYS = {
     # Hero characters
     "hero_char_left",
     "hero_char_right",
+    # Payments — LAVA
+    "pay_lava_enabled",
+    "pay_lava_shop_id",
+    "pay_lava_secret_key",
+    "pay_lava_additional_key",
+    # Payments — Platega
+    "pay_platega_enabled",
+    "pay_platega_merchant_id",
+    "pay_platega_secret",
+    "pay_platega_return_url",
+    # Payments — commissions (%)
+    "pay_commission_sbp",
+    "pay_commission_card_rf",
+    "pay_commission_intl",
 }
 
 

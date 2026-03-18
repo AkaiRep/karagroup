@@ -12,6 +12,7 @@ const nav = [
   { to: '/financial', label: 'Финансы', icon: '💰' },
   { to: '/media', label: 'Медиа', icon: '📺' },
   { to: '/blog', label: 'Блог', icon: '📝' },
+  { to: '/payments', label: 'Платежи', icon: '💳' },
   { to: '/settings', label: 'Настройки', icon: '⚙️' },
   { to: '/health', label: 'Здоровье', icon: '🩺' },
 ]

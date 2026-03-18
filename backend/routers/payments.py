@@ -35,29 +35,46 @@ def _check_rate_limit(user_id: int):
     dq.append(now)
 
 
+# ── Settings helper ───────────────────────────────────────────────────────────
+
+def _cfg(db: Session, key: str, env_key: str = None, default: str = "") -> str:
+    """Read setting from DB, fallback to env var, then default."""
+    row = db.query(models.Setting).filter(models.Setting.key == key).first()
+    if row and row.value:
+        return row.value
+    if env_key:
+        val = os.getenv(env_key)
+        if val:
+            return val
+    return default
+
+
 # ── Platega ──────────────────────────────────────────────────────────────────
 
 PLATEGA_BASE = "https://app.platega.io"
 
 
-def _platega_headers():
-    merchant_id = os.getenv("PLATEGA_MERCHANT_ID")
-    secret = os.getenv("PLATEGA_SECRET")
+def _platega_headers(db: Session):
+    merchant_id = _cfg(db, "pay_platega_merchant_id", "PLATEGA_MERCHANT_ID")
+    secret = _cfg(db, "pay_platega_secret", "PLATEGA_SECRET")
     if not merchant_id or not secret:
         raise HTTPException(status_code=503, detail="Platega не настроена")
     return {"X-MerchantId": merchant_id, "X-Secret": secret}
 
 
-PLATEGA_COMMISSION = {
-    2: 0.11,   # СБП
-    11: 0.12,  # Карта РФ
-    12: 0.05,  # Международная / крипто
-}
+def _platega_commission(db: Session, payment_method: int) -> float:
+    defaults = {2: "11", 11: "12", 12: "5"}
+    db_keys = {2: "pay_commission_sbp", 11: "pay_commission_card_rf", 12: "pay_commission_intl"}
+    pct_str = _cfg(db, db_keys.get(payment_method, "pay_commission_card_rf"), default=defaults.get(payment_method, "12"))
+    try:
+        return float(pct_str) / 100
+    except ValueError:
+        return 0.12
 
 
-async def _create_platega_payment(order: models.Order, payment_method: int) -> dict:
-    return_url = os.getenv("PLATEGA_RETURN_URL", "https://t.me/")
-    commission = PLATEGA_COMMISSION.get(payment_method, 0.12)
+async def _create_platega_payment(order: models.Order, payment_method: int, db: Session) -> dict:
+    return_url = _cfg(db, "pay_platega_return_url", "PLATEGA_RETURN_URL", "https://t.me/")
+    commission = _platega_commission(db, payment_method)
     amount_with_fee = round(order.price * (1 + commission), 2)
     payload = {
         "paymentMethod": payment_method,
@@ -75,7 +92,7 @@ async def _create_platega_payment(order: models.Order, payment_method: int) -> d
         resp = await client.post(
             f"{PLATEGA_BASE}/transaction/process",
             json=payload,
-            headers=_platega_headers(),
+            headers=_platega_headers(db),
             timeout=15,
         )
 
@@ -100,28 +117,28 @@ async def _create_platega_payment(order: models.Order, payment_method: int) -> d
 LAVA_BASE = "https://api.lava.ru"
 
 
-def _lava_sign(payload: dict) -> str:
-    secret_key = os.getenv("LAVA_SECRET_KEY", "")
+def _lava_sign(payload: dict, secret_key: str) -> str:
     sorted_payload = dict(sorted(payload.items()))
     json_str = json.dumps(sorted_payload, ensure_ascii=False, separators=(",", ":"))
     return hmac.new(secret_key.encode(), json_str.encode(), hashlib.sha256).hexdigest()
 
 
-def _lava_headers(payload: dict) -> dict:
+def _lava_headers(payload: dict, secret_key: str) -> dict:
     return {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Signature": _lava_sign(payload),
+        "Signature": _lava_sign(payload, secret_key),
     }
 
 
-async def _create_lava_payment(order: models.Order) -> dict:
-    shop_id = os.getenv("LAVA_SHOP_ID")
-    if not shop_id or not os.getenv("LAVA_SECRET_KEY"):
+async def _create_lava_payment(order: models.Order, db: Session) -> dict:
+    shop_id = _cfg(db, "pay_lava_shop_id", "LAVA_SHOP_ID")
+    secret_key = _cfg(db, "pay_lava_secret_key", "LAVA_SECRET_KEY")
+    if not shop_id or not secret_key:
         raise HTTPException(status_code=503, detail="LAVA не настроена")
 
     site_url = os.getenv("NEXT_PUBLIC_SITE_URL", "https://karashop.ru")
-    hook_url = os.getenv("LAVA_WEBHOOK_URL", f"{os.getenv('BACKEND_URL', 'https://karashop.ru')}/payments/webhook/lava")
+    hook_url = os.getenv("LAVA_WEBHOOK_URL", "https://karashop.ru/payments/webhook/lava")
 
     payload = {
         "shopId": shop_id,
@@ -140,7 +157,7 @@ async def _create_lava_payment(order: models.Order) -> dict:
         resp = await client.post(
             f"{LAVA_BASE}/business/invoice/create",
             content=json_body,
-            headers=_lava_headers(payload),
+            headers=_lava_headers(payload, secret_key),
             timeout=15,
         )
 
@@ -161,8 +178,8 @@ async def _create_lava_payment(order: models.Order) -> dict:
     return {"payment_url": payment_url, "payment_id": invoice_id}
 
 
-def _lava_verify_webhook(invoice_id: str, amount: str, pay_time: str, sign: str) -> bool:
-    additional_key = os.getenv("LAVA_ADDITIONAL_KEY", "")
+def _lava_verify_webhook(invoice_id: str, amount: str, pay_time: str, sign: str, db: Session) -> bool:
+    additional_key = _cfg(db, "pay_lava_additional_key", "LAVA_ADDITIONAL_KEY")
     expected = hashlib.md5(f"{invoice_id}:{amount}:{pay_time}:{additional_key}".encode()).hexdigest()
     return expected == sign
 
@@ -193,18 +210,18 @@ async def create_payment(
             raise HTTPException(status_code=403, detail="Access denied")
 
     if body.provider == "lava":
-        return await _create_lava_payment(order)
+        return await _create_lava_payment(order, db)
 
     # Platega
     payment_method = body.payment_method or int(os.getenv("PLATEGA_PAYMENT_METHOD", "2"))
-    return await _create_platega_payment(order, payment_method)
+    return await _create_platega_payment(order, payment_method, db)
 
 
 @router.post("/webhook")
 async def payment_webhook(request: Request, db: Session = Depends(get_db)):
     """Platega webhook"""
-    merchant_id = os.getenv("PLATEGA_MERCHANT_ID")
-    secret = os.getenv("PLATEGA_SECRET")
+    merchant_id = _cfg(db, "pay_platega_merchant_id", "PLATEGA_MERCHANT_ID")
+    secret = _cfg(db, "pay_platega_secret", "PLATEGA_SECRET")
 
     if not merchant_id or not secret:
         return {"status": "ok"}
@@ -251,19 +268,18 @@ async def lava_webhook(request: Request, db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    log.warning("LAVA webhook full body: %s", data)
-    log.warning("LAVA webhook headers: %s", dict(request.headers))
-
     invoice_id = str(data.get("invoice_id", ""))
     amount = str(data.get("amount", ""))
     pay_time = str(data.get("pay_time", ""))
     sign = data.get("sign", "")
-
-    log.info("LAVA webhook: invoice=%s order=%s status=%s", invoice_id, data.get("order_id"), data.get("status"))
-
-    # LAVA sends status "success" for successful payments
     status = data.get("status", "")
     order_id_str = str(data.get("order_id", ""))
+
+    log.info("LAVA webhook: invoice=%s order=%s status=%s", invoice_id, order_id_str, status)
+
+    if sign and not _lava_verify_webhook(invoice_id, amount, pay_time, sign, db):
+        log.warning("LAVA webhook signature mismatch for invoice=%s", invoice_id)
+        raise HTTPException(status_code=401, detail="Invalid signature")
 
     if status == "success" and order_id_str:
         try:
