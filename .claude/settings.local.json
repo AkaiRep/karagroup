@@ -20,7 +20,11 @@
       "Bash(npx next:*)",
       "Bash(./node_modules/.bin/next build:*)",
       "Bash(ls /Users/daniilsnajder/Documents/karagroup/web/src/components/Footer* 2>&1)",
-      "Bash(perl -pi -e 's|\\\\$\\\\{API_URL\\\\}/blog/|\\\\${API_URL}/api/blog/|g' \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/blog/page.jsx \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/sitemap.js \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/sitemap-page/page.jsx)"
+      "Bash(perl -pi -e 's|\\\\$\\\\{API_URL\\\\}/blog/|\\\\${API_URL}/api/blog/|g' \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/blog/page.jsx \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/sitemap.js \\\\\n  /Users/daniilsnajder/Documents/karagroup/web/src/app/sitemap-page/page.jsx)",
+      "WebFetch(domain:dev.lava.ru)",
+      "WebFetch(domain:github.com)",
+      "Bash(find /Users/daniilsnajder/Documents/karagroup/admin-app/src -type f -name \"*.js\" -o -name \"*.ts\" 2>/dev/null | grep -i api | head -10)",
+      "Bash(grep -r \"PLATEGA\\\\|payment\\\\|webhook\" /Users/daniilsnajder/Documents/karagroup/backend/*.py 2>/dev/null | grep -v \".pyc\" | head -40)"
     ]
   }
 }

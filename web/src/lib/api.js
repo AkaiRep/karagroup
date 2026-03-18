@@ -31,7 +31,10 @@ export const api = {
   getMyOrders: (telegramUserId) => client.get('/orders/', { params: { telegram_user_id: telegramUserId, exclude_status: 'pending_payment' } }).then(r => r.data),
 
   // Payments
-  createPayment: (orderId, paymentMethod) => client.post(`/payments/create/${orderId}`, paymentMethod ? { payment_method: paymentMethod } : {}).then(r => r.data),
+  createPayment: (orderId, payload) => {
+    if (typeof payload === 'number') payload = { payment_method: payload }
+    return client.post(`/payments/create/${orderId}`, payload || {}).then(r => r.data)
+  },
 
   // Site settings
   getSiteSettings: () => client.get('/site-settings/').then(r => r.data),

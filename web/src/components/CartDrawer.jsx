@@ -66,10 +66,10 @@ export default function CartDrawer({ open, onClose }) {
     }
   }
 
-  const handlePayMethod = async (method) => {
+  const handlePayMethod = async (payload) => {
     setCheckoutState('paying')
     try {
-      const payment = await api.createPayment(pendingOrderId, method)
+      const payment = await api.createPayment(pendingOrderId, payload)
       setPaymentUrl(payment.payment_url)
       setCheckoutState('done')
     } catch (e) {
@@ -143,7 +143,15 @@ export default function CartDrawer({ open, onClose }) {
             </div>
             <div className="w-full space-y-3">
               <button
-                onClick={() => handlePayMethod(2)}
+                onClick={() => handlePayMethod({ provider: 'lava' })}
+                disabled={checkoutState === 'paying'}
+                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-[#FF6B2B]/40 hover:bg-[#FF6B2B]/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                <img src="/lava.png" alt="LAVA" className="h-5 object-contain" />
+                <span>LAVA — Карта, СБП, Крипта</span>
+              </button>
+              <button
+                onClick={() => handlePayMethod({ payment_method: 2 })}
                 disabled={checkoutState === 'paying'}
                 className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
@@ -151,7 +159,7 @@ export default function CartDrawer({ open, onClose }) {
                 <span>СБП — Система быстрых платежей</span>
               </button>
               <button
-                onClick={() => handlePayMethod(11)}
+                onClick={() => handlePayMethod({ payment_method: 11 })}
                 disabled={checkoutState === 'paying'}
                 className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
@@ -159,7 +167,7 @@ export default function CartDrawer({ open, onClose }) {
                 <span>Карта РФ</span>
               </button>
               <button
-                onClick={() => handlePayMethod(12)}
+                onClick={() => handlePayMethod({ payment_method: 12 })}
                 disabled={checkoutState === 'paying'}
                 className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
