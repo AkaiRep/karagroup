@@ -40,14 +40,23 @@ function stripHtml(html) {
 export async function generateMetadata({ params }) {
   const post = await getPost(params.slug)
   if (!post) return {}
+  const description = post.excerpt || stripHtml(post.content).slice(0, 160)
+  const pageUrl = `${SITE_URL}/blog/${post.slug}`
+  const imageUrl = post.cover_image_url
+    ? post.cover_image_url.startsWith('http')
+      ? post.cover_image_url
+      : `${API_URL}${post.cover_image_url}`
+    : `${SITE_URL}/favpic.png`
   return {
     title: post.title,
-    description: post.excerpt || stripHtml(post.content).slice(0, 160),
-    alternates: { canonical: `/blog/${post.slug}` },
+    description,
+    alternates: { canonical: pageUrl },
     openGraph: {
+      type: 'article',
+      url: pageUrl,
       title: post.title,
-      description: post.excerpt || stripHtml(post.content).slice(0, 160),
-      ...(post.cover_image_url && { images: [{ url: post.cover_image_url, width: 1200, height: 630 }] }),
+      description,
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: post.title }],
     },
   }
 }
