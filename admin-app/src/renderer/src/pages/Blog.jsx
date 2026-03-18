@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, getBlogPendingComments, approveBlogComment, deleteBlogComment, uploadBlogImage } from '../api'
+import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, getBlogPendingComments, approveBlogComment, deleteBlogComment, uploadBlogImage, getApiBase } from '../api'
 import RichEditor from '../components/RichEditor'
 
 const EMPTY = { title: '', slug: '', excerpt: '', content: '', cover_image_url: '', is_published: false }
@@ -47,7 +47,7 @@ function CoverUploader({ value, onChange }) {
       <label className="text-xs text-slate-400 mb-1 block">Обложка</label>
       {value ? (
         <div className="relative rounded-lg overflow-hidden border border-border">
-          <img src={value} alt="cover" className="w-full h-40 object-cover" />
+          <img src={value.startsWith('http') ? value : `${getApiBase()}${value}`} alt="cover" className="w-full h-40 object-cover" />
           <button
             type="button"
             onClick={() => onChange('')}
@@ -56,6 +56,7 @@ function CoverUploader({ value, onChange }) {
         </div>
       ) : (
         <div
+          onDragEnter={e => { e.preventDefault(); setDragging(true) }}
           onDragOver={e => { e.preventDefault(); setDragging(true) }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
