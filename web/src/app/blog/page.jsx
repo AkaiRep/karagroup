@@ -44,7 +44,7 @@ export default async function BlogPage() {
               {post.cover_image_url && (
                 <div className="relative w-full h-48">
                   <Image
-                    src={post.cover_image_url}
+                    src={post.cover_image_url.startsWith('http') ? post.cover_image_url : `${API_URL}${post.cover_image_url}`}
                     alt={post.title}
                     fill
                     className="object-cover"
