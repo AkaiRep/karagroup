@@ -52,13 +52,17 @@ function CommentForm({ slug, parentId = null, onSubmitted, placeholder = 'Нап
   )
 }
 
+const MAX_VISUAL_DEPTH = 4
+
 function Comment({ comment, slug, user, depth = 0 }) {
   const [replying, setReplying] = useState(false)
+  const visualDepth = Math.min(depth, MAX_VISUAL_DEPTH)
+  const avatarSize = depth === 0 ? 'w-8 h-8 text-sm' : 'w-6 h-6 text-xs'
 
   return (
-    <div className={depth > 0 ? 'border-l-2 border-white/5 pl-4' : ''}>
-      <div className="flex gap-3">
-        <div className={`rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 font-medium text-green-400 ${depth > 0 ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-sm'}`}>
+    <div className={visualDepth > 0 ? 'border-l-2 border-white/5 pl-3' : ''}>
+      <div className="flex gap-2.5">
+        <div className={`rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 font-medium text-green-400 ${avatarSize}`}>
           {(comment.author_name || '?')[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
@@ -69,7 +73,7 @@ function Comment({ comment, slug, user, depth = 0 }) {
             </span>
           </div>
           <p className="text-sm text-slate-400 leading-relaxed break-words">{comment.text}</p>
-          {user && depth === 0 && (
+          {user && (
             <button
               onClick={() => setReplying(v => !v)}
               className="mt-1.5 text-xs text-slate-600 hover:text-green-400 transition-colors"
@@ -80,9 +84,8 @@ function Comment({ comment, slug, user, depth = 0 }) {
         </div>
       </div>
 
-      {/* Replies */}
       {(comment.replies?.length > 0 || replying) && (
-        <div className="mt-3 ml-11 space-y-3">
+        <div className="mt-3 ml-4 space-y-3">
           {comment.replies?.map(r => (
             <Comment key={r.id} comment={r} slug={slug} user={user} depth={depth + 1} />
           ))}
@@ -92,7 +95,7 @@ function Comment({ comment, slug, user, depth = 0 }) {
               parentId={comment.id}
               placeholder={`Ответить ${comment.author_name}...`}
               autoFocus
-              onSubmitted={() => setReplying(false)}
+              onSubmitted={() => { setReplying(false); }}
             />
           )}
         </div>
