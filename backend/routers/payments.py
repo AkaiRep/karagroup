@@ -117,7 +117,7 @@ async def _create_lava_payment(order: models.Order) -> dict:
     payload = {
         "shopId": shop_id,
         "sum": str(round(order.price, 2)),
-        "orderId": str(order.id),
+        "orderId": f"{order.id}-{int(time.time())}",
         "hookUrl": hook_url,
         "successUrl": f"{site_url}/orders",
         "failUrl": f"{site_url}/orders",
@@ -259,7 +259,7 @@ async def lava_webhook(request: Request, db: Session = Depends(get_db)):
 
     if status == "success" and order_id_str:
         try:
-            order_id = int(order_id_str)
+            order_id = int(order_id_str.split("-")[0])
         except ValueError:
             return {"status": "ok"}
 
