@@ -181,7 +181,8 @@ export default function CartDrawer({ open, onClose }) {
                       <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
                         <path d="M13 2L4.5 13.5H11L10 22L20 10H13.5L13 2Z" fill="#1DB954" stroke="#1DB954" strokeWidth="0.5" strokeLinejoin="round"/>
                       </svg>
-                      <span className="text-sm">СБП — Быстрые платежи</span>
+                      <span className="text-sm flex-1 text-left">СБП — Быстрые платежи</span>
+                      <span className="text-xs text-slate-500">+11%</span>
                     </button>
 
                     {/* Карта РФ */}
@@ -195,7 +196,8 @@ export default function CartDrawer({ open, onClose }) {
                         <path d="M2 10h20" strokeWidth="1.5"/>
                         <path d="M6 15h4" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
-                      <span className="text-sm">Карта РФ</span>
+                      <span className="text-sm flex-1 text-left">Карта РФ</span>
+                      <span className="text-xs text-slate-500">+12%</span>
                     </button>
 
                     {/* Международная */}
@@ -208,7 +210,8 @@ export default function CartDrawer({ open, onClose }) {
                         <circle cx="12" cy="12" r="9" strokeWidth="1.5"/>
                         <path d="M12 3c-2.5 3-4 5.5-4 9s1.5 6 4 9M12 3c2.5 3 4 5.5 4 9s-1.5 6-4 9M3 12h18" strokeWidth="1.5"/>
                       </svg>
-                      <span className="text-sm">Международная карта</span>
+                      <span className="text-sm flex-1 text-left">Международная карта</span>
+                      <span className="text-xs text-slate-500">+5%</span>
                     </button>
                   </div>
                 )}

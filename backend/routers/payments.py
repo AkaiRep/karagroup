@@ -48,12 +48,21 @@ def _platega_headers():
     return {"X-MerchantId": merchant_id, "X-Secret": secret}
 
 
+PLATEGA_COMMISSION = {
+    2: 0.11,   # СБП
+    11: 0.12,  # Карта РФ
+    12: 0.05,  # Международная / крипто
+}
+
+
 async def _create_platega_payment(order: models.Order, payment_method: int) -> dict:
     return_url = os.getenv("PLATEGA_RETURN_URL", "https://t.me/")
+    commission = PLATEGA_COMMISSION.get(payment_method, 0.12)
+    amount_with_fee = round(order.price * (1 + commission), 2)
     payload = {
         "paymentMethod": payment_method,
         "paymentDetails": {
-            "amount": round(order.price, 2),
+            "amount": amount_with_fee,
             "currency": "RUB",
         },
         "description": f"Заказ #{order.id}",
