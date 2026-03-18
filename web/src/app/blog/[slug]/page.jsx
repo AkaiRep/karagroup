@@ -143,7 +143,7 @@ export default async function BlogPostPage({ params }) {
                   {p.cover_image_url && (
                     <div className="h-28 overflow-hidden">
                       <img
-                        src={`${API_URL.replace(/\/$/, '')}${p.cover_image_url.startsWith('/') ? p.cover_image_url : '/' + p.cover_image_url}`}
+                        src={p.cover_image_url.startsWith('http') ? p.cover_image_url : `${API_URL.replace(/\/$/, '')}${p.cover_image_url.startsWith('/') ? p.cover_image_url : '/' + p.cover_image_url}`}
                         alt={p.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
