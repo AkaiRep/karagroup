@@ -127,6 +127,18 @@ def run_migrations():
                 )
             """))
             conn.commit()
+        # Create blog_view_log table if missing
+        if "blog_view_log" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE blog_view_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                    ip_hash VARCHAR(64) NOT NULL,
+                    viewed_date VARCHAR(10) NOT NULL
+                )
+            """))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_blog_view_log ON blog_view_log (post_id, ip_hash, viewed_date)"))
+            conn.commit()
 
 
 run_migrations()

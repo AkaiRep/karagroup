@@ -286,6 +286,15 @@ class BlogComment(Base):
     user = relationship("User")
 
 
+class BlogViewLog(Base):
+    __tablename__ = "blog_view_log"
+
+    id = Column(Integer, primary_key=True)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    ip_hash = Column(String(64), nullable=False)
+    viewed_date = Column(String(10), nullable=False)  # YYYY-MM-DD
+
+
 class Review(Base):
     __tablename__ = "reviews"
 

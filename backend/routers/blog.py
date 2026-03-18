@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import List
 from pathlib import Path
-import shutil, uuid as uuid_lib
+import shutil, uuid as uuid_lib, hashlib
+from datetime import date
 from database import get_db
 import models, schemas, auth as auth_utils
 
@@ -117,9 +118,22 @@ async def upload_blog_image(file: UploadFile = File(...), _=Depends(auth_utils.r
 
 
 @router.post("/{slug}/view")
-def increment_view(slug: str, db: Session = Depends(get_db)):
+def increment_view(slug: str, request: Request, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.slug == slug, models.Post.is_published == True).first()
-    if post:
+    if not post:
+        return {"ok": True}
+    # Get real IP (behind proxy)
+    forwarded = request.headers.get("X-Forwarded-For")
+    ip = forwarded.split(",")[0].strip() if forwarded else request.client.host
+    ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+    today = date.today().isoformat()
+    already = db.query(models.BlogViewLog).filter(
+        models.BlogViewLog.post_id == post.id,
+        models.BlogViewLog.ip_hash == ip_hash,
+        models.BlogViewLog.viewed_date == today,
+    ).first()
+    if not already:
+        db.add(models.BlogViewLog(post_id=post.id, ip_hash=ip_hash, viewed_date=today))
         post.views = (post.views or 0) + 1
         db.commit()
     return {"ok": True}
