@@ -39,6 +39,9 @@ export const api = {
   // Reviews
   getReviews: () => client.get('/reviews/').then(r => r.data),
 
+  // Blog
+  getBlogPosts: () => client.get('/api/blog/').then(r => r.data),
+
   // Blog social
   getBlogSocial: (slug) => client.get(`/api/blog/${slug}/social`).then(r => r.data),
   incrementView: (slug) => client.post(`/api/blog/${slug}/view`).then(r => r.data),

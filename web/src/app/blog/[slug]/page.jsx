@@ -16,6 +16,23 @@ async function getPost(slug) {
   }
 }
 
+async function getRelatedPosts(currentSlug) {
+  try {
+    const res = await fetch(`${API_URL}/api/blog/`, { next: { revalidate: 300 } })
+    if (!res.ok) return []
+    const posts = await res.json()
+    const others = posts.filter(p => p.slug !== currentSlug)
+    // shuffle and take 3
+    for (let i = others.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [others[i], others[j]] = [others[j], others[i]]
+    }
+    return others.slice(0, 3)
+  } catch {
+    return []
+  }
+}
+
 function stripHtml(html) {
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 }
@@ -40,7 +57,7 @@ function formatDate(dateStr) {
 }
 
 export default async function BlogPostPage({ params }) {
-  const post = await getPost(params.slug)
+  const [post, related] = await Promise.all([getPost(params.slug), getRelatedPosts(params.slug)])
   if (!post) notFound()
 
   const jsonLd = {
@@ -93,6 +110,39 @@ export default async function BlogPostPage({ params }) {
           className="blog-content text-slate-300 leading-relaxed"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {/* Related posts */}
+        {related.length > 0 && (
+          <div className="mt-12 pt-8 border-t border-white/8">
+            <h3 className="text-base font-semibold text-slate-200 mb-4">Читайте также</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {related.map(p => (
+                <a
+                  key={p.id}
+                  href={`/blog/${p.slug}`}
+                  className="group bg-[#111318] border border-white/5 rounded-xl overflow-hidden hover:border-green-500/30 transition-all duration-200 flex flex-col"
+                >
+                  {p.cover_image_url && (
+                    <div className="h-28 overflow-hidden">
+                      <img
+                        src={`${API_URL.replace(/\/$/, '')}${p.cover_image_url.startsWith('/') ? p.cover_image_url : '/' + p.cover_image_url}`}
+                        alt={p.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
+                  <div className="p-3 flex-1 flex flex-col">
+                    <p className="text-xs font-medium text-white group-hover:text-green-300 transition-colors leading-snug flex-1">
+                      {p.title}
+                    </p>
+                    <span className="mt-2 text-xs text-green-400/70 group-hover:text-green-400 transition-colors">Читать →</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         <BlogInteractions slug={post.slug} />
       </div>
     </>

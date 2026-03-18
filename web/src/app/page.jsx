@@ -28,6 +28,7 @@ export default function CatalogPage() {
   const [catalogVisible, setCatalogVisible] = useState(true)
   const [recentOrders, setRecentOrders] = useState([])
   const [siteSettings, setSiteSettings] = useState({})
+  const [blogPosts, setBlogPosts] = useState([])
   const heroBgRef = useRef(null)
   const wsRef = useRef(null)
 
@@ -92,13 +93,14 @@ export default function CatalogPage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount(), api.getRecentOrders(), api.getSiteSettings()])
-      .then(([prods, cats, disc, recent, settings]) => {
+    Promise.all([api.getProducts(), api.getCategories(), api.getGlobalDiscount(), api.getRecentOrders(), api.getSiteSettings(), api.getBlogPosts()])
+      .then(([prods, cats, disc, recent, settings, posts]) => {
         setProducts(prods)
         setCategories(cats)
         setGlobalDiscount(disc.value || 0)
         setRecentOrders(recent || [])
         setSiteSettings(settings || {})
+        setBlogPosts((posts || []).slice(0, 3))
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -412,6 +414,52 @@ export default function CatalogPage() {
       </section>
 
       <ReviewsCarousel />
+
+      {/* Latest blog posts */}
+      {blogPosts.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pb-16">
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold">Блог</h2>
+              <p className="text-slate-400 mt-1 text-sm">Полезные статьи и новости</p>
+            </div>
+            <a href="/blog" className="text-sm text-green-400 hover:text-green-300 transition-colors flex-shrink-0">
+              Все статьи →
+            </a>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {blogPosts.map(post => (
+              <a
+                key={post.id}
+                href={`/blog/${post.slug}`}
+                className="group bg-[#111318] border border-white/5 rounded-2xl overflow-hidden hover:border-green-500/30 transition-all duration-200 flex flex-col"
+              >
+                {post.cover_image_url && (
+                  <div className="h-40 overflow-hidden">
+                    <img
+                      src={`${BASE.replace(/\/$/, '')}${post.cover_image_url.startsWith('/') ? post.cover_image_url : '/' + post.cover_image_url}`}
+                      alt={post.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                )}
+                <div className="p-4 flex flex-col flex-1">
+                  <time className="text-xs text-slate-600 mb-2 block">
+                    {new Date(post.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </time>
+                  <h3 className="text-sm font-semibold text-white group-hover:text-green-300 transition-colors leading-snug mb-2">
+                    {post.title}
+                  </h3>
+                  {post.excerpt && (
+                    <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">{post.excerpt}</p>
+                  )}
+                  <span className="mt-3 text-xs text-green-400 group-hover:text-green-300 transition-colors">Читать →</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Stats */}
       <section className="relative overflow-hidden py-20">
