@@ -14,6 +14,7 @@ export default function CartDrawer({ open, onClose }) {
   const [promoError, setPromoError] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
   const [checkoutState, setCheckoutState] = useState('idle') // idle | loading | method | paying | done | error
+  const [platExpanded, setPlatExpanded] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState(null)
   const [pendingOrderId, setPendingOrderId] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
@@ -58,6 +59,7 @@ export default function CartDrawer({ open, onClose }) {
       const order = await api.createOrder(orderData)
       setPendingOrderId(order.id)
       clearCart()
+      setPlatExpanded(false)
       setCheckoutState('method')
     } catch (e) {
       console.error('Checkout error:', e?.response?.data || e?.message || e)
@@ -142,38 +144,75 @@ export default function CartDrawer({ open, onClose }) {
               <p className="text-slate-400 text-sm">Выберите способ оплаты</p>
             </div>
             <div className="w-full space-y-3">
+              {/* LAVA */}
               <button
                 onClick={() => handlePayMethod({ provider: 'lava' })}
                 disabled={checkoutState === 'paying'}
-                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-[#FF6B2B]/40 hover:bg-[#FF6B2B]/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-orange-500/40 hover:bg-orange-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center gap-3 px-4"
               >
-                <img src="/lava.png" alt="LAVA" className="h-5 object-contain" />
-                <span>LAVA — Карта, СБП, Крипта</span>
+                <img src="/lava.png" alt="LAVA" className="h-5 object-contain flex-shrink-0" />
+                <span className="flex-1 text-left">LAVA</span>
+                <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">Ниже комиссия</span>
               </button>
-              <button
-                onClick={() => handlePayMethod({ payment_method: 2 })}
-                disabled={checkoutState === 'paying'}
-                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-              >
-                <span className="text-xl">⚡</span>
-                <span>СБП — Система быстрых платежей</span>
-              </button>
-              <button
-                onClick={() => handlePayMethod({ payment_method: 11 })}
-                disabled={checkoutState === 'paying'}
-                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-              >
-                <span className="text-xl">💳</span>
-                <span>Карта РФ</span>
-              </button>
-              <button
-                onClick={() => handlePayMethod({ payment_method: 12 })}
-                disabled={checkoutState === 'paying'}
-                className="w-full py-3.5 bg-[#111318] border border-white/10 hover:border-green-500/40 hover:bg-green-500/5 rounded-xl font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-              >
-                <span className="text-xl">🌍</span>
-                <span>Международная карта</span>
-              </button>
+
+              {/* Platega */}
+              <div className="rounded-xl border border-white/10 overflow-hidden">
+                <button
+                  onClick={() => setPlatExpanded(v => !v)}
+                  disabled={checkoutState === 'paying'}
+                  className="w-full py-3.5 bg-[#111318] hover:bg-white/3 font-medium transition-all disabled:opacity-50 flex items-center gap-3 px-4"
+                >
+                  {/* Platega P logo */}
+                  <span className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">P</span>
+                  <span className="flex-1 text-left">Platega</span>
+                  <svg className={`w-4 h-4 text-slate-500 transition-transform flex-shrink-0 ${platExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {platExpanded && (
+                  <div className="border-t border-white/5">
+                    {/* СБП */}
+                    <button
+                      onClick={() => handlePayMethod({ payment_method: 2 })}
+                      disabled={checkoutState === 'paying'}
+                      className="w-full py-3 bg-[#0d0f14] hover:bg-white/3 transition-all disabled:opacity-50 flex items-center gap-3 px-4"
+                    >
+                      <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                        <path d="M13 2L4.5 13.5H11L10 22L20 10H13.5L13 2Z" fill="#1DB954" stroke="#1DB954" strokeWidth="0.5" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="text-sm">СБП — Быстрые платежи</span>
+                    </button>
+
+                    {/* Карта РФ */}
+                    <button
+                      onClick={() => handlePayMethod({ payment_method: 11 })}
+                      disabled={checkoutState === 'paying'}
+                      className="w-full py-3 bg-[#0d0f14] hover:bg-white/3 transition-all disabled:opacity-50 flex items-center gap-3 px-4 border-t border-white/5"
+                    >
+                      <svg className="w-5 h-5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="2" y="5" width="20" height="14" rx="2" strokeWidth="1.5"/>
+                        <path d="M2 10h20" strokeWidth="1.5"/>
+                        <path d="M6 15h4" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                      <span className="text-sm">Карта РФ</span>
+                    </button>
+
+                    {/* Международная */}
+                    <button
+                      onClick={() => handlePayMethod({ payment_method: 12 })}
+                      disabled={checkoutState === 'paying'}
+                      className="w-full py-3 bg-[#0d0f14] hover:bg-white/3 transition-all disabled:opacity-50 flex items-center gap-3 px-4 border-t border-white/5"
+                    >
+                      <svg className="w-5 h-5 flex-shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" strokeWidth="1.5"/>
+                        <path d="M12 3c-2.5 3-4 5.5-4 9s1.5 6 4 9M12 3c2.5 3 4 5.5 4 9s-1.5 6-4 9M3 12h18" strokeWidth="1.5"/>
+                      </svg>
+                      <span className="text-sm">Международная карта</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             {checkoutState === 'paying' && <p className="text-slate-500 text-sm">Создаём ссылку на оплату...</p>}
             {checkoutState === 'method' && (
