@@ -413,17 +413,13 @@ export default function CatalogPage() {
         </div>
       </section>
 
-      <ReviewsCarousel />
-
       {/* Latest blog posts */}
       {blogPosts.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 pb-16">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold">Блог</h2>
-              <p className="text-slate-400 mt-1 text-sm">Полезные статьи и новости</p>
-            </div>
-            <a href="/blog" className="text-sm text-green-400 hover:text-green-300 transition-colors flex-shrink-0">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold">Блог</h2>
+            <p className="text-slate-400 mt-1 text-sm">Полезные статьи и новости</p>
+            <a href="/blog" className="inline-block mt-2 text-sm text-green-400 hover:text-green-300 transition-colors">
               Все статьи →
             </a>
           </div>
@@ -460,6 +456,8 @@ export default function CatalogPage() {
           </div>
         </section>
       )}
+
+      <ReviewsCarousel />
 
       {/* Stats */}
       <section className="relative overflow-hidden py-20">
