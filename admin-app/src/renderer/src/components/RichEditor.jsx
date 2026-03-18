@@ -5,8 +5,18 @@ import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
+import { Mark } from '@tiptap/core'
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { uploadBlogImage, getApiBase } from '../api'
+
+// Inline quote mark — works on any selection like bold/italic
+const InlineQuote = Mark.create({
+  name: 'inlineQuote',
+  parseHTML() { return [{ tag: 'span[data-quote]' }] },
+  renderHTML({ HTMLAttributes }) {
+    return ['span', { ...HTMLAttributes, 'data-quote': '', class: 'inline-quote' }, 0]
+  },
+})
 
 const Sep = () => <div className="w-px h-5 bg-border self-center mx-0.5 flex-shrink-0" />
 
@@ -86,7 +96,7 @@ function ContextMenu({ editor, pos, onClose, onBlockquote }) {
     null,
     { label: 'Список', active: editor.isActive('bulletList'), fn: () => editor.chain().focus().toggleBulletList().run() },
     { label: 'Нумер. список', active: editor.isActive('orderedList'), fn: () => editor.chain().focus().toggleOrderedList().run() },
-    { label: 'Цитата', active: editor.isActive('blockquote'), fn: () => onBlockquote() },
+    { label: 'Цитата', active: editor.isActive('inlineQuote'), fn: () => onBlockquote() },
   ]
 
   // Adjust position to stay in viewport
@@ -131,6 +141,7 @@ export default function RichEditor({ value, onChange }) {
       Image.configure({ inline: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: 'Начните писать статью...' }),
+      InlineQuote,
     ],
     content: value || '',
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -138,76 +149,7 @@ export default function RichEditor({ value, onChange }) {
 
   const toggleBlockquote = useCallback(() => {
     if (!editor) return
-
-    // Removing blockquote — just lift it normally
-    if (editor.isActive('blockquote')) {
-      editor.chain().focus().toggleBlockquote().run()
-      return
-    }
-
-    const { from, to, empty } = editor.state.selection
-
-    // No selection — wrap whole current paragraph
-    if (empty) {
-      editor.chain().focus().toggleBlockquote().run()
-      return
-    }
-
-    const $from = editor.state.doc.resolve(from)
-    const $to   = editor.state.doc.resolve(to)
-
-    // Multi-paragraph selection — wrap all selected blocks as-is
-    if (!$from.sameParent($to)) {
-      editor.chain().focus().toggleBlockquote().run()
-      return
-    }
-
-    // Find depth of the paragraph/heading node (skip blockquote and doc)
-    let depth = $from.depth
-    while (depth > 0) {
-      const node = $from.node(depth)
-      if (node.isBlock && node.type.name !== 'blockquote' && node.type.name !== 'doc') break
-      depth--
-    }
-    if (depth <= 0) depth = 1
-
-    const paraStart = $from.start(depth)
-    const paraEnd   = $from.end(depth)
-    const needSplitEnd   = to < paraEnd
-    const needSplitStart = from > paraStart
-
-    if (!needSplitStart && !needSplitEnd) {
-      // Selection covers the whole paragraph — no splitting needed
-      editor.chain().focus().toggleBlockquote().run()
-      return
-    }
-
-    // Split at `to` first — doesn't affect positions before `to` (i.e. `from` stays valid)
-    if (needSplitEnd) {
-      editor.chain().focus().setTextSelection(to).splitBlock().run()
-    }
-
-    // Split at `from` — selected text moves to the new paragraph at `from + 2`
-    if (needSplitStart) {
-      editor.chain().focus().setTextSelection(from).splitBlock().run()
-    }
-
-    // Resolve target position in updated state and wrap that paragraph
-    const targetPos  = needSplitStart ? from + 2 : from
-    const $target    = editor.state.doc.resolve(targetPos)
-    let targetDepth  = $target.depth
-    while (targetDepth > 0) {
-      const node = $target.node(targetDepth)
-      if (node.isBlock && node.type.name !== 'blockquote' && node.type.name !== 'doc') break
-      targetDepth--
-    }
-    if (targetDepth <= 0) targetDepth = 1
-
-    editor.chain()
-      .focus()
-      .setTextSelection({ from: $target.start(targetDepth), to: $target.end(targetDepth) })
-      .toggleBlockquote()
-      .run()
+    editor.chain().focus().toggleMark('inlineQuote').run()
   }, [editor])
 
   const openLink = useCallback(() => {
@@ -299,7 +241,7 @@ export default function RichEditor({ value, onChange }) {
 
         <Sep />
 
-        <Btn active={editor.isActive('blockquote')} onClick={() => toggleBlockquote()} title="Цитата">
+        <Btn active={editor.isActive('inlineQuote')} onClick={() => toggleBlockquote()} title="Цитата">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
             <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
@@ -374,7 +316,7 @@ export default function RichEditor({ value, onChange }) {
         <BubbleBtn active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>H1</BubbleBtn>
         <BubbleBtn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</BubbleBtn>
         <div className="w-px h-4 bg-border mx-0.5" />
-        <BubbleBtn active={editor.isActive('blockquote')} onClick={() => toggleBlockquote()} title="Цитата">
+        <BubbleBtn active={editor.isActive('inlineQuote')} onClick={() => toggleBlockquote()} title="Цитата">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
             <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>

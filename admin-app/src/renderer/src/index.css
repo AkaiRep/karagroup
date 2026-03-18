@@ -61,6 +61,13 @@ input, textarea, select { user-select: text; }
   color: #94a3b8;
   font-style: italic;
 }
+.rich-editor .ProseMirror .inline-quote {
+  background: linear-gradient(to right, rgb(var(--brand-500)) 0, rgb(var(--brand-500)) 3px, rgb(var(--brand-500) / 0.08) 3px);
+  color: #94a3b8;
+  padding: 0.15em 0.5em 0.15em 0.75em;
+  border-radius: 0 4px 4px 0;
+  font-style: italic;
+}
 .rich-editor .ProseMirror code {
   background: rgba(255,255,255,0.07);
   padding: 0.1rem 0.35rem;
