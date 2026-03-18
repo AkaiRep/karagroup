@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, getBlogPendingComments, approveBlogComment, deleteBlogComment } from '../api'
+import { useEffect, useState, useRef } from 'react'
+import { getBlogPosts, createBlogPost, updateBlogPost, deleteBlogPost, getBlogPendingComments, approveBlogComment, deleteBlogComment, uploadBlogImage } from '../api'
 import RichEditor from '../components/RichEditor'
 
 const EMPTY = { title: '', slug: '', excerpt: '', content: '', cover_image_url: '', is_published: false }
@@ -18,6 +18,65 @@ function slugify(str) {
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+function CoverUploader({ value, onChange }) {
+  const [dragging, setDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const inputRef = useRef(null)
+
+  const upload = async (file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    setUploading(true)
+    try {
+      const data = await uploadBlogImage(file)
+      onChange(data.url)
+    } catch {}
+    finally { setUploading(false) }
+  }
+
+  const onDrop = (e) => {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) upload(file)
+  }
+
+  return (
+    <div>
+      <label className="text-xs text-slate-400 mb-1 block">Обложка</label>
+      {value ? (
+        <div className="relative rounded-lg overflow-hidden border border-border">
+          <img src={value} alt="cover" className="w-full h-40 object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute top-2 right-2 bg-black/60 hover:bg-red-600/80 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm transition-colors"
+          >✕</button>
+        </div>
+      ) : (
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          onClick={() => inputRef.current?.click()}
+          className={`w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${dragging ? 'border-brand-500 bg-brand-500/10' : 'border-border hover:border-brand-500/50'}`}
+        >
+          {uploading ? (
+            <span className="text-xs text-slate-400">Загрузка...</span>
+          ) : (
+            <>
+              <svg className="w-7 h-7 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span className="text-xs text-slate-400">Перетащите или нажмите для выбора</span>
+            </>
+          )}
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }} />
+    </div>
+  )
 }
 
 function formatDate(dateStr) {
@@ -295,15 +354,10 @@ export default function Blog() {
                   onChange={html => setForm(f => ({ ...f, content: html }))}
                 />
               </div>
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">URL обложки</label>
-                <input
-                  className="w-full bg-base border border-border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
-                  value={form.cover_image_url}
-                  onChange={e => setForm(f => ({ ...f, cover_image_url: e.target.value }))}
-                  placeholder="https://..."
-                />
-              </div>
+              <CoverUploader
+                value={form.cover_image_url}
+                onChange={url => setForm(f => ({ ...f, cover_image_url: url }))}
+              />
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
