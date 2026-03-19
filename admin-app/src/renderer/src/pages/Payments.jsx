@@ -140,7 +140,7 @@ export default function Payments() {
   }
 
   const toggle = async (key) => {
-    const next = get(key) === 'true' ? 'false' : 'true'
+    const next = settings[key] === 'false' ? 'true' : 'false'
     set(key, next)
     await updateSiteSetting(key, next).catch(() => {})
   }
@@ -161,7 +161,7 @@ export default function Payments() {
         <ProviderCard
           title="LAVA"
           logo={<img src="lava.png" alt="LAVA" className="h-5 object-contain" />}
-          enabled={get('pay_lava_enabled') === 'true'}
+          enabled={settings['pay_lava_enabled'] !== 'false'}
           onToggle={() => toggle('pay_lava_enabled')}
         >
           {LAVA_FIELDS.map(f => f.secret ? (
@@ -206,7 +206,7 @@ export default function Payments() {
         <ProviderCard
           title="Platega"
           logo={<span className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white text-xs font-bold">P</span>}
-          enabled={get('pay_platega_enabled') === 'true'}
+          enabled={settings['pay_platega_enabled'] !== 'false'}
           onToggle={() => toggle('pay_platega_enabled')}
         >
           {PLATEGA_FIELDS.map(f => f.secret ? (
