@@ -53,6 +53,8 @@ ALLOWED_KEYS = {
     "pay_commission_sbp",
     "pay_commission_card_rf",
     "pay_commission_intl",
+    # Bot
+    "bot_shop_enabled",
 }
 
 

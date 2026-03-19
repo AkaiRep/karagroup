@@ -210,9 +210,13 @@ async def create_payment(
             raise HTTPException(status_code=403, detail="Access denied")
 
     if body.provider == "lava":
+        if _cfg(db, "pay_lava_enabled", default="true") == "false":
+            raise HTTPException(status_code=503, detail="LAVA временно недоступна")
         return await _create_lava_payment(order, db)
 
     # Platega
+    if _cfg(db, "pay_platega_enabled", default="true") == "false":
+        raise HTTPException(status_code=503, detail="Platega временно недоступна")
     payment_method = body.payment_method or int(os.getenv("PLATEGA_PAYMENT_METHOD", "2"))
     return await _create_platega_payment(order, payment_method, db)
 

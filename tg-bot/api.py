@@ -92,6 +92,17 @@ class BackendAPI:
     async def get_user_orders(self, telegram_user_id: int) -> list:
         return await self._request("get", "/orders/", params={"telegram_user_id": telegram_user_id})
 
+    async def get_settings(self) -> dict:
+        session = await self._session_()
+        timeout = aiohttp.ClientTimeout(total=10)
+        try:
+            async with session.get(f"{settings.BACKEND_URL}/site-settings/", timeout=timeout) as r:
+                if r.status == 200:
+                    return await r.json()
+        except Exception:
+            pass
+        return {}
+
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def close(self):

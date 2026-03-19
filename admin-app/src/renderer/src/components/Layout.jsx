@@ -13,6 +13,7 @@ const nav = [
   { to: '/media', label: 'Медиа', icon: '📺' },
   { to: '/blog', label: 'Блог', icon: '📝' },
   { to: '/payments', label: 'Платежи', icon: '💳' },
+  { to: '/bot', label: 'Бот', icon: '🤖' },
   { to: '/settings', label: 'Настройки', icon: '⚙️' },
   { to: '/health', label: 'Здоровье', icon: '🩺' },
 ]

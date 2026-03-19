@@ -1,8 +1,9 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.fsm.context import FSMContext
 
 from api import api
+from config import settings as bot_settings
 from keyboards import categories_kb, products_kb, back_kb
 from utils import edit_or_send
 
@@ -41,6 +42,22 @@ def format_product_list(category: dict, products: list, global_discount: float) 
 @router.callback_query(F.data == "shop")
 async def show_categories(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
+
+    site_settings = await api.get_settings()
+    if site_settings.get("bot_shop_enabled") == "false":
+        kb = None
+        if bot_settings.WEB_APP_URL:
+            kb = InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="🌐 Открыть Mini App", web_app=WebAppInfo(url=bot_settings.WEB_APP_URL))
+            ]])
+        await edit_or_send(
+            callback,
+            "🔒 <b>Магазин временно недоступен</b>\n\nЗаказы можно оформить через Mini App.",
+            reply_markup=kb,
+            parse_mode="HTML",
+        )
+        return
+
     categories = await api.get_categories()
     data = await state.get_data()
     cart = data.get("cart", {})

@@ -10,6 +10,7 @@ export default function OrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState([])
   const [fetching, setFetching] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -19,7 +20,7 @@ export default function OrdersPage() {
     if (user) {
       api.getMyOrders(user.telegram_id)
         .then(setOrders)
-        .catch(console.error)
+        .catch(() => setFetchError(true))
         .finally(() => setFetching(false))
     }
   }, [user, loading])
@@ -30,6 +31,14 @@ export default function OrdersPage() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="bg-[#111318] rounded-2xl h-28 animate-pulse" />
         ))}
+      </div>
+    )
+  }
+
+  if (fetchError) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 text-center py-20">
+        <p className="text-slate-400">Не удалось загрузить заказы. Попробуйте обновить страницу.</p>
       </div>
     )
   }
