@@ -31,10 +31,12 @@ def _build_notify_text(order: dict) -> str:
 
     tg_id = order.get("telegram_user_id", "")
     tg_username = order.get("telegram_username", "")
-    name = f"@{tg_username}" if tg_username else str(tg_id) if tg_id else "—"
-    username_part = f" (@{tg_username})" if tg_username else ""
-    if tg_id:
-        tg_link = f'<a href="tg://user?id={tg_id}">{name}</a>{username_part}'
+    if tg_username:
+        tg_link = f'<a href="https://t.me/{tg_username}">@{tg_username}</a>'
+        if tg_id:
+            tg_link += f' [<code>{tg_id}</code>]'
+    elif tg_id:
+        tg_link = f'<a href="tg://user?id={tg_id}"><code>{tg_id}</code></a>'
     else:
         client_info = order.get("client_info") or "—"
         tg_link = client_info
