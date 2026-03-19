@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import BlogInteractions from '@/components/BlogInteractions'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://karashop.ru'
 
 async function getPost(slug) {
