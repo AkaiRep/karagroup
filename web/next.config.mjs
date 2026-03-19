@@ -12,14 +12,20 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      {
-        source: '/api/:path*',
-        destination: `${BACKEND}/api/:path*`,
-      },
-      {
-        source: '/media/:path*',
-        destination: `${BACKEND}/media/:path*`,
-      },
+      { source: '/api/:path*',          destination: `${BACKEND}/api/:path*` },
+      { source: '/media/:path*',        destination: `${BACKEND}/media/:path*` },
+      { source: '/auth/:path*',         destination: `${BACKEND}/auth/:path*` },
+      { source: '/categories/:path*',   destination: `${BACKEND}/categories/:path*` },
+      { source: '/products/:path*',     destination: `${BACKEND}/products/:path*` },
+      { source: '/orders/:path*',       destination: `${BACKEND}/orders/:path*` },
+      { source: '/payments/:path*',     destination: `${BACKEND}/payments/:path*` },
+      { source: '/reviews/:path*',      destination: `${BACKEND}/reviews/:path*` },
+      { source: '/site-settings/:path*',destination: `${BACKEND}/site-settings/:path*` },
+      { source: '/chat/:path*',         destination: `${BACKEND}/chat/:path*` },
+      { source: '/global-chat/:path*',  destination: `${BACKEND}/global-chat/:path*` },
+      { source: '/faq/:path*',          destination: `${BACKEND}/faq/:path*` },
+      { source: '/health/:path*',       destination: `${BACKEND}/health/:path*` },
+      { source: '/uploads/:path*',      destination: `${BACKEND}/uploads/:path*` },
     ]
   },
 }
