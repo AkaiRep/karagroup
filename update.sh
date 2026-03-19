@@ -31,6 +31,7 @@ pm2 restart karagroup-bot 2>/dev/null || \
 echo "==> Build web"
 cd $PROJECT/web
 grep -E '^NEXT_PUBLIC_' $PROJECT/backend/.env > $PROJECT/web/.env.production 2>/dev/null || true
+echo "BACKEND_URL=http://localhost:8000" >> $PROJECT/web/.env.production
 npm install --silent
 npm run build
 
