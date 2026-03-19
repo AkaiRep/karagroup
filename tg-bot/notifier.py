@@ -4,6 +4,8 @@ from datetime import datetime, timezone, timedelta
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import User as TgUser
+from aiogram.utils.formatting import Bold, Italic, Text, TextMention, as_list
 
 from api import api
 from config import settings
@@ -22,28 +24,18 @@ STATUS_LABELS = {
 }
 
 
-def _build_notify_text(order: dict) -> str:
+def _build_notify_content(order: dict):
     items_text = ", ".join(
         item["product"]["name"]
         for item in order.get("items", [])
         if item.get("product")
     ) or "—"
 
-    tg_id = order.get("telegram_user_id", "")
-    tg_username = order.get("telegram_username", "")
-    if tg_username:
-        tg_link = f'<a href="https://t.me/{tg_username}">@{tg_username}</a>'
-        if tg_id:
-            tg_link += f' [<code>{tg_id}</code>]'
-    elif tg_id:
-        tg_link = f'<a href="tg://user?id={tg_id}"><code>{tg_id}</code></a>'
+    tg_id = order.get("telegram_user_id")
+    if tg_id:
+        client_part = TextMention(str(tg_id), user=TgUser(id=int(tg_id), is_bot=False, first_name=str(tg_id)))
     else:
-        client_info = order.get("client_info") or "—"
-        tg_link = client_info
-
-    promo_line = ""
-    if order.get("promo_code"):
-        promo_line = f"\n🎟 Промокод: {order['promo_code']['code']}"
+        client_part = Text(order.get("client_info") or "—")
 
     source_map = {"telegram": "Telegram", "funpay": "FunPay", "other": "Другое"}
     source = source_map.get(order.get("source", ""), order.get("source", ""))
@@ -51,32 +43,37 @@ def _build_notify_text(order: dict) -> str:
     status = order.get("status", "paid")
     status_label = STATUS_LABELS.get(status, status)
 
-    text = (
-        f"🆕 <b>Новый заказ #{order['id']}</b> [{source}]\n\n"
-        f"👤 Клиент: {tg_link}\n"
-        f"📦 Услуги: {items_text}"
-        f"{promo_line}\n"
-        f"💰 Сумма: <i>Смотреть в приложении</i>\n"
-        f"📊 Статус: {status_label}"
-    )
+    lines = [
+        Text(Bold(f"🆕 Новый заказ #{order['id']}"), f" [{source}]"),
+        Text(""),
+        Text("👤 Клиент: ", client_part),
+        Text(f"📦 Услуги: {items_text}"),
+    ]
+
+    if order.get("promo_code"):
+        lines.append(Text(f"🎟 Промокод: {order['promo_code']['code']}"))
+
+    lines.append(Text("💰 Сумма: ", Italic("Смотреть в приложении")))
+    lines.append(Text(f"📊 Статус: {status_label}"))
 
     if order.get("worker") and status in ("in_progress", "completed", "confirmed"):
-        text += f"\n\n👷 Исполнитель: <b>{order['worker']['username']}</b>"
+        lines.append(Text(""))
+        lines.append(Text("👷 Исполнитель: ", Bold(order["worker"]["username"])))
 
     if order.get("tg_expiry_warned"):
-        text += "\n\n⚠️ Статус заказа больше не обновляется в Telegram. Смотреть в приложении."
+        lines.append(Text(""))
+        lines.append(Text("⚠️ Статус заказа больше не обновляется в Telegram. Смотреть в приложении."))
 
-    return text
+    return as_list(*lines, sep="\n")
 
 
-async def _send_notify_message(bot: Bot, order: dict, text: str) -> int | None:
+async def _send_notify_message(bot: Bot, order: dict, content) -> int | None:
     """Send a new notification message, return message_id or None on failure."""
     try:
         kwargs = {
             "chat_id": settings.NOTIFY_GROUP_ID,
-            "text": text,
-            "parse_mode": "HTML",
             "disable_web_page_preview": True,
+            **content.as_kwargs(),
         }
         if settings.NOTIFY_TOPIC_ID:
             kwargs["message_thread_id"] = settings.NOTIFY_TOPIC_ID
@@ -87,14 +84,13 @@ async def _send_notify_message(bot: Bot, order: dict, text: str) -> int | None:
         return None
 
 
-async def _edit_notify_message(bot: Bot, order: dict, text: str) -> bool:
+async def _edit_notify_message(bot: Bot, order: dict, content) -> bool:
     try:
         await bot.edit_message_text(
             chat_id=settings.NOTIFY_GROUP_ID,
             message_id=order["tg_notify_message_id"],
-            text=text,
-            parse_mode="HTML",
             disable_web_page_preview=True,
+            **content.as_kwargs(),
         )
         return True
     except TelegramBadRequest as e:
@@ -124,8 +120,8 @@ async def check_and_update(bot: Bot) -> None:
 
         # ── Case 1: New order, need to send initial notification ──────────────
         if not order.get("tg_notified"):
-            text = _build_notify_text(order)
-            msg_id = await _send_notify_message(bot, order, text)
+            content = _build_notify_content(order)
+            msg_id = await _send_notify_message(bot, order, content)
             if msg_id:
                 try:
                     await api.update_tg_notify(order["id"], {
@@ -175,9 +171,9 @@ async def check_and_update(bot: Bot) -> None:
 
         # Apply updates to local dict so text builder uses new values
         order.update(updates)
-        text = _build_notify_text(order)
+        content = _build_notify_content(order)
 
-        if await _edit_notify_message(bot, order, text):
+        if await _edit_notify_message(bot, order, content):
             try:
                 await api.update_tg_notify(order["id"], updates)
             except Exception as e:
