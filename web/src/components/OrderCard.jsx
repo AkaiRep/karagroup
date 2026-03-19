@@ -55,6 +55,27 @@ export default function OrderCard({ order }) {
       {order.notes && (
         <p className="mt-3 text-sm text-slate-400 border-t border-white/5 pt-3">{order.notes}</p>
       )}
+
+      {order.status === 'paid' && (
+        <div className="mt-3 border-t border-white/5 pt-3 flex gap-2">
+          <a
+            href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-2 text-center text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg transition-colors"
+          >
+            Перейти в бота
+          </a>
+          <a
+            href={`https://t.me/${(process.env.NEXT_PUBLIC_MANAGER || '').replace('@', '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-2 text-center text-xs font-medium bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 rounded-lg transition-colors"
+          >
+            Написать менеджеру
+          </a>
+        </div>
+      )}
     </div>
   )
 }
