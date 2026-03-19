@@ -327,11 +327,18 @@ def take_order(
     order.worker_earnings = round(net * current_user.worker_percentage / 100, 2)
     order.worker_is_vip = current_user.is_vip
 
-    db.add(models.Transaction(
-        order_id=order.id,
-        worker_id=current_user.id,
-        amount=order.worker_earnings,
-    ))
+    existing_tx = db.query(models.Transaction).filter(models.Transaction.order_id == order.id).first()
+    if existing_tx:
+        existing_tx.worker_id = current_user.id
+        existing_tx.amount = order.worker_earnings
+        existing_tx.status = "pending"
+        existing_tx.paid_at = None
+    else:
+        db.add(models.Transaction(
+            order_id=order.id,
+            worker_id=current_user.id,
+            amount=order.worker_earnings,
+        ))
     db.commit()
     return _load_order(db, order_id)
 
