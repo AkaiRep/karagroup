@@ -20,7 +20,14 @@ export default function OrdersPage() {
     if (user) {
       api.getMyOrders(user.telegram_id)
         .then(setOrders)
-        .catch(() => setFetchError(true))
+        .catch((err) => {
+          const status = err?.response?.status
+          if (status === 401 || status === 403) {
+            router.push('/')
+          } else {
+            setFetchError(true)
+          }
+        })
         .finally(() => setFetching(false))
     }
   }, [user, loading])
