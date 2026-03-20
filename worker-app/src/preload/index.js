@@ -7,6 +7,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electronBridge', {
       captureScreen: () => ipcRenderer.invoke('capture-screen'),
       getScreenSourceId: () => ipcRenderer.invoke('get-screen-source-id'),
+      getProcesses: () => ipcRenderer.invoke('get-processes'),
     })
   } catch (e) {
     console.error(e)

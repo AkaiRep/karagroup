@@ -140,6 +140,15 @@ export const createScreenViewWs = (workerId) => {
   return new WebSocket(`${base}/users/${workerId}/screen-view?token=${token}`)
 }
 
+export const createMicViewWs = (workerId) => {
+  const token = localStorage.getItem('token')
+  const base = getApiBase().replace(/^http/, 'ws')
+  return new WebSocket(`${base}/users/${workerId}/mic-view?token=${token}`)
+}
+
+export const fetchWorkerProcesses = (workerId) =>
+  api.get(`/users/${workerId}/processes`).then((r) => r.data)
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 

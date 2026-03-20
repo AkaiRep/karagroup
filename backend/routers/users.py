@@ -15,8 +15,15 @@ SCREENSHOTS_DIR = Path("uploads/screenshots")
 _screenshot_requests: dict[int, float] = {}
 
 # Live screen streaming
-_worker_screen_ws: dict[int, WebSocket] = {}   # worker_id -> worker WS
-_screen_viewers: dict[int, list] = {}           # worker_id -> [admin WSes]
+_worker_screen_ws: dict[int, WebSocket] = {}
+_screen_viewers: dict[int, list] = {}
+
+# Live mic streaming
+_worker_mic_ws: dict[int, WebSocket] = {}
+_mic_viewers: dict[int, list] = {}
+
+# Processes
+_worker_processes: dict[int, dict] = {}  # worker_id -> {processes: [...], updated_at: str}
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -162,6 +169,108 @@ async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
                         pass
     finally:
         db.close()
+
+
+@router.websocket("/mic-ws")
+async def worker_mic_stream(websocket: WebSocket, token: str):
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _worker_mic_ws[user.id] = websocket
+        if _mic_viewers.get(user.id):
+            await websocket.send_text("start")
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                data = msg.get("bytes")
+                if not data:
+                    continue
+                viewers = _mic_viewers.get(user.id, [])
+                dead = []
+                for viewer in viewers:
+                    try:
+                        await viewer.send_bytes(data)
+                    except Exception:
+                        dead.append(viewer)
+                for d in dead:
+                    viewers.remove(d)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_mic_ws.pop(user.id, None)
+    finally:
+        db.close()
+
+
+@router.websocket("/{user_id}/mic-view")
+async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _mic_viewers.setdefault(user_id, []).append(websocket)
+        worker_ws = _worker_mic_ws.get(user_id)
+        if worker_ws:
+            try:
+                await worker_ws.send_text("start")
+            except Exception:
+                pass
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+        except WebSocketDisconnect:
+            pass
+        finally:
+            viewers = _mic_viewers.get(user_id, [])
+            if websocket in viewers:
+                viewers.remove(websocket)
+            if not viewers:
+                worker_ws = _worker_mic_ws.get(user_id)
+                if worker_ws:
+                    try:
+                        await worker_ws.send_text("stop")
+                    except Exception:
+                        pass
+    finally:
+        db.close()
+
+
+@router.post("/processes", status_code=204)
+def upload_processes(
+    data: dict,
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    if current_user.role != models.UserRole.worker:
+        raise HTTPException(status_code=403, detail="Workers only")
+    _worker_processes[current_user.id] = {
+        "processes": data.get("processes", []),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/{user_id}/processes")
+def get_processes(user_id: int, _=Depends(auth_utils.require_admin)):
+    data = _worker_processes.get(user_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="No process data")
+    return data
 
 
 @router.get("/screenshot/pending")

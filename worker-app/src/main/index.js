@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer } from 'electron'
 import { join } from 'path'
+import { exec } from 'child_process'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 process.on('uncaughtException', (err) => {
@@ -47,6 +48,22 @@ ipcMain.handle('capture-screen', async () => {
     return null
   }
 })
+
+ipcMain.handle('get-processes', () => new Promise((resolve) => {
+  const cmd = process.platform === 'win32'
+    ? 'tasklist /fo csv /nh'
+    : 'ps ax -o comm='
+  exec(cmd, (err, stdout) => {
+    if (err) { resolve([]); return }
+    let names
+    if (process.platform === 'win32') {
+      names = stdout.trim().split('\n').map(line => line.split('","')[0].replace(/"/g, '').trim())
+    } else {
+      names = stdout.trim().split('\n').map(l => l.trim().split('/').pop())
+    }
+    resolve([...new Set(names.filter(Boolean))].sort((a, b) => a.localeCompare(b)))
+  })
+}))
 
 ipcMain.handle('get-screen-source-id', async () => {
   try {
