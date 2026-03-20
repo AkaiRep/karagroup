@@ -35,6 +35,17 @@ export const login = (username, password) =>
   api.post('/auth/login', { username, password }).then((r) => r.data)
 export const sendHeartbeat = () => api.post('/users/heartbeat')
 
+export const checkScreenshotPending = () =>
+  api.get('/users/screenshot/pending').then((r) => r.data)
+
+export const uploadWorkerScreenshot = (base64) => {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+  const blob = new Blob([bytes], { type: 'image/jpeg' })
+  const fd = new FormData()
+  fd.append('file', blob, 'screenshot.jpg')
+  return api.post('/users/screenshot', fd)
+}
+
 export const getAvailableOrders = () => api.get('/orders/available').then((r) => r.data)
 export const getMyOrders = () =>
   api.get('/orders/', { params: { status: 'in_progress' } }).then((r) => r.data)

@@ -2,14 +2,21 @@ import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
-from database import get_db
+from database import get_db, SessionLocal
 import models, schemas, auth as auth_utils
 
 SCREENSHOTS_DIR = Path("uploads/screenshots")
+
+# In-memory: worker_id -> timestamp when screenshot was requested
+_screenshot_requests: dict[int, float] = {}
+
+# Live screen streaming
+_worker_screen_ws: dict[int, WebSocket] = {}   # worker_id -> worker WS
+_screen_viewers: dict[int, list] = {}           # worker_id -> [admin WSes]
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -60,6 +67,119 @@ def heartbeat(
 
     current_user.last_seen_at = now
     db.commit()
+
+
+@router.websocket("/screen-ws")
+async def worker_screen_stream(websocket: WebSocket, token: str):
+    """Worker connects here and streams binary JPEG frames."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001)
+            return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003)
+            return
+
+        await websocket.accept()
+        _worker_screen_ws[user.id] = websocket
+
+        # If admin is already viewing — start streaming immediately
+        if _screen_viewers.get(user.id):
+            await websocket.send_text("start")
+
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                data = msg.get("bytes")
+                if not data:
+                    continue
+                # Relay frame to all admin viewers
+                viewers = _screen_viewers.get(user.id, [])
+                dead = []
+                for viewer in viewers:
+                    try:
+                        await viewer.send_bytes(data)
+                    except Exception:
+                        dead.append(viewer)
+                for d in dead:
+                    viewers.remove(d)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_screen_ws.pop(user.id, None)
+    finally:
+        db.close()
+
+
+@router.websocket("/{user_id}/screen-view")
+async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
+    """Admin connects here to receive live frames from a worker."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001)
+            return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            await websocket.close(code=4003)
+            return
+
+        await websocket.accept()
+        _screen_viewers.setdefault(user_id, []).append(websocket)
+
+        # Tell worker to start streaming
+        worker_ws = _worker_screen_ws.get(user_id)
+        if worker_ws:
+            try:
+                await worker_ws.send_text("start")
+            except Exception:
+                pass
+
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+        except WebSocketDisconnect:
+            pass
+        finally:
+            viewers = _screen_viewers.get(user_id, [])
+            if websocket in viewers:
+                viewers.remove(websocket)
+            # If no more viewers — tell worker to stop
+            if not viewers:
+                worker_ws = _worker_screen_ws.get(user_id)
+                if worker_ws:
+                    try:
+                        await worker_ws.send_text("stop")
+                    except Exception:
+                        pass
+    finally:
+        db.close()
+
+
+@router.get("/screenshot/pending")
+def check_screenshot_pending(
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    """Worker polls this to know if admin requested a screenshot."""
+    requested = current_user.id in _screenshot_requests
+    if requested:
+        del _screenshot_requests[current_user.id]
+    return {"requested": requested}
+
+
+@router.post("/{user_id}/screenshot/request", status_code=204)
+def request_screenshot(user_id: int, _=Depends(auth_utils.require_admin)):
+    """Admin requests an on-demand screenshot from a worker."""
+    import time
+    _screenshot_requests[user_id] = time.time()
 
 
 @router.post("/screenshot", status_code=204)

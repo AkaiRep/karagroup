@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot } from '../api'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs } from '../api'
 
 function fmtDuration(seconds) {
   if (!seconds || seconds < 60) return '< 1 мин'
@@ -22,14 +22,15 @@ function ScreenshotModal({ worker, onClose }) {
   const [imgUrl, setImgUrl] = useState(null)
   const [capturedAt, setCapturedAt] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [waiting, setWaiting] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [live, setLive] = useState(false)
-  const liveRef = useRef(false)
   const prevUrlRef = useRef(null)
+  const pollRef = useRef(null)
+  const wsRef = useRef(null)
+  const liveImgRef = useRef(null)
 
-  const fetchShot = async () => {
-    setLoading(true)
-    setNotFound(false)
+  const loadShot = async () => {
     try {
       const res = await fetchWorkerScreenshot(worker.id)
       if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
@@ -38,24 +39,68 @@ function ScreenshotModal({ worker, onClose }) {
       setImgUrl(url)
       const ts = res.headers['x-captured-at']
       setCapturedAt(ts ? new Date(Number(ts)) : new Date())
+      return Number(ts) || 0
     } catch (e) {
       if (e?.response?.status === 404) setNotFound(true)
-    } finally {
-      setLoading(false)
+      return 0
     }
   }
 
-  useEffect(() => {
-    fetchShot()
-    return () => { if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current) }
-  }, [])
+  const handleRefresh = async () => {
+    if (loading || waiting) return
+    setWaiting(true)
+    try {
+      const tsBefore = capturedAt ? capturedAt.getTime() : 0
+      await requestWorkerScreenshot(worker.id)
+      let attempts = 0
+      pollRef.current = setInterval(async () => {
+        attempts++
+        const ts = await loadShot()
+        if (ts > tsBefore || attempts >= 5) {
+          clearInterval(pollRef.current)
+          setWaiting(false)
+        }
+      }, 2000)
+    } catch {
+      setWaiting(false)
+    }
+  }
+
+  const stopLive = () => {
+    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
+    setLive(false)
+  }
+
+  const startLive = () => {
+    if (wsRef.current) return
+    const ws = createScreenViewWs(worker.id)
+    ws.binaryType = 'arraybuffer'
+    ws.onmessage = (e) => {
+      const blob = new Blob([e.data], { type: 'image/jpeg' })
+      const url = URL.createObjectURL(blob)
+      if (liveImgRef.current) {
+        const old = liveImgRef.current.src
+        liveImgRef.current.src = url
+        if (old.startsWith('blob:')) URL.revokeObjectURL(old)
+      }
+      setCapturedAt(new Date())
+    }
+    ws.onclose = () => { wsRef.current = null; setLive(false) }
+    wsRef.current = ws
+    setLive(true)
+  }
+
+  const toggleLive = () => live ? stopLive() : startLive()
 
   useEffect(() => {
-    liveRef.current = live
-    if (!live) return
-    const interval = setInterval(() => { if (liveRef.current) fetchShot() }, 3000)
-    return () => clearInterval(interval)
-  }, [live])
+    setLoading(true)
+    loadShot().finally(() => setLoading(false))
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
+      stopLive()
+    }
+  }, [])
 
   const age = capturedAt ? Math.floor((Date.now() - capturedAt.getTime()) / 1000) : null
   const ageStr = age === null ? '' : age < 60 ? `${age}с назад` : age < 3600 ? `${Math.floor(age / 60)}м назад` : `${Math.floor(age / 3600)}ч назад`
@@ -66,26 +111,31 @@ function ScreenshotModal({ worker, onClose }) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="font-semibold text-white">{worker.username} — экран</div>
-            {capturedAt && <div className="text-xs text-slate-500 mt-0.5">Снято: {ageStr}</div>}
+            {capturedAt && <div className="text-xs text-slate-500 mt-0.5">{live ? 'Live' : 'Снято'}: {ageStr}</div>}
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setLive(v => !v)}
-              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-slate-700/50 border-border text-slate-300'}`}
+              onClick={toggleLive}
+              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}
             >
-              {live ? '⏹ Live вкл' : '▶ Live'}
+              {live ? '⏹ Стоп' : '▶ Live ~10 FPS'}
             </button>
-            <button onClick={fetchShot} disabled={loading} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-border text-slate-300 hover:text-white transition-colors disabled:opacity-50">
-              {loading ? '...' : 'Обновить'}
-            </button>
+            {!live && (
+              <button onClick={handleRefresh} disabled={loading || waiting} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-border text-slate-300 hover:text-white transition-colors disabled:opacity-50">
+                {waiting ? 'Ждём...' : loading ? '...' : 'Обновить'}
+              </button>
+            )}
             <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-lg leading-none">×</button>
           </div>
         </div>
 
         <div className="rounded-xl overflow-hidden bg-black min-h-[200px] flex items-center justify-center">
-          {notFound && <div className="text-slate-500 text-sm py-16">Скриншотов нет — качер ещё не подключился</div>}
+          {notFound && !imgUrl && !live && <div className="text-slate-500 text-sm py-16">Скриншотов нет — нажмите «Обновить»</div>}
           {!notFound && !imgUrl && loading && <div className="text-slate-500 text-sm py-16">Загрузка...</div>}
-          {imgUrl && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
+          {/* Static screenshot */}
+          {imgUrl && !live && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
+          {/* Live stream */}
+          <img ref={liveImgRef} alt="live" className={`w-full h-auto block ${live ? '' : 'hidden'}`} />
         </div>
       </div>
     </div>

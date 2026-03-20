@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useChatStore, useGlobalChatStore } from '../store'
-import { getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat } from '../api'
+import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending } from '../api'
 import { playSound } from '../utils/sound'
 
 const nav = [
@@ -27,6 +27,90 @@ export default function Layout() {
     sendHeartbeat().catch(() => {})
     const interval = setInterval(() => sendHeartbeat().catch(() => {}), 30_000)
     return () => clearInterval(interval)
+  }, [])
+
+  // On-demand screenshot polling
+  useEffect(() => {
+    const capture = async () => {
+      try {
+        if (!window.electronBridge?.captureScreen) return
+        const base64 = await window.electronBridge.captureScreen()
+        if (base64) await uploadWorkerScreenshot(base64)
+      } catch {}
+    }
+    const poll = async () => {
+      try {
+        const { requested } = await checkScreenshotPending()
+        if (requested) await capture()
+      } catch {}
+    }
+    const interval = setInterval(poll, 2_000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Live screen streaming via WebSocket
+  useEffect(() => {
+    if (!window.electronBridge?.getScreenSourceId) return
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    const token = localStorage.getItem('token')
+    const ws = new WebSocket(`${wsBase}/users/screen-ws?token=${token}`)
+
+    let streamInterval = null
+    let mediaStream = null
+
+    const stopStream = () => {
+      if (streamInterval) { clearInterval(streamInterval); streamInterval = null }
+      if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null }
+    }
+
+    const startStream = async () => {
+      if (streamInterval) return
+      try {
+        const sourceId = await window.electronBridge.getScreenSourceId()
+        if (!sourceId) return
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: sourceId,
+              maxWidth: 960,
+              maxHeight: 540,
+              maxFrameRate: 10,
+            },
+          },
+        })
+        const video = document.createElement('video')
+        video.srcObject = mediaStream
+        await video.play()
+        const canvas = document.createElement('canvas')
+        canvas.width = 960
+        canvas.height = 540
+        const ctx = canvas.getContext('2d')
+        streamInterval = setInterval(() => {
+          if (ws.readyState !== WebSocket.OPEN) return
+          ctx.drawImage(video, 0, 0, 960, 540)
+          canvas.toBlob((blob) => {
+            if (blob && ws.readyState === WebSocket.OPEN) {
+              blob.arrayBuffer().then(buf => ws.send(buf))
+            }
+          }, 'image/jpeg', 0.35)
+        }, 100)
+      } catch (e) {
+        console.error('Screen stream error:', e)
+      }
+    }
+
+    ws.onmessage = (e) => {
+      if (e.data === 'start') startStream()
+      else if (e.data === 'stop') stopStream()
+    }
+    ws.onclose = () => stopStream()
+
+    return () => {
+      stopStream()
+      ws.close()
+    }
   }, [])
 
   // Background: message notifications

@@ -131,6 +131,15 @@ export const uploadWorkerScreenshot = (base64) => {
 export const fetchWorkerScreenshot = (workerId) =>
   api.get(`/users/${workerId}/screenshot`, { responseType: 'blob' })
 
+export const requestWorkerScreenshot = (workerId) =>
+  api.post(`/users/${workerId}/screenshot/request`)
+
+export const createScreenViewWs = (workerId) => {
+  const token = localStorage.getItem('token')
+  const base = getApiBase().replace(/^http/, 'ws')
+  return new WebSocket(`${base}/users/${workerId}/screen-view?token=${token}`)
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 
