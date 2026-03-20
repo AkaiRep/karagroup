@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats } from '../api'
+import { useEffect, useRef, useState } from 'react'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot } from '../api'
 
 function fmtDuration(seconds) {
   if (!seconds || seconds < 60) return '< 1 мин'
@@ -18,6 +18,80 @@ function fmtLastSeen(dateStr) {
   return new Date(dateStr).toLocaleDateString('ru-RU')
 }
 
+function ScreenshotModal({ worker, onClose }) {
+  const [imgUrl, setImgUrl] = useState(null)
+  const [capturedAt, setCapturedAt] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [notFound, setNotFound] = useState(false)
+  const [live, setLive] = useState(false)
+  const liveRef = useRef(false)
+  const prevUrlRef = useRef(null)
+
+  const fetchShot = async () => {
+    setLoading(true)
+    setNotFound(false)
+    try {
+      const res = await fetchWorkerScreenshot(worker.id)
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
+      const url = URL.createObjectURL(res.data)
+      prevUrlRef.current = url
+      setImgUrl(url)
+      const ts = res.headers['x-captured-at']
+      setCapturedAt(ts ? new Date(Number(ts)) : new Date())
+    } catch (e) {
+      if (e?.response?.status === 404) setNotFound(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchShot()
+    return () => { if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current) }
+  }, [])
+
+  useEffect(() => {
+    liveRef.current = live
+    if (!live) return
+    const interval = setInterval(() => { if (liveRef.current) fetchShot() }, 3000)
+    return () => clearInterval(interval)
+  }, [live])
+
+  const age = capturedAt ? Math.floor((Date.now() - capturedAt.getTime()) / 1000) : null
+  const ageStr = age === null ? '' : age < 60 ? `${age}с назад` : age < 3600 ? `${Math.floor(age / 60)}м назад` : `${Math.floor(age / 3600)}ч назад`
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
+      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-5 max-w-4xl w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="font-semibold text-white">{worker.username} — экран</div>
+            {capturedAt && <div className="text-xs text-slate-500 mt-0.5">Снято: {ageStr}</div>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLive(v => !v)}
+              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-slate-700/50 border-border text-slate-300'}`}
+            >
+              {live ? '⏹ Live вкл' : '▶ Live'}
+            </button>
+            <button onClick={fetchShot} disabled={loading} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-border text-slate-300 hover:text-white transition-colors disabled:opacity-50">
+              {loading ? '...' : 'Обновить'}
+            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-lg leading-none">×</button>
+          </div>
+        </div>
+
+        <div className="rounded-xl overflow-hidden bg-black min-h-[200px] flex items-center justify-center">
+          {notFound && <div className="text-slate-500 text-sm py-16">Скриншотов нет — качер ещё не подключился</div>}
+          {!notFound && !imgUrl && loading && <div className="text-slate-500 text-sm py-16">Загрузка...</div>}
+          {imgUrl && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Workers() {
   const [workers, setWorkers] = useState([])
   const [stats, setStats] = useState({})
@@ -25,6 +99,7 @@ export default function Workers() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({ username: '', password: '', worker_percentage: 70, is_vip: false })
   const [hidePercentages, setHidePercentages] = useState(true)
+  const [screenshotWorker, setScreenshotWorker] = useState(null)
 
   const loadStats = () =>
     getWorkersStats().then((list) => {
@@ -87,6 +162,7 @@ export default function Workers() {
   }
 
   return (
+    <>
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Качеры</h1>
@@ -242,6 +318,9 @@ export default function Workers() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => setScreenshotWorker(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Скриншот экрана">
+                        📷
+                      </button>
                       <button onClick={() => handleEdit(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
                         Изменить
                       </button>
@@ -265,5 +344,10 @@ export default function Workers() {
         </table>
       </div>
     </div>
+
+    {screenshotWorker && (
+      <ScreenshotModal worker={screenshotWorker} onClose={() => setScreenshotWorker(null)} />
+    )}
+    </>
   )
 }

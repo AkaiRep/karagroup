@@ -31,7 +31,18 @@
       "Bash(find /Users/daniilsnajder/Documents/karagroup/admin-app/src/renderer/src/pages -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) 2>/dev/null | sort)",
       "Bash(find /Users/daniilsnajder/Documents/karagroup/web/src/app -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) 2>/dev/null | head -30)",
       "Bash(find /Users/daniilsnajder/Documents/karagroup/tg-bot/handlers -name \"*.py\" -type f 2>/dev/null | head -10)",
-      "Bash(find /Users/daniilsnajder/Documents/karagroup/admin-app/src/renderer/src -name \"*.js\" -path \"*/lib/*\" -o -name \"*.js\" -path \"*/utils/*\" 2>/dev/null | head -10)"
+      "Bash(find /Users/daniilsnajder/Documents/karagroup/admin-app/src/renderer/src -name \"*.js\" -path \"*/lib/*\" -o -name \"*.js\" -path \"*/utils/*\" 2>/dev/null | head -10)",
+      "Bash(curl -sL \"https://community.hetzner.com/tutorials/making-website-accessible-from-restricted-regions/\" \\\\\n  -H \"User-Agent: Mozilla/5.0 \\(Macintosh; Intel Mac OS X 10_15_7\\) AppleWebKit/537.36 \\(KHTML, like Gecko\\) Chrome/120.0.0.0 Safari/537.36\" \\\\\n  -H \"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\" \\\\\n  2>/dev/null | python3 -c \"\nimport sys, re\nhtml = sys.stdin.read\\(\\)\n\n# Remove script and style tags\nhtml = re.sub\\(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL|re.IGNORECASE\\)\nhtml = re.sub\\(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL|re.IGNORECASE\\)\n\n# Convert common tags to readable text\nhtml = re.sub\\(r'<br\\\\s*/?>', '\\\\n', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'<li[^>]*>', '\\\\n- ', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'<h[1-6][^>]*>', '\\\\n\\\\n## ', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'</h[1-6]>', '\\\\n', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'<p[^>]*>', '\\\\n', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'</p>', '\\\\n', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'<code[^>]*>', '\\\\`', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'</code>', '\\\\`', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'<pre[^>]*>', '\\\\n\\\\`\\\\`\\\\`\\\\n', html, flags=re.IGNORECASE\\)\nhtml = re.sub\\(r'</pre>', '\\\\n\\\\`\\\\`\\\\`\\\\n', html, flags=re.IGNORECASE\\)\n\n# Strip remaining tags\nhtml = re.sub\\(r'<[^>]+>', '', html\\)\n\n# Clean up whitespace\nhtml = re.sub\\(r'\\\\n{3,}', '\\\\n\\\\n', html\\)\nhtml = re.sub\\(r'[ \\\\t]+', ' ', html\\)\n\n# Decode HTML entities\nimport html as htmlmod\nhtml = htmlmod.unescape\\(html\\)\n\nprint\\(html.strip\\(\\)\\)\n\")",
+      "WebFetch(domain:www.w3tutorials.net)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:qna.habr.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:habr.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:core.telegram.org)",
+      "WebFetch(domain:community.cloudflare.com)",
+      "WebFetch(domain:www.linux.org.ru)",
+      "WebFetch(domain:blog.abolfazlmohajeri.ir)"
     ]
   }
 }

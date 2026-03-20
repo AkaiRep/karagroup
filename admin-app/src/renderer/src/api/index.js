@@ -119,6 +119,18 @@ export const updatePromoCode = (id, data) => api.patch(`/media/promo-codes/${id}
 export const deletePromoCode = (id) => api.delete(`/media/promo-codes/${id}`)
 export const lookupPromoCode = (code) => api.get(`/media/promo-codes/lookup/${code}`).then((r) => r.data)
 
+// ── Screenshots ───────────────────────────────────────────────────────────────
+export const uploadWorkerScreenshot = (base64) => {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+  const blob = new Blob([bytes], { type: 'image/jpeg' })
+  const fd = new FormData()
+  fd.append('file', blob, 'screenshot.jpg')
+  return api.post('/users/screenshot', fd)
+}
+
+export const fetchWorkerScreenshot = (workerId) =>
+  api.get(`/users/${workerId}/screenshot`, { responseType: 'blob' })
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 

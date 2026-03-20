@@ -14,6 +14,7 @@ from routers import auth, users, orders, products, financial, chat, global_chat,
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
 Path("uploads/products").mkdir(parents=True, exist_ok=True)
 Path("uploads/hero").mkdir(parents=True, exist_ok=True)
+Path("uploads/screenshots").mkdir(parents=True, exist_ok=True)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -157,6 +158,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Captured-At"],
 )
 
 # Serve uploaded files

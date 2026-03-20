@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, Menu } from 'electron'
+import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
@@ -41,6 +41,19 @@ function createWindow() {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
+
+ipcMain.handle('capture-screen', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: 1280, height: 720 },
+    })
+    if (!sources.length) return null
+    return sources[0].thumbnail.toJPEG(60).toString('base64')
+  } catch {
+    return null
+  }
+})
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useChatStore, useGlobalChatStore } from '../store'
-import { getUnreadCounts, getGlobalUnreadCount, sendHeartbeat } from '../api'
+import { getUnreadCounts, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot } from '../api'
 import { playSound } from '../utils/sound'
 
 const nav = [
@@ -34,6 +34,21 @@ export default function Layout() {
     const interval = setInterval(() => sendHeartbeat().catch(() => {}), 30_000)
     return () => clearInterval(interval)
   }, [])
+
+  // Screen capture — only for workers
+  useEffect(() => {
+    if (user?.role !== 'worker') return
+    const capture = async () => {
+      try {
+        if (!window.electronBridge?.captureScreen) return
+        const base64 = await window.electronBridge.captureScreen()
+        if (base64) await uploadWorkerScreenshot(base64)
+      } catch {}
+    }
+    capture()
+    const interval = setInterval(capture, 30_000)
+    return () => clearInterval(interval)
+  }, [user])
 
   // Background: order chat notifications
   useEffect(() => {

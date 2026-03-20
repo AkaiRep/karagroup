@@ -1,9 +1,15 @@
+import os
+import shutil
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from pathlib import Path
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
 import models, schemas, auth as auth_utils
+
+SCREENSHOTS_DIR = Path("uploads/screenshots")
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -54,6 +60,19 @@ def heartbeat(
 
     current_user.last_seen_at = now
     db.commit()
+
+
+@router.post("/screenshot", status_code=204)
+async def upload_screenshot(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    if current_user.role != models.UserRole.worker:
+        raise HTTPException(status_code=403, detail="Only workers can upload screenshots")
+    SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    path = SCREENSHOTS_DIR / f"{current_user.id}.jpg"
+    with open(path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
 
 
 @router.get("/workers/stats", response_model=List[schemas.WorkerStatsOut])
@@ -146,6 +165,15 @@ def get_user(user_id: int, db: Session = Depends(get_db), _=Depends(auth_utils.r
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.get("/{user_id}/screenshot")
+def get_screenshot(user_id: int, db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+    path = SCREENSHOTS_DIR / f"{user_id}.jpg"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="No screenshot available")
+    mtime_ms = int(os.path.getmtime(path) * 1000)
+    return FileResponse(path, media_type="image/jpeg", headers={"X-Captured-At": str(mtime_ms)})
 
 
 @router.patch("/{user_id}", response_model=schemas.UserOut)
