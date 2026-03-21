@@ -31,8 +31,15 @@ export default function Layout() {
   // Heartbeat — only when window is visible (hidden = appear offline)
   useEffect(() => {
     if (!isVisible) return
-    sendHeartbeat().catch(() => {})
-    const interval = setInterval(() => sendHeartbeat().catch(() => {}), 30_000)
+    const beat = () => sendHeartbeat().catch((err) => {
+      if (err?.response?.status === 426) {
+        const msg = err.response?.data?.detail || 'Обновите приложение'
+        logout()
+        navigate('/login', { state: { versionError: msg } })
+      }
+    })
+    beat()
+    const interval = setInterval(beat, 30_000)
     return () => clearInterval(interval)
   }, [isVisible])
 

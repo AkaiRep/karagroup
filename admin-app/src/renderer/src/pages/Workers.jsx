@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, getSiteSettings, updateSiteSetting } from '../api'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, getSiteSettings, updateSiteSetting, resetWorkerSessions } from '../api'
 import { PinModal, MonitoringModal } from '../components/MonitoringModal'
 
 function fmtDuration(seconds) {
@@ -111,6 +111,15 @@ export default function Workers() {
             className={`text-xs px-3 py-2 rounded-lg border transition-colors font-medium ${spyUnlocked ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-slate-700 border-border text-slate-400'}`}
           >
             {spyUnlocked ? '🔓 Мониторинг вкл' : '🔒 Мониторинг'}
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm('Сбросить все активные сессии воркеров? Все будут выкинуты на логин.')) return
+              await resetWorkerSessions()
+            }}
+            className="text-xs px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors font-medium"
+          >
+            ⚡ Сбросить сессии
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true) }}

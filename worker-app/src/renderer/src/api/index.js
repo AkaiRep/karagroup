@@ -35,7 +35,17 @@ export const login = async (username, password) => {
   const version = await window.electronBridge?.getVersion().catch(() => null)
   return api.post('/auth/login', { username, password, version }).then((r) => r.data)
 }
-export const sendHeartbeat = () => api.post('/users/heartbeat')
+let _cachedVersion = null
+const getVersion = async () => {
+  if (_cachedVersion !== null) return _cachedVersion
+  _cachedVersion = await window.electronBridge?.getVersion().catch(() => '') || ''
+  return _cachedVersion
+}
+
+export const sendHeartbeat = async () => {
+  const version = await getVersion()
+  return api.post('/users/heartbeat', null, { headers: { 'X-Worker-Version': version } })
+}
 
 export const checkScreenshotPending = () =>
   api.get('/users/screenshot/pending').then((r) => r.data)

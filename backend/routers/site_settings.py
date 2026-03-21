@@ -57,6 +57,7 @@ ALLOWED_KEYS = {
     "bot_shop_enabled",
     # Worker
     "worker_required_version",
+    "sessions_reset_at",
 }
 
 
@@ -96,6 +97,13 @@ def update_setting(
         raise HTTPException(status_code=400, detail="Unknown setting key")
     _set(db, key, str(body.value))
     return {"key": key, "value": str(body.value)}
+
+
+@router.post("/reset-worker-sessions")
+def reset_worker_sessions(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+    import time
+    _set(db, "sessions_reset_at", str(time.time()))
+    return {"ok": True}
 
 
 @router.post("/upload-hero-char/{side}")

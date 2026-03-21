@@ -176,6 +176,7 @@ export const getHealth = () => api.get('/health/').then(r => r.data)
 // ── Site Settings ─────────────────────────────────────────────────────────────
 export const getSiteSettings = () => api.get('/site-settings/').then(r => r.data)
 export const updateSiteSetting = (key, value) => api.patch(`/site-settings/${key}`, { value }).then(r => r.data)
+export const resetWorkerSessions = () => api.post('/site-settings/reset-worker-sessions').then(r => r.data)
 
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 export const getFAQ = () => api.get('/faq/all').then(r => r.data)

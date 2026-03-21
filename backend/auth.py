@@ -37,8 +37,10 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS))
+    now = datetime.now(timezone.utc)
+    expire = now + (expires_delta or timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS))
     to_encode["exp"] = expire
+    to_encode["iat"] = int(now.timestamp())
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -63,6 +65,17 @@ def get_current_user(
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+    # Check if worker session has been invalidated
+    if user.role == models.UserRole.worker:
+        iat = payload.get("iat")
+        if iat:
+            reset_setting = db.query(models.Setting).filter(models.Setting.key == "sessions_reset_at").first()
+            if reset_setting and reset_setting.value:
+                try:
+                    if iat < float(reset_setting.value):
+                        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session invalidated")
+                except (ValueError, TypeError):
+                    pass
     return user
 
 

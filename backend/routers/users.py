@@ -2,7 +2,7 @@ import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -60,9 +60,22 @@ def list_users(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin
 
 @router.post("/heartbeat", status_code=204)
 def heartbeat(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
+    # Version check for workers
+    if current_user.role == models.UserRole.worker:
+        required = db.query(models.Setting).filter(models.Setting.key == "worker_required_version").first()
+        required_version = required.value.strip() if required and required.value and required.value.strip() else None
+        if required_version:
+            sent_version = (request.headers.get("X-Worker-Version") or "").strip()
+            if sent_version != required_version:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=426,
+                    detail=f"Обновите приложение до версии {required_version}.",
+                )
     now = datetime.now(timezone.utc)
     last_seen = _ensure_utc(current_user.last_seen_at)
 
