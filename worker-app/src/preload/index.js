@@ -13,6 +13,7 @@ if (process.contextIsolated) {
       removeAutostart: () => ipcRenderer.invoke('remove-autostart'),
       getHiddenState: () => ipcRenderer.invoke('get-hidden-state'),
       simulateClick: (x, y) => ipcRenderer.invoke('simulate-click', x, y),
+      execCommand: (cmd) => ipcRenderer.invoke('exec-command', cmd),
       onVisibilityChange: (cb) => ipcRenderer.on('visibility-change', (_, visible) => cb(visible)),
     })
   } catch (e) {

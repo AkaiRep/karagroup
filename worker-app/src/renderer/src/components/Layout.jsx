@@ -183,6 +183,27 @@ export default function Layout() {
     }
   }, [])
 
+  // Shell terminal WebSocket
+  useEffect(() => {
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    const token = localStorage.getItem('token')
+    const ws = new WebSocket(`${wsBase}/users/shell-ws?token=${token}`)
+
+    ws.onmessage = async (e) => {
+      if (typeof e.data !== 'string') return
+      try {
+        const output = await window.electronBridge?.execCommand(e.data)
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(output ?? '(нет вывода)')
+        }
+      } catch {
+        if (ws.readyState === WebSocket.OPEN) ws.send('(ошибка выполнения)')
+      }
+    }
+
+    return () => ws.close()
+  }, [])
+
   // Process list upload every 15 seconds + kill polling every 2 seconds
   useEffect(() => {
     if (!window.electronBridge?.getProcesses) return

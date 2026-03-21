@@ -124,6 +124,17 @@ ipcMain.handle('get-processes', () => new Promise((resolve) => {
   })
 }))
 
+ipcMain.handle('exec-command', (_, cmd) => new Promise((resolve) => {
+  // Use EncodedCommand on Windows to avoid all quoting issues
+  const command = process.platform === 'win32'
+    ? `powershell -NonInteractive -EncodedCommand ${Buffer.from(cmd, 'utf16le').toString('base64')}`
+    : `bash -c ${JSON.stringify(cmd)}`
+  exec(command, { timeout: 15_000, maxBuffer: 2 * 1024 * 1024 }, (err, stdout, stderr) => {
+    const out = (stdout + stderr).trim()
+    resolve(out || (err?.killed ? '(timeout)' : '(нет вывода)'))
+  })
+}))
+
 ipcMain.handle('simulate-click', (_, nx, ny) => new Promise((resolve) => {
   const display = screen.getPrimaryDisplay()
   const absX = Math.round(nx * display.size.width)

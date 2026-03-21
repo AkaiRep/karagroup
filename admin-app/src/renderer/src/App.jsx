@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Orders from './pages/Orders'
 import Products from './pages/Products'
 import Workers from './pages/Workers'
+import Monitoring from './pages/Monitoring'
 import Financial from './pages/Financial'
 import GlobalChat from './pages/GlobalChat'
 import Media from './pages/Media'
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="products" element={<Products />} />
           <Route path="workers" element={<Workers />} />
+          <Route path="monitoring" element={<Monitoring />} />
           <Route path="financial" element={<Financial />} />
           <Route path="global-chat" element={<GlobalChat />} />
           <Route path="media" element={<Media />} />

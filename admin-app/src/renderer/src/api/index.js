@@ -158,6 +158,12 @@ export const sendWorkerCommand = (workerId, command) =>
 export const sendWorkerClick = (workerId, x, y) =>
   api.post(`/users/${workerId}/click`, { x, y })
 
+export const createShellViewWs = (workerId) => {
+  const token = localStorage.getItem('token')
+  const base = getApiBase().replace(/^http/, 'ws')
+  return new WebSocket(`${base}/users/${workerId}/shell-view?token=${token}`)
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 

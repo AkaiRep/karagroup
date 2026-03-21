@@ -29,6 +29,10 @@ _kill_requests: dict[int, list] = {}     # worker_id -> [process names to kill]
 # Admin commands for worker app (quit, remove-autostart)
 _worker_commands: dict[int, list] = {}   # worker_id -> ['quit', 'remove-autostart', ...]
 
+# Shell terminal
+_worker_shell_ws: dict[int, WebSocket] = {}
+_shell_viewers: dict[int, WebSocket] = {}
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 # Gap in seconds: if no heartbeat longer than this, the session is considered ended
@@ -252,6 +256,83 @@ async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
                         await worker_ws.send_text("stop")
                     except Exception:
                         pass
+    finally:
+        db.close()
+
+
+@router.websocket("/shell-ws")
+async def worker_shell(websocket: WebSocket, token: str):
+    """Worker connects here and waits for shell commands, sends back output."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _worker_shell_ws[user.id] = websocket
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                # Worker sends command output — relay to admin viewer
+                text = msg.get("text")
+                if text is not None:
+                    viewer = _shell_viewers.get(user.id)
+                    if viewer:
+                        try:
+                            await viewer.send_text(text)
+                        except Exception:
+                            pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_shell_ws.pop(user.id, None)
+    finally:
+        db.close()
+
+
+@router.websocket("/{user_id}/shell-view")
+async def admin_shell_view(user_id: int, websocket: WebSocket, token: str):
+    """Admin connects here to send commands and receive output from worker shell."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _shell_viewers[user_id] = websocket
+        worker_connected = user_id in _worker_shell_ws
+        await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                # Admin sends command — forward to worker
+                text = msg.get("text")
+                if text:
+                    worker_ws = _worker_shell_ws.get(user_id)
+                    if worker_ws:
+                        try:
+                            await worker_ws.send_text(text)
+                        except Exception:
+                            await websocket.send_text("(ошибка: не удалось отправить команду)")
+                    else:
+                        await websocket.send_text("(воркер не подключён)")
+        except WebSocketDisconnect:
+            pass
+        finally:
+            if _shell_viewers.get(user_id) is websocket:
+                _shell_viewers.pop(user_id, None)
     finally:
         db.close()
 
