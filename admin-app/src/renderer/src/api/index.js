@@ -134,11 +134,15 @@ export const fetchWorkerScreenshot = (workerId) =>
 export const requestWorkerScreenshot = (workerId) =>
   api.post(`/users/${workerId}/screenshot/request`)
 
-export const fetchWorkerWebcam = (workerId) =>
-  api.get(`/users/${workerId}/webcam`, { responseType: 'blob' })
+export const createWebcamViewWs = (workerId) => {
+  const token = localStorage.getItem('token')
+  return new WebSocket(`${wsBase()}/users/${workerId}/webcam-view?token=${token}`)
+}
 
-export const requestWorkerWebcam = (workerId) =>
-  api.post(`/users/${workerId}/webcam/request`)
+export const createScreenshotViewWs = (workerId) => {
+  const token = localStorage.getItem('token')
+  return new WebSocket(`${wsBase()}/users/${workerId}/screenshot-view?token=${token}`)
+}
 
 export const createScreenViewWs = (workerId) => {
   const token = localStorage.getItem('token')

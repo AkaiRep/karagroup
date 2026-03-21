@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  fetchWorkerScreenshot, requestWorkerScreenshot,
-  fetchWorkerWebcam, requestWorkerWebcam,
-  createScreenViewWs, createMicViewWs,
+  createScreenViewWs, createMicViewWs, createWebcamViewWs, createScreenshotViewWs,
   fetchWorkerProcesses, killWorkerProcess,
   sendWorkerCommand, sendWorkerClick, createShellViewWs, createFilesViewWs,
 } from '../api'
@@ -71,60 +69,37 @@ export function PinModal({ onSuccess, onClose }) {
 
 // ── Screen tab ────────────────────────────────────────────────────────────────
 function ScreenTab({ worker }) {
-  const [imgUrl, setImgUrl] = useState(null)
-  const [capturedAt, setCapturedAt] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [waiting, setWaiting] = useState(false)
-  const [notFound, setNotFound] = useState(false)
+  const [shotUrl, setShotUrl] = useState(null)
+  const [shotAt, setShotAt] = useState(null)
+  const [shotWorkerOnline, setShotWorkerOnline] = useState(false)
+  const [shotCapturing, setShotCapturing] = useState(false)
   const [live, setLive] = useState(false)
   const [webcamUrl, setWebcamUrl] = useState(null)
-  const [webcamAt, setWebcamAt] = useState(null)
-  const [webcamWaiting, setWebcamWaiting] = useState(false)
-  const prevUrlRef = useRef(null)
+  const [webcamWorkerOnline, setWebcamWorkerOnline] = useState(false)
+  const [webcamCapturing, setWebcamCapturing] = useState(false)
+  const prevShotUrlRef = useRef(null)
   const prevWebcamUrlRef = useRef(null)
-  const pollRef = useRef(null)
-  const webcamPollRef = useRef(null)
-  const wsRef = useRef(null)
+  const shotWsRef = useRef(null)
+  const webcamWsRef = useRef(null)
+  const liveWsRef = useRef(null)
   const liveImgRef = useRef(null)
 
-  const loadShot = async () => {
-    try {
-      const res = await fetchWorkerScreenshot(worker.id)
-      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
-      const url = URL.createObjectURL(res.data)
-      prevUrlRef.current = url
-      setImgUrl(url)
-      const ts = res.headers['x-captured-at']
-      setCapturedAt(ts ? new Date(Number(ts)) : new Date())
-      return Number(ts) || 0
-    } catch (e) {
-      if (e?.response?.status === 404) setNotFound(true)
-      return 0
-    }
+  // Screenshot WS
+  const captureShot = () => {
+    if (!shotWorkerOnline || shotCapturing) return
+    setShotCapturing(true)
+    shotWsRef.current?.send('capture')
+    setTimeout(() => setShotCapturing(false), 10000)
   }
 
-  const handleRefresh = async () => {
-    if (loading || waiting) return
-    setWaiting(true)
-    try {
-      const tsBefore = capturedAt ? capturedAt.getTime() : 0
-      await requestWorkerScreenshot(worker.id)
-      let attempts = 0
-      pollRef.current = setInterval(async () => {
-        attempts++
-        const ts = await loadShot()
-        if (ts > tsBefore || attempts >= 5) { clearInterval(pollRef.current); setWaiting(false) }
-      }, 2000)
-    } catch { setWaiting(false) }
-  }
-
+  // Live screen WS
   const stopLive = () => {
-    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
+    if (liveWsRef.current) { liveWsRef.current.close(); liveWsRef.current = null }
     setLive(false)
   }
 
   const startLive = () => {
-    if (wsRef.current) return
+    if (liveWsRef.current) return
     const ws = createScreenViewWs(worker.id)
     ws.binaryType = 'arraybuffer'
     ws.onmessage = (e) => {
@@ -135,14 +110,11 @@ function ScreenTab({ worker }) {
         liveImgRef.current.src = url
         if (old.startsWith('blob:')) URL.revokeObjectURL(old)
       }
-      setCapturedAt(new Date())
     }
-    ws.onclose = () => { wsRef.current = null; setLive(false) }
-    wsRef.current = ws
+    ws.onclose = () => { liveWsRef.current = null; setLive(false) }
+    liveWsRef.current = ws
     setLive(true)
   }
-
-  const toggleLive = () => live ? stopLive() : startLive()
 
   const handleLiveClick = (e) => {
     if (!live) return
@@ -150,68 +122,76 @@ function ScreenTab({ worker }) {
     sendWorkerClick(worker.id, (e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height).catch(() => {})
   }
 
-  const handleWebcam = async () => {
-    if (webcamWaiting) return
-    setWebcamWaiting(true)
-    try {
-      const tsBefore = webcamAt ? webcamAt.getTime() : 0
-      await requestWorkerWebcam(worker.id)
-      webcamPollRef.current = setInterval(async () => {
-        try {
-          const res = await fetchWorkerWebcam(worker.id)
-          const ts = res.headers['x-captured-at']
-          const tsNum = Number(ts) || 0
-          if (tsNum > tsBefore) {
-            if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
-            const url = URL.createObjectURL(res.data)
-            prevWebcamUrlRef.current = url
-            setWebcamUrl(url)
-            setWebcamAt(new Date(tsNum))
-            clearInterval(webcamPollRef.current)
-            setWebcamWaiting(false)
-          }
-        } catch {}
-      }, 2000)
-      setTimeout(() => {
-        if (webcamWaiting) { clearInterval(webcamPollRef.current); setWebcamWaiting(false) }
-      }, 20000)
-    } catch { setWebcamWaiting(false) }
+  // Webcam WS
+  const captureWebcam = () => {
+    if (!webcamWorkerOnline || webcamCapturing) return
+    setWebcamCapturing(true)
+    webcamWsRef.current?.send('capture')
+    setTimeout(() => setWebcamCapturing(false), 8000)
   }
 
   useEffect(() => {
-    setLoading(true)
-    loadShot().finally(() => setLoading(false))
+    // Screenshot view WS
+    const shotWs = createScreenshotViewWs(worker.id)
+    shotWs.binaryType = 'arraybuffer'
+    shotWs.onmessage = (e) => {
+      if (typeof e.data === 'string') { setShotWorkerOnline(e.data.slice(1) === 'connected'); return }
+      setShotCapturing(false)
+      const blob = new Blob([e.data], { type: 'image/jpeg' })
+      const url = URL.createObjectURL(blob)
+      if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
+      prevShotUrlRef.current = url
+      setShotUrl(url)
+      setShotAt(new Date())
+    }
+    shotWs.onclose = () => { shotWsRef.current = null; setShotWorkerOnline(false) }
+    shotWsRef.current = shotWs
+
+    // Webcam view WS
+    const camWs = createWebcamViewWs(worker.id)
+    camWs.binaryType = 'arraybuffer'
+    camWs.onmessage = (e) => {
+      if (typeof e.data === 'string') { setWebcamWorkerOnline(e.data.slice(1) === 'connected'); return }
+      setWebcamCapturing(false)
+      const blob = new Blob([e.data], { type: 'image/jpeg' })
+      const url = URL.createObjectURL(blob)
+      if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
+      prevWebcamUrlRef.current = url
+      setWebcamUrl(url)
+    }
+    camWs.onclose = () => { webcamWsRef.current = null; setWebcamWorkerOnline(false) }
+    webcamWsRef.current = camWs
+
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-      if (webcamPollRef.current) clearInterval(webcamPollRef.current)
-      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
+      if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
       if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
       stopLive()
+      shotWs.close()
+      camWs.close()
     }
   }, [])
 
-  const age = capturedAt ? Math.floor((Date.now() - capturedAt.getTime()) / 1000) : null
-  const ageStr = age === null ? '' : age < 60 ? `${age}с назад` : age < 3600 ? `${Math.floor(age / 60)}м назад` : `${Math.floor(age / 3600)}ч назад`
+  const shotAge = shotAt ? Math.floor((Date.now() - shotAt.getTime()) / 1000) : null
+  const shotAgeStr = shotAge === null ? '' : shotAge < 60 ? `${shotAge}с назад` : `${Math.floor(shotAge / 60)}м назад`
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        {capturedAt ? <span className="text-xs text-slate-500">{live ? 'Live' : 'Снято'}: {ageStr}</span> : <span />}
+        {shotAt && !live ? <span className="text-xs text-slate-500">Снято: {shotAgeStr}</span> : <span />}
         <div className="flex items-center gap-2">
-          <button onClick={toggleLive} className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}>
+          <button onClick={live ? stopLive : startLive} className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}>
             {live ? '⏹ Стоп' : '▶ Live ~10 FPS'}
           </button>
           {!live && (
-            <button onClick={handleRefresh} disabled={loading || waiting} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white transition-colors disabled:opacity-50">
-              {waiting ? 'Ждём...' : loading ? '...' : 'Скриншот'}
+            <button onClick={captureShot} disabled={!shotWorkerOnline || shotCapturing} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white transition-colors disabled:opacity-40">
+              {shotCapturing ? 'Ждём...' : 'Скриншот'}
             </button>
           )}
         </div>
       </div>
       <div className="rounded-xl overflow-hidden bg-black min-h-[180px] flex items-center justify-center">
-        {notFound && !imgUrl && !live && <div className="text-slate-500 text-sm py-12">Снимков нет — нажмите «Скриншот»</div>}
-        {!notFound && !imgUrl && loading && <div className="text-slate-500 text-sm py-12">Загрузка...</div>}
-        {imgUrl && !live && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
+        {!shotUrl && !live && <div className="text-slate-500 text-sm py-12">{shotWorkerOnline ? 'Нажмите «Скриншот»' : 'Воркер офлайн'}</div>}
+        {shotUrl && !live && <img src={shotUrl} alt="screenshot" className="w-full h-auto block" />}
         <img ref={liveImgRef} alt="live" onClick={handleLiveClick} className={`w-full h-auto block ${live ? 'cursor-crosshair' : 'hidden'}`} />
       </div>
 
@@ -220,31 +200,20 @@ function ScreenTab({ worker }) {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 font-medium">📷 Вебкамера</span>
-            {webcamAt && <span className="text-xs text-slate-600">{Math.floor((Date.now() - webcamAt.getTime()) / 1000)}с назад</span>}
+            <span className={`w-1.5 h-1.5 rounded-full ${webcamWorkerOnline ? 'bg-green-400' : 'bg-slate-600'}`} />
           </div>
           <button
-            onClick={handleWebcam}
-            disabled={webcamWaiting}
-            className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
+            onClick={captureWebcam}
+            disabled={!webcamWorkerOnline || webcamCapturing}
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
           >
-            {webcamWaiting ? 'Ждём...' : 'Снять фото'}
+            {webcamCapturing ? 'Снимаем...' : 'Сфотографировать'}
           </button>
         </div>
-        {webcamUrl && (
-          <div className="rounded-xl overflow-hidden bg-black">
-            <img src={webcamUrl} alt="webcam" className="w-full h-auto block" />
-          </div>
-        )}
-        {!webcamUrl && !webcamWaiting && (
-          <div className="rounded-xl bg-black/30 border border-white/5 flex items-center justify-center py-8 text-slate-600 text-sm">
-            Нет снимков
-          </div>
-        )}
-        {webcamWaiting && !webcamUrl && (
-          <div className="rounded-xl bg-black/30 border border-white/5 flex items-center justify-center py-8 text-slate-500 text-sm">
-            Ожидаем ответа от воркера...
-          </div>
-        )}
+        {webcamUrl
+          ? <div className="rounded-xl overflow-hidden bg-black"><img src={webcamUrl} alt="webcam" className="w-full h-auto block" /></div>
+          : <div className="rounded-xl bg-black/30 border border-white/5 flex items-center justify-center py-8 text-slate-600 text-sm">{webcamWorkerOnline ? 'Нажмите кнопку для снимка' : 'Воркер офлайн'}</div>
+        }
       </div>
     </div>
   )

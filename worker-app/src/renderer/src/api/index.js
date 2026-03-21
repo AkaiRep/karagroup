@@ -50,16 +50,6 @@ export const sendHeartbeat = async () => {
 export const checkScreenshotPending = () =>
   api.get('/users/screenshot/pending').then((r) => r.data)
 
-export const checkWebcamPending = () =>
-  api.get('/users/webcam/pending').then((r) => r.data)
-
-export const uploadWorkerWebcam = (base64) => {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
-  const blob = new Blob([bytes], { type: 'image/jpeg' })
-  const fd = new FormData()
-  fd.append('file', blob, 'webcam.jpg')
-  return api.post('/users/webcam', fd)
-}
 
 export const uploadProcesses = (processes) =>
   api.post('/users/processes', { processes })

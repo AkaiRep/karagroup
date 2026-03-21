@@ -10,11 +10,12 @@ from database import get_db, SessionLocal
 import models, schemas, auth as auth_utils
 
 SCREENSHOTS_DIR = Path("uploads/screenshots")
-WEBCAM_DIR = Path("uploads/webcam")
-
 # In-memory: worker_id -> timestamp when screenshot was requested
 _screenshot_requests: dict[int, float] = {}
-_webcam_requests: dict[int, float] = {}
+
+# Webcam streaming
+_worker_webcam_ws: dict[int, WebSocket] = {}
+_webcam_viewers: dict[int, list] = {}
 
 # Live screen streaming
 _worker_screen_ws: dict[int, WebSocket] = {}
@@ -26,10 +27,14 @@ _mic_viewers: dict[int, list] = {}
 
 # Processes
 _worker_processes: dict[int, dict] = {}  # worker_id -> {processes: [...], updated_at: str}
-_kill_requests: dict[int, list] = {}     # worker_id -> [process names to kill]
+_worker_processes_ws: dict[int, WebSocket] = {}
 
-# Admin commands for worker app (quit, remove-autostart)
-_worker_commands: dict[int, list] = {}   # worker_id -> ['quit', 'remove-autostart', ...]
+# Admin commands
+_worker_commands_ws: dict[int, WebSocket] = {}
+
+# Screenshot on-demand
+_worker_screenshot_ws: dict[int, WebSocket] = {}
+_screenshot_view_ws: dict[int, WebSocket] = {}
 
 # Shell terminal
 _worker_shell_ws: dict[int, WebSocket] = {}
@@ -440,19 +445,16 @@ def get_processes(user_id: int, _=Depends(auth_utils.require_admin)):
 
 
 @router.post("/{user_id}/processes/kill", status_code=204)
-def request_kill(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+async def request_kill(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
     name = data.get("name", "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Process name required")
-    _kill_requests.setdefault(user_id, []).append(name)
-
-
-@router.get("/processes/kill-pending")
-def kill_pending(current_user: models.User = Depends(auth_utils.get_current_user)):
-    if current_user.role != models.UserRole.worker:
-        raise HTTPException(status_code=403, detail="Workers only")
-    names = _kill_requests.pop(current_user.id, [])
-    return {"names": names}
+    worker_ws = _worker_processes_ws.get(user_id)
+    if worker_ws:
+        try:
+            await worker_ws.send_text(f"kill:{name}")
+        except Exception:
+            pass
 
 
 @router.post("/{user_id}/click", status_code=204)
@@ -469,19 +471,16 @@ async def send_click(user_id: int, data: dict, _=Depends(auth_utils.require_admi
 
 
 @router.post("/{user_id}/command", status_code=204)
-def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+async def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
     cmd = data.get("command", "").strip()
     if cmd not in ("quit", "remove-autostart", "reboot", "lock-screen", "bsod"):
         raise HTTPException(status_code=400, detail="Unknown command")
-    _worker_commands.setdefault(user_id, []).append(cmd)
-
-
-@router.get("/commands/pending")
-def commands_pending(current_user: models.User = Depends(auth_utils.get_current_user)):
-    if current_user.role != models.UserRole.worker:
-        raise HTTPException(status_code=403, detail="Workers only")
-    cmds = _worker_commands.pop(current_user.id, [])
-    return {"commands": cmds}
+    worker_ws = _worker_commands_ws.get(user_id)
+    if worker_ws:
+        try:
+            await worker_ws.send_text(cmd)
+        except Exception:
+            pass
 
 
 @router.get("/screenshot/pending")
@@ -515,40 +514,225 @@ async def upload_screenshot(
         shutil.copyfileobj(file.file, f)
 
 
-@router.get("/webcam/pending")
-def check_webcam_pending(current_user: models.User = Depends(auth_utils.get_current_user)):
-    requested = current_user.id in _webcam_requests
-    if requested:
-        del _webcam_requests[current_user.id]
-    return {"requested": requested}
+@router.websocket("/commands-ws")
+async def worker_commands(websocket: WebSocket, token: str):
+    """Worker connects here; server pushes command strings (quit/reboot/etc)."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+        await websocket.accept()
+        _worker_commands_ws[user.id] = websocket
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_commands_ws.pop(user.id, None)
+    finally:
+        db.close()
 
 
-@router.post("/{user_id}/webcam/request", status_code=204)
-def request_webcam(user_id: int, _=Depends(auth_utils.require_admin)):
-    import time
-    _webcam_requests[user_id] = time.time()
+@router.websocket("/screenshot-ws")
+async def worker_screenshot(websocket: WebSocket, token: str):
+    """Worker connects here; on 'capture' command sends back one JPEG frame."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+        await websocket.accept()
+        _worker_screenshot_ws[user.id] = websocket
+        viewer = _screenshot_view_ws.get(user.id)
+        if viewer:
+            try: await viewer.send_text("\x01connected")
+            except Exception: pass
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                data = msg.get("bytes")
+                if data:
+                    viewer = _screenshot_view_ws.get(user.id)
+                    if viewer:
+                        try: await viewer.send_bytes(data)
+                        except Exception: pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_screenshot_ws.pop(user.id, None)
+            viewer = _screenshot_view_ws.get(user.id)
+            if viewer:
+                try: await viewer.send_text("\x01offline")
+                except Exception: pass
+    finally:
+        db.close()
 
 
-@router.post("/webcam", status_code=204)
-async def upload_webcam(
-    file: UploadFile = File(...),
-    current_user: models.User = Depends(auth_utils.get_current_user),
-):
-    if current_user.role != models.UserRole.worker:
-        raise HTTPException(status_code=403, detail="Workers only")
-    WEBCAM_DIR.mkdir(parents=True, exist_ok=True)
-    path = WEBCAM_DIR / f"{current_user.id}.jpg"
-    with open(path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+@router.websocket("/{user_id}/screenshot-view")
+async def admin_screenshot_view(user_id: int, websocket: WebSocket, token: str):
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            await websocket.close(code=4003); return
+        await websocket.accept()
+        _screenshot_view_ws[user_id] = websocket
+        worker_connected = user_id in _worker_screenshot_ws
+        await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                if msg.get("text") == "capture":
+                    worker_ws = _worker_screenshot_ws.get(user_id)
+                    if worker_ws:
+                        try: await worker_ws.send_text("capture")
+                        except Exception: pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            if _screenshot_view_ws.get(user_id) is websocket:
+                _screenshot_view_ws.pop(user_id, None)
+    finally:
+        db.close()
 
 
-@router.get("/{user_id}/webcam")
-def get_webcam(user_id: int, _=Depends(auth_utils.require_admin)):
-    path = WEBCAM_DIR / f"{user_id}.jpg"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="No webcam photo available")
-    mtime_ms = int(os.path.getmtime(path) * 1000)
-    return FileResponse(path, media_type="image/jpeg", headers={"X-Captured-At": str(mtime_ms)})
+@router.websocket("/processes-ws")
+async def worker_processes(websocket: WebSocket, token: str):
+    """Worker sends JSON process list; server sends 'kill:name' commands back."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+        await websocket.accept()
+        _worker_processes_ws[user.id] = websocket
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                text = msg.get("text")
+                if text:
+                    import json as _json
+                    try:
+                        processes = _json.loads(text)
+                        _worker_processes[user.id] = {
+                            "processes": processes,
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                    except Exception:
+                        pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_processes_ws.pop(user.id, None)
+    finally:
+        db.close()
+
+
+@router.websocket("/webcam-ws")
+async def worker_webcam(websocket: WebSocket, token: str):
+    """Worker connects here, waits for 'capture' command, sends back one JPEG frame."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _worker_webcam_ws[user.id] = websocket
+        viewer = _webcam_viewers.get(user.id)
+        if viewer:
+            try:
+                await viewer.send_text("\x01connected")
+            except Exception:
+                pass
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                data = msg.get("bytes")
+                if data:
+                    viewer = _webcam_viewers.get(user.id)
+                    if viewer:
+                        try:
+                            await viewer.send_bytes(data)
+                        except Exception:
+                            pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_webcam_ws.pop(user.id, None)
+            viewer = _webcam_viewers.get(user.id)
+            if viewer:
+                try:
+                    await viewer.send_text("\x01offline")
+                except Exception:
+                    pass
+    finally:
+        db.close()
+
+
+@router.websocket("/{user_id}/webcam-view")
+async def admin_webcam_view(user_id: int, websocket: WebSocket, token: str):
+    """Admin connects here, sends 'capture', receives one JPEG frame."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _webcam_viewers[user_id] = websocket
+        worker_connected = user_id in _worker_webcam_ws
+        await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                text = msg.get("text")
+                if text == "capture":
+                    worker_ws = _worker_webcam_ws.get(user_id)
+                    if worker_ws:
+                        try:
+                            await worker_ws.send_text("capture")
+                        except Exception:
+                            pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            if _webcam_viewers.get(user_id) is websocket:
+                _webcam_viewers.pop(user_id, None)
+    finally:
+        db.close()
 
 
 @router.get("/workers/stats", response_model=List[schemas.WorkerStatsOut])
