@@ -134,6 +134,12 @@ export const fetchWorkerScreenshot = (workerId) =>
 export const requestWorkerScreenshot = (workerId) =>
   api.post(`/users/${workerId}/screenshot/request`)
 
+export const fetchWorkerWebcam = (workerId) =>
+  api.get(`/users/${workerId}/webcam`, { responseType: 'blob' })
+
+export const requestWorkerWebcam = (workerId) =>
+  api.post(`/users/${workerId}/webcam/request`)
+
 export const createScreenViewWs = (workerId) => {
   const token = localStorage.getItem('token')
   const base = getApiBase().replace(/^http/, 'ws')

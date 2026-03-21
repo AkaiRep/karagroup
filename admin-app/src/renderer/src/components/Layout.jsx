@@ -9,7 +9,6 @@ const nav = [
   { to: '/orders', label: 'Заказы', icon: '📋' },
   { to: '/products', label: 'Услуги', icon: '🎮' },
   { to: '/workers', label: 'Качеры', icon: '👷' },
-  { to: '/monitoring', label: 'Мониторинг', icon: '🖥️' },
   { to: '/financial', label: 'Финансы', icon: '💰' },
   { to: '/media', label: 'Медиа', icon: '📺' },
   { to: '/blog', label: 'Блог', icon: '📝' },

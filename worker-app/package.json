@@ -1,6 +1,6 @@
 {
   "name": "karagroup-worker",
-  "version": "1.0.1 Zeus",
+  "version": "1.0.1zeus",
   "description": "KaraGroup Worker App",
   "main": "out/main/index.js",
   "scripts": {

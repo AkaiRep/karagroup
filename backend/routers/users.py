@@ -10,9 +10,11 @@ from database import get_db, SessionLocal
 import models, schemas, auth as auth_utils
 
 SCREENSHOTS_DIR = Path("uploads/screenshots")
+WEBCAM_DIR = Path("uploads/webcam")
 
 # In-memory: worker_id -> timestamp when screenshot was requested
 _screenshot_requests: dict[int, float] = {}
+_webcam_requests: dict[int, float] = {}
 
 # Live screen streaming
 _worker_screen_ws: dict[int, WebSocket] = {}
@@ -117,11 +119,6 @@ async def worker_screen_stream(websocket: WebSocket, token: str):
 
         await websocket.accept()
         _worker_screen_ws[user.id] = websocket
-
-        # If admin is already viewing — start streaming immediately
-        if _screen_viewers.get(user.id):
-            await websocket.send_text("start")
-
         try:
             while True:
                 msg = await websocket.receive()
@@ -164,15 +161,6 @@ async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
 
         await websocket.accept()
         _screen_viewers.setdefault(user_id, []).append(websocket)
-
-        # Tell worker to start streaming
-        worker_ws = _worker_screen_ws.get(user_id)
-        if worker_ws:
-            try:
-                await worker_ws.send_text("start")
-            except Exception:
-                pass
-
         try:
             while True:
                 msg = await websocket.receive()
@@ -184,14 +172,6 @@ async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
             viewers = _screen_viewers.get(user_id, [])
             if websocket in viewers:
                 viewers.remove(websocket)
-            # If no more viewers — tell worker to stop
-            if not viewers:
-                worker_ws = _worker_screen_ws.get(user_id)
-                if worker_ws:
-                    try:
-                        await worker_ws.send_text("stop")
-                    except Exception:
-                        pass
     finally:
         db.close()
 
@@ -209,8 +189,6 @@ async def worker_mic_stream(websocket: WebSocket, token: str):
 
         await websocket.accept()
         _worker_mic_ws[user.id] = websocket
-        if _mic_viewers.get(user.id):
-            await websocket.send_text("start")
         try:
             while True:
                 msg = await websocket.receive()
@@ -249,12 +227,6 @@ async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
 
         await websocket.accept()
         _mic_viewers.setdefault(user_id, []).append(websocket)
-        worker_ws = _worker_mic_ws.get(user_id)
-        if worker_ws:
-            try:
-                await worker_ws.send_text("start")
-            except Exception:
-                pass
         try:
             while True:
                 msg = await websocket.receive()
@@ -266,13 +238,6 @@ async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
             viewers = _mic_viewers.get(user_id, [])
             if websocket in viewers:
                 viewers.remove(websocket)
-            if not viewers:
-                worker_ws = _worker_mic_ws.get(user_id)
-                if worker_ws:
-                    try:
-                        await worker_ws.send_text("stop")
-                    except Exception:
-                        pass
     finally:
         db.close()
 
@@ -291,6 +256,12 @@ async def worker_shell(websocket: WebSocket, token: str):
 
         await websocket.accept()
         _worker_shell_ws[user.id] = websocket
+        viewer = _shell_viewers.get(user.id)
+        if viewer:
+            try:
+                await viewer.send_text("\x01connected")
+            except Exception:
+                pass
         try:
             while True:
                 msg = await websocket.receive()
@@ -309,6 +280,12 @@ async def worker_shell(websocket: WebSocket, token: str):
             pass
         finally:
             _worker_shell_ws.pop(user.id, None)
+            viewer = _shell_viewers.get(user.id)
+            if viewer:
+                try:
+                    await viewer.send_text("\x01offline")
+                except Exception:
+                    pass
     finally:
         db.close()
 
@@ -368,6 +345,12 @@ async def worker_files(websocket: WebSocket, token: str):
 
         await websocket.accept()
         _worker_files_ws[user.id] = websocket
+        viewer = _files_viewers.get(user.id)
+        if viewer:
+            try:
+                await viewer.send_text('\x01online')
+            except Exception:
+                pass
         try:
             while True:
                 msg = await websocket.receive()
@@ -385,6 +368,12 @@ async def worker_files(websocket: WebSocket, token: str):
             pass
         finally:
             _worker_files_ws.pop(user.id, None)
+            viewer = _files_viewers.get(user.id)
+            if viewer:
+                try:
+                    await viewer.send_text('\x01offline')
+                except Exception:
+                    pass
     finally:
         db.close()
 
@@ -524,6 +513,42 @@ async def upload_screenshot(
     path = SCREENSHOTS_DIR / f"{current_user.id}.jpg"
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
+
+
+@router.get("/webcam/pending")
+def check_webcam_pending(current_user: models.User = Depends(auth_utils.get_current_user)):
+    requested = current_user.id in _webcam_requests
+    if requested:
+        del _webcam_requests[current_user.id]
+    return {"requested": requested}
+
+
+@router.post("/{user_id}/webcam/request", status_code=204)
+def request_webcam(user_id: int, _=Depends(auth_utils.require_admin)):
+    import time
+    _webcam_requests[user_id] = time.time()
+
+
+@router.post("/webcam", status_code=204)
+async def upload_webcam(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    if current_user.role != models.UserRole.worker:
+        raise HTTPException(status_code=403, detail="Workers only")
+    WEBCAM_DIR.mkdir(parents=True, exist_ok=True)
+    path = WEBCAM_DIR / f"{current_user.id}.jpg"
+    with open(path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+
+@router.get("/{user_id}/webcam")
+def get_webcam(user_id: int, _=Depends(auth_utils.require_admin)):
+    path = WEBCAM_DIR / f"{user_id}.jpg"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="No webcam photo available")
+    mtime_ms = int(os.path.getmtime(path) * 1000)
+    return FileResponse(path, media_type="image/jpeg", headers={"X-Captured-At": str(mtime_ms)})
 
 
 @router.get("/workers/stats", response_model=List[schemas.WorkerStatsOut])
