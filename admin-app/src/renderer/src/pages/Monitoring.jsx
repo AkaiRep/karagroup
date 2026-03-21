@@ -22,6 +22,7 @@ function fmtDuration(seconds) {
 const QUICK_TABS = [
   { id: 'screen', label: '📷 Экран' },
   { id: 'shell', label: '💻 Терминал' },
+  { id: 'files', label: '📁 Файлы' },
   { id: 'processes', label: '⚙ Процессы' },
   { id: 'mic', label: '🎙 Микрофон' },
   { id: 'controls', label: '🛠 Управление' },

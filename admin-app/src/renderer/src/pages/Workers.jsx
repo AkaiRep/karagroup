@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats } from '../api'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, getSiteSettings, updateSiteSetting } from '../api'
 import { PinModal, MonitoringModal } from '../components/MonitoringModal'
 
 function fmtDuration(seconds) {
@@ -29,6 +29,10 @@ export default function Workers() {
   const [spyUnlocked, setSpyUnlocked] = useState(false)
   const [showPin, setShowPin] = useState(false)
   const [monitoringWorker, setMonitoringWorker] = useState(null)
+  const [requiredVersion, setRequiredVersion] = useState('')
+  const [versionInput, setVersionInput] = useState('')
+  const [editingVersion, setEditingVersion] = useState(false)
+  const [savingVersion, setSavingVersion] = useState(false)
 
   const loadStats = () =>
     getWorkersStats().then((list) => {
@@ -45,8 +49,22 @@ export default function Workers() {
   useEffect(() => {
     load()
     const interval = setInterval(loadStats, 15_000)
+    getSiteSettings().then((s) => {
+      const v = s.worker_required_version || ''
+      setRequiredVersion(v)
+      setVersionInput(v)
+    }).catch(() => {})
     return () => clearInterval(interval)
   }, [])
+
+  const saveVersion = async () => {
+    setSavingVersion(true)
+    try {
+      await updateSiteSetting('worker_required_version', versionInput.trim())
+      setRequiredVersion(versionInput.trim())
+      setEditingVersion(false)
+    } catch {} finally { setSavingVersion(false) }
+  }
 
   const resetForm = () => {
     setForm({ username: '', password: '', worker_percentage: 70, is_vip: false })
@@ -101,6 +119,35 @@ export default function Workers() {
             + Добавить качера
           </button>
         </div>
+      </div>
+
+      {/* Required version bar */}
+      <div className="flex items-center gap-3 mb-5 bg-surface border border-border/50 rounded-xl px-4 py-3">
+        <span className="text-xs text-slate-500">Обязательная версия воркера:</span>
+        {editingVersion ? (
+          <>
+            <input
+              autoFocus
+              value={versionInput}
+              onChange={(e) => setVersionInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveVersion(); if (e.key === 'Escape') setEditingVersion(false) }}
+              placeholder="1.0.0"
+              className="bg-black/30 border border-white/10 rounded-lg px-3 py-1 text-sm text-white font-mono w-28 focus:outline-none focus:border-brand-500"
+            />
+            <button onClick={saveVersion} disabled={savingVersion} className="text-xs px-3 py-1 rounded-lg bg-brand-500/20 border border-brand-500/30 text-brand-400 hover:bg-brand-500/30 disabled:opacity-50 transition-colors">
+              {savingVersion ? '...' : 'Сохранить'}
+            </button>
+            <button onClick={() => { setEditingVersion(false); setVersionInput(requiredVersion) }} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Отмена</button>
+          </>
+        ) : (
+          <>
+            {requiredVersion
+              ? <span className="text-sm font-mono text-green-400 font-medium">v{requiredVersion}</span>
+              : <span className="text-xs text-slate-600 italic">не задана (любая версия)</span>
+            }
+            <button onClick={() => setEditingVersion(true)} className="text-xs text-slate-500 hover:text-slate-300 transition-colors ml-1">изменить</button>
+          </>
+        )}
       </div>
 
       {showForm && (

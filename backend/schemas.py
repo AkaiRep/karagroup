@@ -9,6 +9,7 @@ from models import UserRole, OrderSource, OrderStatus, TransactionStatus
 class LoginRequest(BaseModel):
     username: str
     password: str
+    version: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

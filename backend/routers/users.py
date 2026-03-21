@@ -33,6 +33,10 @@ _worker_commands: dict[int, list] = {}   # worker_id -> ['quit', 'remove-autosta
 _worker_shell_ws: dict[int, WebSocket] = {}
 _shell_viewers: dict[int, WebSocket] = {}
 
+# File manager
+_worker_files_ws: dict[int, WebSocket] = {}
+_files_viewers: dict[int, WebSocket] = {}
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 # Gap in seconds: if no heartbeat longer than this, the session is considered ended
@@ -337,6 +341,81 @@ async def admin_shell_view(user_id: int, websocket: WebSocket, token: str):
         db.close()
 
 
+@router.websocket("/files-ws")
+async def worker_files(websocket: WebSocket, token: str):
+    """Worker connects here to handle file manager requests from admin."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _worker_files_ws[user.id] = websocket
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                text = msg.get("text")
+                if text is not None:
+                    viewer = _files_viewers.get(user.id)
+                    if viewer:
+                        try:
+                            await viewer.send_text(text)
+                        except Exception:
+                            pass
+        except WebSocketDisconnect:
+            pass
+        finally:
+            _worker_files_ws.pop(user.id, None)
+    finally:
+        db.close()
+
+
+@router.websocket("/{user_id}/files-view")
+async def admin_files_view(user_id: int, websocket: WebSocket, token: str):
+    """Admin connects here to browse worker's filesystem."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            await websocket.close(code=4001); return
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            await websocket.close(code=4003); return
+
+        await websocket.accept()
+        _files_viewers[user_id] = websocket
+        worker_online = user_id in _worker_files_ws
+        await websocket.send_text(f'\x01{"online" if worker_online else "offline"}')
+        try:
+            while True:
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                text = msg.get("text")
+                if text:
+                    worker_ws = _worker_files_ws.get(user_id)
+                    if worker_ws:
+                        try:
+                            await worker_ws.send_text(text)
+                        except Exception:
+                            await websocket.send_text('{"error":"Ошибка отправки","id":null}')
+                    else:
+                        await websocket.send_text('{"error":"Воркер офлайн","id":null}')
+        except WebSocketDisconnect:
+            pass
+        finally:
+            if _files_viewers.get(user_id) is websocket:
+                _files_viewers.pop(user_id, None)
+    finally:
+        db.close()
+
+
 @router.post("/processes", status_code=204)
 def upload_processes(
     data: dict,
@@ -390,7 +469,7 @@ async def send_click(user_id: int, data: dict, _=Depends(auth_utils.require_admi
 @router.post("/{user_id}/command", status_code=204)
 def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
     cmd = data.get("command", "").strip()
-    if cmd not in ("quit", "remove-autostart"):
+    if cmd not in ("quit", "remove-autostart", "reboot", "lock-screen", "bsod"):
         raise HTTPException(status_code=400, detail="Unknown command")
     _worker_commands.setdefault(user_id, []).append(cmd)
 

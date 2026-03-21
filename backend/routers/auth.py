@@ -37,6 +37,18 @@ def login(request: Request, data: schemas.LoginRequest, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account disabled")
+
+    # Version check — only for workers
+    if user.role == models.UserRole.worker:
+        required = db.query(models.Setting).filter(models.Setting.key == "worker_required_version").first()
+        required_version = required.value.strip() if required and required.value and required.value.strip() else None
+        if required_version:
+            if not data.version or data.version.strip() != required_version:
+                raise HTTPException(
+                    status_code=status.HTTP_426_UPGRADE_REQUIRED,
+                    detail=f"Устаревшая версия приложения. Обновите до версии {required_version}.",
+                )
+
     token = auth_utils.create_access_token({"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer", "user": user}
 

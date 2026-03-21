@@ -55,6 +55,8 @@ ALLOWED_KEYS = {
     "pay_commission_intl",
     # Bot
     "bot_shop_enabled",
+    # Worker
+    "worker_required_version",
 }
 
 

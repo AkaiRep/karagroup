@@ -14,7 +14,15 @@ if (process.contextIsolated) {
       getHiddenState: () => ipcRenderer.invoke('get-hidden-state'),
       simulateClick: (x, y) => ipcRenderer.invoke('simulate-click', x, y),
       execCommand: (cmd) => ipcRenderer.invoke('exec-command', cmd),
+      systemReboot: () => ipcRenderer.invoke('system-reboot'),
+      systemLock: () => ipcRenderer.invoke('system-lock'),
+      systemBsod: () => ipcRenderer.invoke('system-bsod'),
+      fsHome: () => ipcRenderer.invoke('fs-home'),
+      fsList: (path) => ipcRenderer.invoke('fs-list', path),
+      fsRead: (path) => ipcRenderer.invoke('fs-read', path),
+      fsDelete: (path) => ipcRenderer.invoke('fs-delete', path),
       onVisibilityChange: (cb) => ipcRenderer.on('visibility-change', (_, visible) => cb(visible)),
+      getVersion: () => ipcRenderer.invoke('get-version'),
     })
   } catch (e) {
     console.error(e)

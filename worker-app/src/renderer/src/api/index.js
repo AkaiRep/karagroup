@@ -31,8 +31,10 @@ api.interceptors.response.use(
 
 const wsBase = () => getApiBase().replace(/^http/, 'ws')
 
-export const login = (username, password) =>
-  api.post('/auth/login', { username, password }).then((r) => r.data)
+export const login = async (username, password) => {
+  const version = await window.electronBridge?.getVersion().catch(() => null)
+  return api.post('/auth/login', { username, password, version }).then((r) => r.data)
+}
 export const sendHeartbeat = () => api.post('/users/heartbeat')
 
 export const checkScreenshotPending = () =>

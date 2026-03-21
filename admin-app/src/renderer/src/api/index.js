@@ -164,6 +164,12 @@ export const createShellViewWs = (workerId) => {
   return new WebSocket(`${base}/users/${workerId}/shell-view?token=${token}`)
 }
 
+export const createFilesViewWs = (workerId) => {
+  const token = localStorage.getItem('token')
+  const base = getApiBase().replace(/^http/, 'ws')
+  return new WebSocket(`${base}/users/${workerId}/files-view?token=${token}`)
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 
