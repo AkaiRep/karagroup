@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs, createMicViewWs, fetchWorkerProcesses, killWorkerProcess } from '../api'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs, createMicViewWs, fetchWorkerProcesses, killWorkerProcess, sendWorkerCommand } from '../api'
 
 function fmtDuration(seconds) {
   if (!seconds || seconds < 60) return '< 1 мин'
@@ -539,6 +539,20 @@ export default function Workers() {
                       </button>
                       <button onClick={() => setProcessesWorker(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Процессы">
                         ⚙
+                      </button>
+                      <button
+                        onClick={async () => { if (confirm(`Закрыть приложение у ${w.username}?`)) await sendWorkerCommand(w.id, 'quit') }}
+                        className="text-xs px-2 py-1 rounded text-orange-400 hover:bg-orange-400/10 transition-colors"
+                        title="Закрыть приложение воркера"
+                      >
+                        ⏹
+                      </button>
+                      <button
+                        onClick={async () => { if (confirm(`Убрать ${w.username} из автозапуска?`)) await sendWorkerCommand(w.id, 'remove-autostart') }}
+                        className="text-xs px-2 py-1 rounded text-slate-400 hover:bg-slate-400/10 transition-colors"
+                        title="Убрать из автозапуска"
+                      >
+                        🚫
                       </button>
                       <button onClick={() => handleEdit(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
                         Изменить

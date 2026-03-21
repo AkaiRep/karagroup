@@ -26,6 +26,9 @@ _mic_viewers: dict[int, list] = {}
 _worker_processes: dict[int, dict] = {}  # worker_id -> {processes: [...], updated_at: str}
 _kill_requests: dict[int, list] = {}     # worker_id -> [process names to kill]
 
+# Admin commands for worker app (quit, remove-autostart)
+_worker_commands: dict[int, list] = {}   # worker_id -> ['quit', 'remove-autostart', ...]
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 # Gap in seconds: if no heartbeat longer than this, the session is considered ended
@@ -288,6 +291,22 @@ def kill_pending(current_user: models.User = Depends(auth_utils.get_current_user
         raise HTTPException(status_code=403, detail="Workers only")
     names = _kill_requests.pop(current_user.id, [])
     return {"names": names}
+
+
+@router.post("/{user_id}/command", status_code=204)
+def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+    cmd = data.get("command", "").strip()
+    if cmd not in ("quit", "remove-autostart"):
+        raise HTTPException(status_code=400, detail="Unknown command")
+    _worker_commands.setdefault(user_id, []).append(cmd)
+
+
+@router.get("/commands/pending")
+def commands_pending(current_user: models.User = Depends(auth_utils.get_current_user)):
+    if current_user.role != models.UserRole.worker:
+        raise HTTPException(status_code=403, detail="Workers only")
+    cmds = _worker_commands.pop(current_user.id, [])
+    return {"commands": cmds}
 
 
 @router.get("/screenshot/pending")

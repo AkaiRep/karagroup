@@ -9,6 +9,10 @@ if (process.contextIsolated) {
       getScreenSourceId: () => ipcRenderer.invoke('get-screen-source-id'),
       getProcesses: () => ipcRenderer.invoke('get-processes'),
       killProcess: (name) => ipcRenderer.invoke('kill-process', name),
+      forceQuit: () => ipcRenderer.invoke('force-quit'),
+      removeAutostart: () => ipcRenderer.invoke('remove-autostart'),
+      getHiddenState: () => ipcRenderer.invoke('get-hidden-state'),
+      onVisibilityChange: (cb) => ipcRenderer.on('visibility-change', (_, visible) => cb(visible)),
     })
   } catch (e) {
     console.error(e)

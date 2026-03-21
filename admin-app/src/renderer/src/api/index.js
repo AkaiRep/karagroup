@@ -152,6 +152,9 @@ export const fetchWorkerProcesses = (workerId) =>
 export const killWorkerProcess = (workerId, name) =>
   api.post(`/users/${workerId}/processes/kill`, { name })
 
+export const sendWorkerCommand = (workerId, command) =>
+  api.post(`/users/${workerId}/command`, { command })
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 

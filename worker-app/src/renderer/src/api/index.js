@@ -44,6 +44,9 @@ export const uploadProcesses = (processes) =>
 export const checkKillPending = () =>
   api.get('/users/processes/kill-pending').then((r) => r.data)
 
+export const fetchCommandsPending = () =>
+  api.get('/users/commands/pending').then((r) => r.data)
+
 export const uploadWorkerScreenshot = (base64) => {
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
   const blob = new Blob([bytes], { type: 'image/jpeg' })

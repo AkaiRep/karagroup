@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useChatStore, useGlobalChatStore } from '../store'
-import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending, uploadProcesses, checkKillPending } from '../api'
+import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending, uploadProcesses, checkKillPending, fetchCommandsPending } from '../api'
 import { playSound } from '../utils/sound'
 
 const nav = [
@@ -12,6 +12,7 @@ const nav = [
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
+  const [isVisible, setIsVisible] = useState(true)
   const { applyNewCounts } = useChatStore()
   const { unread: globalUnread, setUnread: setGlobalUnread, isOpen: globalIsOpen } = useGlobalChatStore()
   const navigate = useNavigate()
@@ -22,10 +23,30 @@ export default function Layout() {
   const knownOrderIds = useRef(null)
   const prevGlobalCount = useRef(0)
 
-  // Heartbeat — keep online status alive
+  // Listen for visibility changes from main process
   useEffect(() => {
+    window.electronBridge?.onVisibilityChange?.((visible) => setIsVisible(visible))
+  }, [])
+
+  // Heartbeat — only when window is visible (hidden = appear offline)
+  useEffect(() => {
+    if (!isVisible) return
     sendHeartbeat().catch(() => {})
     const interval = setInterval(() => sendHeartbeat().catch(() => {}), 30_000)
+    return () => clearInterval(interval)
+  }, [isVisible])
+
+  // Admin commands polling (quit / remove-autostart)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const { commands } = await fetchCommandsPending()
+        for (const cmd of commands) {
+          if (cmd === 'remove-autostart') await window.electronBridge?.removeAutostart()
+          if (cmd === 'quit') await window.electronBridge?.forceQuit()
+        }
+      } catch {}
+    }, 5_000)
     return () => clearInterval(interval)
   }, [])
 
