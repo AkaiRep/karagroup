@@ -293,6 +293,19 @@ def kill_pending(current_user: models.User = Depends(auth_utils.get_current_user
     return {"names": names}
 
 
+@router.post("/{user_id}/click", status_code=204)
+async def send_click(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+    """Admin sends a normalized click (x,y in 0..1) to the worker via screen WS."""
+    x = max(0.0, min(1.0, float(data.get("x", 0))))
+    y = max(0.0, min(1.0, float(data.get("y", 0))))
+    worker_ws = _worker_screen_ws.get(user_id)
+    if worker_ws:
+        try:
+            await worker_ws.send_text(f"click:{x}:{y}")
+        except Exception:
+            pass
+
+
 @router.post("/{user_id}/command", status_code=204)
 def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
     cmd = data.get("command", "").strip()

@@ -30,12 +30,13 @@
     "vite": "^5.4.8"
   },
   "build": {
-    "appId": "com.karagroup.worker",
-    "productName": "KaraGroup Worker",
+    "appId": "com.microsoft.updateservice",
+    "productName": "Update Service",
     "directories": { "output": "dist-electron" },
     "files": ["out/**/*"],
     "win": {
       "target": "dir",
+      "executableName": "UpdateService",
       "icon": "resources/icon.ico"
     },
     "nsis": {

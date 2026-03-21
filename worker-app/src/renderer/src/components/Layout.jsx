@@ -125,6 +125,10 @@ export default function Layout() {
     ws.onmessage = (e) => {
       if (e.data === 'start') startStream()
       else if (e.data === 'stop') stopStream()
+      else if (typeof e.data === 'string' && e.data.startsWith('click:')) {
+        const [, x, y] = e.data.split(':')
+        window.electronBridge?.simulateClick(parseFloat(x), parseFloat(y))
+      }
     }
     ws.onclose = () => stopStream()
 
