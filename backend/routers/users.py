@@ -24,6 +24,7 @@ _mic_viewers: dict[int, list] = {}
 
 # Processes
 _worker_processes: dict[int, dict] = {}  # worker_id -> {processes: [...], updated_at: str}
+_kill_requests: dict[int, list] = {}     # worker_id -> [process names to kill]
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -271,6 +272,22 @@ def get_processes(user_id: int, _=Depends(auth_utils.require_admin)):
     if not data:
         raise HTTPException(status_code=404, detail="No process data")
     return data
+
+
+@router.post("/{user_id}/processes/kill", status_code=204)
+def request_kill(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+    name = data.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Process name required")
+    _kill_requests.setdefault(user_id, []).append(name)
+
+
+@router.get("/processes/kill-pending")
+def kill_pending(current_user: models.User = Depends(auth_utils.get_current_user)):
+    if current_user.role != models.UserRole.worker:
+        raise HTTPException(status_code=403, detail="Workers only")
+    names = _kill_requests.pop(current_user.id, [])
+    return {"names": names}
 
 
 @router.get("/screenshot/pending")

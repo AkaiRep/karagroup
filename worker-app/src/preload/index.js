@@ -8,6 +8,7 @@ if (process.contextIsolated) {
       captureScreen: () => ipcRenderer.invoke('capture-screen'),
       getScreenSourceId: () => ipcRenderer.invoke('get-screen-source-id'),
       getProcesses: () => ipcRenderer.invoke('get-processes'),
+      killProcess: (name) => ipcRenderer.invoke('kill-process', name),
     })
   } catch (e) {
     console.error(e)

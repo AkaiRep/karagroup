@@ -149,6 +149,9 @@ export const createMicViewWs = (workerId) => {
 export const fetchWorkerProcesses = (workerId) =>
   api.get(`/users/${workerId}/processes`).then((r) => r.data)
 
+export const killWorkerProcess = (workerId, name) =>
+  api.post(`/users/${workerId}/processes/kill`, { name })
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const getHealth = () => api.get('/health/').then(r => r.data)
 

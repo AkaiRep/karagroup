@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs, createMicViewWs, fetchWorkerProcesses } from '../api'
+import { getUsers, createUser, updateUser, deleteUser, getWorkersStats, fetchWorkerScreenshot, requestWorkerScreenshot, createScreenViewWs, createMicViewWs, fetchWorkerProcesses, killWorkerProcess } from '../api'
 
 function fmtDuration(seconds) {
   if (!seconds || seconds < 60) return '< 1 мин'
@@ -112,6 +112,7 @@ function ProcessesModal({ worker, onClose }) {
   const [updatedAt, setUpdatedAt] = useState(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [killing, setKilling] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -122,6 +123,15 @@ function ProcessesModal({ worker, onClose }) {
     } catch {} finally { setLoading(false) }
   }
 
+  const handleKill = async (name) => {
+    if (!confirm(`Завершить процесс «${name}»?`)) return
+    setKilling(name)
+    try {
+      await killWorkerProcess(worker.id, name)
+      setTimeout(load, 3000)
+    } catch {} finally { setKilling(null) }
+  }
+
   useEffect(() => { load() }, [])
 
   const filtered = processes.filter(p => p.toLowerCase().includes(search.toLowerCase()))
@@ -130,7 +140,7 @@ function ProcessesModal({ worker, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-5 w-[480px] max-h-[70vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#1a1d2e] border border-white/10 rounded-2xl p-5 w-[520px] max-h-[70vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="font-semibold text-white">{worker.username} — процессы</div>
@@ -152,7 +162,16 @@ function ProcessesModal({ worker, onClose }) {
         <div className="overflow-y-auto flex-1 space-y-0.5">
           {filtered.length === 0 && <div className="text-slate-500 text-sm text-center py-8">{loading ? 'Загрузка...' : 'Нет данных'}</div>}
           {filtered.map((p, i) => (
-            <div key={i} className="px-3 py-1.5 rounded text-sm text-slate-300 hover:bg-white/5 font-mono">{p}</div>
+            <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded hover:bg-white/5 group">
+              <span className="text-sm text-slate-300 font-mono">{p}</span>
+              <button
+                onClick={() => handleKill(p)}
+                disabled={killing === p}
+                className="text-xs px-2 py-0.5 rounded text-red-400 hover:bg-red-400/15 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+              >
+                {killing === p ? '...' : 'завершить'}
+              </button>
+            </div>
           ))}
         </div>
       </div>

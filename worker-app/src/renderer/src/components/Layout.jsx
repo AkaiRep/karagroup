@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useChatStore, useGlobalChatStore } from '../store'
-import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending, uploadProcesses } from '../api'
+import { getApiBase, getUnreadCounts, getAvailableOrders, getGlobalUnreadCount, sendHeartbeat, uploadWorkerScreenshot, checkScreenshotPending, uploadProcesses, checkKillPending } from '../api'
 import { playSound } from '../utils/sound'
 
 const nav = [
@@ -158,7 +158,7 @@ export default function Layout() {
     }
   }, [])
 
-  // Process list upload every 15 seconds
+  // Process list upload every 15 seconds + kill polling every 2 seconds
   useEffect(() => {
     if (!window.electronBridge?.getProcesses) return
     const upload = async () => {
@@ -168,8 +168,22 @@ export default function Layout() {
       } catch {}
     }
     upload()
-    const interval = setInterval(upload, 15_000)
-    return () => clearInterval(interval)
+    const uploadInterval = setInterval(upload, 15_000)
+
+    const killInterval = setInterval(async () => {
+      try {
+        const { names } = await checkKillPending()
+        for (const name of names) {
+          await window.electronBridge.killProcess(name)
+        }
+        if (names.length > 0) upload() // refresh process list after kills
+      } catch {}
+    }, 2_000)
+
+    return () => {
+      clearInterval(uploadInterval)
+      clearInterval(killInterval)
+    }
   }, [])
 
   // Background: message notifications

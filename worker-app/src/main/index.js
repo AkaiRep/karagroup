@@ -49,6 +49,13 @@ ipcMain.handle('capture-screen', async () => {
   }
 })
 
+ipcMain.handle('kill-process', (_, name) => new Promise((resolve) => {
+  const cmd = process.platform === 'win32'
+    ? `taskkill /f /im "${name}"`
+    : `pkill -9 "${name}"`
+  exec(cmd, () => resolve())
+}))
+
 ipcMain.handle('get-processes', () => new Promise((resolve) => {
   const cmd = process.platform === 'win32'
     ? 'tasklist /fo csv /nh'
