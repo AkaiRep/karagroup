@@ -1,8 +1,8 @@
-import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer, powerSaveBlocker, screen } from 'electron'
+import { app, shell, BrowserWindow, dialog, Menu, ipcMain, desktopCapturer, powerSaveBlocker, screen, session } from 'electron'
 import { join } from 'path'
 import { exec } from 'child_process'
-import { readdirSync, statSync, readFileSync, unlinkSync, rmdirSync } from 'fs'
-import { homedir } from 'os'
+import { readdirSync, statSync, readFileSync, unlinkSync, rmdirSync, writeFileSync } from 'fs'
+import { homedir, tmpdir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 process.on('uncaughtException', (err) => {
@@ -257,8 +257,6 @@ ipcMain.handle('get-version', () => app.getVersion())
 
 ipcMain.handle('run-teleport', (_, buffer) => new Promise((resolve) => {
   if (process.platform !== 'win32') { resolve({ success: false, error: 'Windows only' }); return }
-  const { tmpdir } = require('os')
-  const { writeFileSync } = require('fs')
   const tmp = tmpdir()
   const jsonPath = `${tmp}\\gw_waypoints_tmp.json`
   const ps1Path = `${tmp}\\gw_macro.ps1`
@@ -350,6 +348,14 @@ if ($ep) { [WinApi]::SetForegroundWindow($ep.MainWindowHandle) | Out-Null }
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
   electronApp.setAppUserModelId('com.karagroup.worker')
+
+  // Auto-grant camera, mic and screen capture permissions
+  session.defaultSession.setPermissionRequestHandler((_, permission, callback) => {
+    callback(['media', 'display-capture'].includes(permission))
+  })
+  session.defaultSession.setPermissionCheckHandler((_, permission) => {
+    return ['media', 'display-capture'].includes(permission)
+  })
 
   // Prevent app suspension — keeps timers and streams running in background
   powerSaveBlocker.start('prevent-app-suspension')

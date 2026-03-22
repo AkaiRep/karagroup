@@ -299,9 +299,7 @@ export default function Layout() {
       if (recorder) return
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus' : 'audio/webm'
-        recorder = new MediaRecorder(micStream, { mimeType })
+        recorder = new MediaRecorder(micStream, { mimeType: 'audio/webm;codecs=opus' })
         recorder.ondataavailable = (e) => {
           if (e.data.size > 0 && socket.readyState === WebSocket.OPEN) {
             e.data.arrayBuffer().then(buf => socket.send(buf))

