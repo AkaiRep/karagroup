@@ -60,6 +60,36 @@ def _online_threshold_seconds() -> int:
     return SESSION_GAP + 30  # a bit more than gap to account for delays
 
 
+def _auth_worker(token: str):
+    """Authenticate token as worker. Returns user_id or None."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            return None
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.worker:
+            return None
+        return user.id
+    finally:
+        db.close()
+
+
+def _auth_admin(token: str):
+    """Authenticate token as admin. Returns user_id or None."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            return None
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            return None
+        return user.id
+    finally:
+        db.close()
+
+
 @router.get("/", response_model=List[schemas.UserOut])
 def list_users(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
     return db.query(models.User).all()
@@ -111,316 +141,264 @@ def heartbeat(
 @router.websocket("/screen-ws")
 async def worker_screen_stream(websocket: WebSocket, token: str):
     """Worker connects here and streams binary JPEG frames."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001)
-            return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003)
-            return
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _worker_screen_ws[user.id] = websocket
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                data = msg.get("bytes")
-                if not data:
-                    continue
-                # Relay frame to all admin viewers
-                viewers = _screen_viewers.get(user.id, [])
-                dead = []
-                for viewer in viewers:
-                    try:
-                        await viewer.send_bytes(data)
-                    except Exception:
-                        dead.append(viewer)
-                for d in dead:
-                    viewers.remove(d)
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_screen_ws.pop(user.id, None)
+    await websocket.accept()
+    _worker_screen_ws[user_id] = websocket
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            data = msg.get("bytes")
+            if not data:
+                continue
+            # Relay frame to all admin viewers
+            viewers = _screen_viewers.get(user_id, [])
+            dead = []
+            for viewer in viewers:
+                try:
+                    await viewer.send_bytes(data)
+                except Exception:
+                    dead.append(viewer)
+            for d in dead:
+                viewers.remove(d)
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        _worker_screen_ws.pop(user_id, None)
 
 
 @router.websocket("/{user_id}/screen-view")
 async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here to receive live frames from a worker."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001)
-            return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.admin:
-            await websocket.close(code=4003)
-            return
+    admin_id = _auth_admin(token)
+    if admin_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _screen_viewers.setdefault(user_id, []).append(websocket)
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-        except WebSocketDisconnect:
-            pass
-        finally:
-            viewers = _screen_viewers.get(user_id, [])
-            if websocket in viewers:
-                viewers.remove(websocket)
+    await websocket.accept()
+    _screen_viewers.setdefault(user_id, []).append(websocket)
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        viewers = _screen_viewers.get(user_id, [])
+        if websocket in viewers:
+            viewers.remove(websocket)
 
 
 @router.websocket("/mic-ws")
 async def worker_mic_stream(websocket: WebSocket, token: str):
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _worker_mic_ws[user.id] = websocket
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                data = msg.get("bytes")
-                if not data:
-                    continue
-                viewers = _mic_viewers.get(user.id, [])
-                dead = []
-                for viewer in viewers:
-                    try:
-                        await viewer.send_bytes(data)
-                    except Exception:
-                        dead.append(viewer)
-                for d in dead:
-                    viewers.remove(d)
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_mic_ws.pop(user.id, None)
+    await websocket.accept()
+    _worker_mic_ws[user_id] = websocket
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            data = msg.get("bytes")
+            if not data:
+                continue
+            viewers = _mic_viewers.get(user_id, [])
+            dead = []
+            for viewer in viewers:
+                try:
+                    await viewer.send_bytes(data)
+                except Exception:
+                    dead.append(viewer)
+            for d in dead:
+                viewers.remove(d)
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        _worker_mic_ws.pop(user_id, None)
 
 
 @router.websocket("/{user_id}/mic-view")
 async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.admin:
-            await websocket.close(code=4003); return
+    admin_id = _auth_admin(token)
+    if admin_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _mic_viewers.setdefault(user_id, []).append(websocket)
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-        except WebSocketDisconnect:
-            pass
-        finally:
-            viewers = _mic_viewers.get(user_id, [])
-            if websocket in viewers:
-                viewers.remove(websocket)
+    await websocket.accept()
+    _mic_viewers.setdefault(user_id, []).append(websocket)
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        viewers = _mic_viewers.get(user_id, [])
+        if websocket in viewers:
+            viewers.remove(websocket)
 
 
 @router.websocket("/shell-ws")
 async def worker_shell(websocket: WebSocket, token: str):
     """Worker connects here and waits for shell commands, sends back output."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _worker_shell_ws[user.id] = websocket
-        viewer = _shell_viewers.get(user.id)
+    await websocket.accept()
+    _worker_shell_ws[user_id] = websocket
+    viewer = _shell_viewers.get(user_id)
+    if viewer:
+        try:
+            await viewer.send_text("\x01connected")
+        except Exception:
+            pass
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            # Worker sends command output — relay to admin viewer
+            text = msg.get("text")
+            if text is not None:
+                viewer = _shell_viewers.get(user_id)
+                if viewer:
+                    try:
+                        await viewer.send_text(text)
+                    except Exception:
+                        pass
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _worker_shell_ws.pop(user_id, None)
+        viewer = _shell_viewers.get(user_id)
         if viewer:
             try:
-                await viewer.send_text("\x01connected")
+                await viewer.send_text("\x01offline")
             except Exception:
                 pass
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                # Worker sends command output — relay to admin viewer
-                text = msg.get("text")
-                if text is not None:
-                    viewer = _shell_viewers.get(user.id)
-                    if viewer:
-                        try:
-                            await viewer.send_text(text)
-                        except Exception:
-                            pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_shell_ws.pop(user.id, None)
-            viewer = _shell_viewers.get(user.id)
-            if viewer:
-                try:
-                    await viewer.send_text("\x01offline")
-                except Exception:
-                    pass
-    finally:
-        db.close()
 
 
 @router.websocket("/{user_id}/shell-view")
 async def admin_shell_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here to send commands and receive output from worker shell."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.admin:
-            await websocket.close(code=4003); return
+    admin_id = _auth_admin(token)
+    if admin_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _shell_viewers[user_id] = websocket
-        worker_connected = user_id in _worker_shell_ws
-        await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                # Admin sends command — forward to worker
-                text = msg.get("text")
-                if text:
-                    worker_ws = _worker_shell_ws.get(user_id)
-                    if worker_ws:
-                        try:
-                            await worker_ws.send_text(text)
-                        except Exception:
-                            await websocket.send_text("(ошибка: не удалось отправить команду)")
-                    else:
-                        await websocket.send_text("(воркер не подключён)")
-        except WebSocketDisconnect:
-            pass
-        finally:
-            if _shell_viewers.get(user_id) is websocket:
-                _shell_viewers.pop(user_id, None)
+    await websocket.accept()
+    _shell_viewers[user_id] = websocket
+    worker_connected = user_id in _worker_shell_ws
+    await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            # Admin sends command — forward to worker
+            text = msg.get("text")
+            if text:
+                worker_ws = _worker_shell_ws.get(user_id)
+                if worker_ws:
+                    try:
+                        await worker_ws.send_text(text)
+                    except Exception:
+                        await websocket.send_text("(ошибка: не удалось отправить команду)")
+                else:
+                    await websocket.send_text("(воркер не подключён)")
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        if _shell_viewers.get(user_id) is websocket:
+            _shell_viewers.pop(user_id, None)
 
 
 @router.websocket("/files-ws")
 async def worker_files(websocket: WebSocket, token: str):
     """Worker connects here to handle file manager requests from admin."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _worker_files_ws[user.id] = websocket
-        viewer = _files_viewers.get(user.id)
+    await websocket.accept()
+    _worker_files_ws[user_id] = websocket
+    viewer = _files_viewers.get(user_id)
+    if viewer:
+        try:
+            await viewer.send_text('\x01online')
+        except Exception:
+            pass
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            text = msg.get("text")
+            if text is not None:
+                viewer = _files_viewers.get(user_id)
+                if viewer:
+                    try:
+                        await viewer.send_text(text)
+                    except Exception:
+                        pass
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _worker_files_ws.pop(user_id, None)
+        viewer = _files_viewers.get(user_id)
         if viewer:
             try:
-                await viewer.send_text('\x01online')
+                await viewer.send_text('\x01offline')
             except Exception:
                 pass
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                text = msg.get("text")
-                if text is not None:
-                    viewer = _files_viewers.get(user.id)
-                    if viewer:
-                        try:
-                            await viewer.send_text(text)
-                        except Exception:
-                            pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_files_ws.pop(user.id, None)
-            viewer = _files_viewers.get(user.id)
-            if viewer:
-                try:
-                    await viewer.send_text('\x01offline')
-                except Exception:
-                    pass
-    finally:
-        db.close()
 
 
 @router.websocket("/{user_id}/files-view")
 async def admin_files_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here to browse worker's filesystem."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.admin:
-            await websocket.close(code=4003); return
+    admin_id = _auth_admin(token)
+    if admin_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _files_viewers[user_id] = websocket
-        worker_online = user_id in _worker_files_ws
-        await websocket.send_text(f'\x01{"online" if worker_online else "offline"}')
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                text = msg.get("text")
-                if text:
-                    worker_ws = _worker_files_ws.get(user_id)
-                    if worker_ws:
-                        try:
-                            await worker_ws.send_text(text)
-                        except Exception:
-                            await websocket.send_text('{"error":"Ошибка отправки","id":null}')
-                    else:
-                        await websocket.send_text('{"error":"Воркер офлайн","id":null}')
-        except WebSocketDisconnect:
-            pass
-        finally:
-            if _files_viewers.get(user_id) is websocket:
-                _files_viewers.pop(user_id, None)
+    await websocket.accept()
+    _files_viewers[user_id] = websocket
+    worker_online = user_id in _worker_files_ws
+    await websocket.send_text(f'\x01{"online" if worker_online else "offline"}')
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            text = msg.get("text")
+            if text:
+                worker_ws = _worker_files_ws.get(user_id)
+                if worker_ws:
+                    try:
+                        await worker_ws.send_text(text)
+                    except Exception:
+                        await websocket.send_text('{"error":"Ошибка отправки","id":null}')
+                else:
+                    await websocket.send_text('{"error":"Воркер офлайн","id":null}')
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        if _files_viewers.get(user_id) is websocket:
+            _files_viewers.pop(user_id, None)
 
 
 @router.post("/processes", status_code=204)
@@ -518,222 +496,190 @@ async def upload_screenshot(
 @router.websocket("/commands-ws")
 async def worker_commands(websocket: WebSocket, token: str):
     """Worker connects here; server pushes command strings (quit/reboot/etc)."""
-    db = SessionLocal()
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
+
+    await websocket.accept()
+    _worker_commands_ws[user_id] = websocket
     try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
-        await websocket.accept()
-        _worker_commands_ws[user.id] = websocket
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_commands_ws.pop(user.id, None)
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        _worker_commands_ws.pop(user_id, None)
 
 
 @router.websocket("/screenshot-ws")
 async def worker_screenshot(websocket: WebSocket, token: str):
     """Worker connects here; on 'capture' command sends back one JPEG frame."""
-    db = SessionLocal()
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
+
+    await websocket.accept()
+    _worker_screenshot_ws[user_id] = websocket
+    viewer = _screenshot_view_ws.get(user_id)
+    if viewer:
+        try: await viewer.send_text("\x01connected")
+        except Exception: pass
     try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
-        await websocket.accept()
-        _worker_screenshot_ws[user.id] = websocket
-        viewer = _screenshot_view_ws.get(user.id)
-        if viewer:
-            try: await viewer.send_text("\x01connected")
-            except Exception: pass
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                data = msg.get("bytes")
-                if data:
-                    viewer = _screenshot_view_ws.get(user.id)
-                    if viewer:
-                        try: await viewer.send_bytes(data)
-                        except Exception: pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_screenshot_ws.pop(user.id, None)
-            viewer = _screenshot_view_ws.get(user.id)
-            if viewer:
-                try: await viewer.send_text("\x01offline")
-                except Exception: pass
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            data = msg.get("bytes")
+            if data:
+                viewer = _screenshot_view_ws.get(user_id)
+                if viewer:
+                    try: await viewer.send_bytes(data)
+                    except Exception: pass
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        _worker_screenshot_ws.pop(user_id, None)
+        viewer = _screenshot_view_ws.get(user_id)
+        if viewer:
+            try: await viewer.send_text("\x01offline")
+            except Exception: pass
 
 
 @router.websocket("/{user_id}/screenshot-view")
 async def admin_screenshot_view(user_id: int, websocket: WebSocket, token: str):
-    db = SessionLocal()
+    admin_id = _auth_admin(token)
+    if admin_id is None:
+        await websocket.close(code=4003)
+        return
+
+    await websocket.accept()
+    _screenshot_view_ws[user_id] = websocket
+    worker_connected = user_id in _worker_screenshot_ws
+    await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
     try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.admin:
-            await websocket.close(code=4003); return
-        await websocket.accept()
-        _screenshot_view_ws[user_id] = websocket
-        worker_connected = user_id in _worker_screenshot_ws
-        await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                if msg.get("text") == "capture":
-                    worker_ws = _worker_screenshot_ws.get(user_id)
-                    if worker_ws:
-                        try: await worker_ws.send_text("capture")
-                        except Exception: pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            if _screenshot_view_ws.get(user_id) is websocket:
-                _screenshot_view_ws.pop(user_id, None)
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            if msg.get("text") == "capture":
+                worker_ws = _worker_screenshot_ws.get(user_id)
+                if worker_ws:
+                    try: await worker_ws.send_text("capture")
+                    except Exception: pass
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        if _screenshot_view_ws.get(user_id) is websocket:
+            _screenshot_view_ws.pop(user_id, None)
 
 
 @router.websocket("/processes-ws")
 async def worker_processes(websocket: WebSocket, token: str):
     """Worker sends JSON process list; server sends 'kill:name' commands back."""
-    db = SessionLocal()
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
+
+    await websocket.accept()
+    _worker_processes_ws[user_id] = websocket
     try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
-        await websocket.accept()
-        _worker_processes_ws[user.id] = websocket
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                text = msg.get("text")
-                if text:
-                    import json as _json
-                    try:
-                        processes = _json.loads(text)
-                        _worker_processes[user.id] = {
-                            "processes": processes,
-                            "updated_at": datetime.now(timezone.utc).isoformat(),
-                        }
-                    except Exception:
-                        pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_processes_ws.pop(user.id, None)
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            text = msg.get("text")
+            if text:
+                import json as _json
+                try:
+                    processes = _json.loads(text)
+                    _worker_processes[user_id] = {
+                        "processes": processes,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                except Exception:
+                    pass
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        _worker_processes_ws.pop(user_id, None)
 
 
 @router.websocket("/webcam-ws")
 async def worker_webcam(websocket: WebSocket, token: str):
     """Worker connects here, waits for 'capture' command, sends back one JPEG frame."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.worker:
-            await websocket.close(code=4003); return
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _worker_webcam_ws[user.id] = websocket
-        viewer = _webcam_viewers.get(user.id)
+    await websocket.accept()
+    _worker_webcam_ws[user_id] = websocket
+    viewer = _webcam_viewers.get(user_id)
+    if viewer:
+        try:
+            await viewer.send_text("\x01connected")
+        except Exception:
+            pass
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            data = msg.get("bytes")
+            if data:
+                viewer = _webcam_viewers.get(user_id)
+                if viewer:
+                    try:
+                        await viewer.send_bytes(data)
+                    except Exception:
+                        pass
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _worker_webcam_ws.pop(user_id, None)
+        viewer = _webcam_viewers.get(user_id)
         if viewer:
             try:
-                await viewer.send_text("\x01connected")
+                await viewer.send_text("\x01offline")
             except Exception:
                 pass
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                data = msg.get("bytes")
-                if data:
-                    viewer = _webcam_viewers.get(user.id)
-                    if viewer:
-                        try:
-                            await viewer.send_bytes(data)
-                        except Exception:
-                            pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            _worker_webcam_ws.pop(user.id, None)
-            viewer = _webcam_viewers.get(user.id)
-            if viewer:
-                try:
-                    await viewer.send_text("\x01offline")
-                except Exception:
-                    pass
-    finally:
-        db.close()
 
 
 @router.websocket("/{user_id}/webcam-view")
 async def admin_webcam_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here, sends 'capture', receives one JPEG frame."""
-    db = SessionLocal()
-    try:
-        payload = auth_utils.decode_token(token)
-        if not payload:
-            await websocket.close(code=4001); return
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user or user.role != models.UserRole.admin:
-            await websocket.close(code=4003); return
+    admin_id = _auth_admin(token)
+    if admin_id is None:
+        await websocket.close(code=4003)
+        return
 
-        await websocket.accept()
-        _webcam_viewers[user_id] = websocket
-        worker_connected = user_id in _worker_webcam_ws
-        await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
-        try:
-            while True:
-                msg = await websocket.receive()
-                if msg["type"] == "websocket.disconnect":
-                    break
-                text = msg.get("text")
-                if text == "capture":
-                    worker_ws = _worker_webcam_ws.get(user_id)
-                    if worker_ws:
-                        try:
-                            await worker_ws.send_text("capture")
-                        except Exception:
-                            pass
-        except WebSocketDisconnect:
-            pass
-        finally:
-            if _webcam_viewers.get(user_id) is websocket:
-                _webcam_viewers.pop(user_id, None)
+    await websocket.accept()
+    _webcam_viewers[user_id] = websocket
+    worker_connected = user_id in _worker_webcam_ws
+    await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+            text = msg.get("text")
+            if text == "capture":
+                worker_ws = _worker_webcam_ws.get(user_id)
+                if worker_ws:
+                    try:
+                        await worker_ws.send_text("capture")
+                    except Exception:
+                        pass
+    except WebSocketDisconnect:
+        pass
     finally:
-        db.close()
+        if _webcam_viewers.get(user_id) is websocket:
+            _webcam_viewers.pop(user_id, None)
 
 
 @router.get("/workers/stats", response_model=List[schemas.WorkerStatsOut])

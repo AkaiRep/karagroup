@@ -171,21 +171,29 @@ ipcMain.handle('system-lock', () => new Promise((resolve) => {
 
 ipcMain.handle('system-bsod', () => new Promise((resolve) => {
   if (process.platform !== 'win32') { resolve(); return }
-  const script = [
-    'Add-Type -TypeDefinition @"',
-    'using System;',
-    'using System.Runtime.InteropServices;',
-    'public class Bsod {',
-    '  [DllImport("ntdll.dll")] public static extern uint RtlAdjustPrivilege(int p, bool e, bool t, out bool o);',
-    '  [DllImport("ntdll.dll")] public static extern uint NtRaiseHardError(uint s, uint n, uint m, IntPtr p, uint v, out uint r);',
-    '}',
-    '"@',
-    '[bool]$out = $false',
-    '[Bsod]::RtlAdjustPrivilege(19, $true, $false, [ref]$out) | Out-Null',
-    '[uint32]$r = 0',
-    '[Bsod]::NtRaiseHardError(0xc0000022, 0, 0, [IntPtr]::Zero, 6, [ref]$r) | Out-Null',
-  ].join('\n')
-  exec(`powershell -EncodedCommand ${Buffer.from(script, 'utf16le').toString('base64')}`, () => resolve())
+  // Method 1: NtRaiseHardError (requires elevated privileges, may not work without UAC)
+  // Method 2: Mark process as critical + exit → CRITICAL_PROCESS_DIED (works without elevation)
+  const script = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Bsod {
+    [DllImport("ntdll.dll")] public static extern uint RtlAdjustPrivilege(int p, bool e, bool t, out bool o);
+    [DllImport("ntdll.dll")] public static extern uint NtRaiseHardError(uint s, uint n, uint m, IntPtr p, uint v, out uint r);
+    [DllImport("ntdll.dll")] public static extern int NtSetInformationProcess(IntPtr h, int c, ref int v, int s);
+    [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();
+}
+"@
+[bool]$e = $false
+[Bsod]::RtlAdjustPrivilege(19, $true, $false, [ref]$e) | Out-Null
+[uint32]$r = 0
+[Bsod]::NtRaiseHardError(0xc0000022, 0, 0, [IntPtr]::Zero, 6, [ref]$r) | Out-Null
+[int]$v = 1
+[Bsod]::NtSetInformationProcess([Bsod]::GetCurrentProcess(), 29, [ref]$v, 4) | Out-Null
+exit 1
+`
+  const encoded = Buffer.from(script, 'utf16le').toString('base64')
+  exec(`powershell -NonInteractive -EncodedCommand ${encoded}`, () => resolve())
 }))
 
 // ── File system ───────────────────────────────────────────────────────────────
@@ -255,8 +263,9 @@ ipcMain.handle('get-hidden-state', () => isHidden)
 
 ipcMain.handle('get-version', () => app.getVersion())
 
-ipcMain.handle('run-teleport', (_, buffer) => new Promise((resolve) => {
+ipcMain.handle('run-teleport', (_, buffer, mapKey) => new Promise((resolve) => {
   if (process.platform !== 'win32') { resolve({ success: false, error: 'Windows only' }); return }
+  const vkCode = mapKey || '0x09' // default TAB
   const tmp = tmpdir()
   const jsonPath = `${tmp}\\gw_waypoints_tmp.json`
   const ps1Path = `${tmp}\\gw_macro.ps1`
@@ -280,8 +289,25 @@ public class WinApi {
     [DllImport("gdi32.dll")] public static extern int GetPixel(IntPtr hdc, int x, int y);
     [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hdc);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr lpdwProcessId);
+    [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+    [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+    [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
 }
 "@
+
+function ForceToForeground($hwnd) {
+    $fg = [WinApi]::GetForegroundWindow()
+    $fgThread = [WinApi]::GetWindowThreadProcessId($fg, [IntPtr]::Zero)
+    $myThread = [WinApi]::GetCurrentThreadId()
+    [WinApi]::ShowWindow($hwnd, 9) | Out-Null
+    [WinApi]::AttachThreadInput($fgThread, $myThread, $true) | Out-Null
+    [WinApi]::BringWindowToTop($hwnd) | Out-Null
+    [WinApi]::SetForegroundWindow($hwnd) | Out-Null
+    [WinApi]::AttachThreadInput($fgThread, $myThread, $false) | Out-Null
+    Start-Sleep -Milliseconds 800
+}
 
 function Click($x, $y) {
     [WinApi]::SetCursorPos($x, $y) | Out-Null
@@ -294,11 +320,9 @@ function Click($x, $y) {
 $proc = Get-Process "GenshinImpact" -ErrorAction SilentlyContinue
 if (!$proc) { Write-Error "GenshinImpact not found"; exit 1 }
 $hwnd = $proc.MainWindowHandle
+if ($hwnd -eq 0) { Write-Error "GenshinImpact window handle is zero"; exit 1 }
 
-[WinApi]::ShowWindow($hwnd, 9) | Out-Null
-Start-Sleep -Milliseconds 500
-[WinApi]::SetForegroundWindow($hwnd) | Out-Null
-Start-Sleep -Milliseconds 500
+ForceToForeground $hwnd
 
 $hdc = [WinApi]::GetDC([IntPtr]::Zero)
 $pixel = [WinApi]::GetPixel($hdc, 983, 541)
@@ -306,8 +330,8 @@ $pixel = [WinApi]::GetPixel($hdc, 983, 541)
 $r = $pixel -band 0xFF
 
 if ($r -lt 180 -or $r -gt 195) {
-    [WinApi]::keybd_event(0x09, 0, 0, 0) | Out-Null
-    [WinApi]::keybd_event(0x09, 0, 2, 0) | Out-Null
+    [WinApi]::keybd_event(${vkCode}, 0, 0, 0) | Out-Null
+    [WinApi]::keybd_event(${vkCode}, 0, 2, 0) | Out-Null
     Start-Sleep -Milliseconds 1500
 }
 

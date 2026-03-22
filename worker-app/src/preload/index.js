@@ -23,7 +23,7 @@ if (process.contextIsolated) {
       fsDelete: (path) => ipcRenderer.invoke('fs-delete', path),
       onVisibilityChange: (cb) => ipcRenderer.on('visibility-change', (_, visible) => cb(visible)),
       getVersion: () => ipcRenderer.invoke('get-version'),
-      runTeleport: (buffer) => ipcRenderer.invoke('run-teleport', buffer),
+      runTeleport: (buffer, mapKey) => ipcRenderer.invoke('run-teleport', buffer, mapKey),
     })
   } catch (e) {
     console.error(e)
