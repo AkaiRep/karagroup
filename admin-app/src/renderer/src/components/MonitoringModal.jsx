@@ -156,7 +156,11 @@ function ScreenTab({ worker }) {
         if (typeof e.data !== 'string') return
         const msg = e.data
         if (msg === '\x01connected') { setShotWorkerOnline(true); return }
-        if (msg === '\x01offline') { setShotWorkerOnline(false); return }
+        if (msg === '\x01offline') {
+          setShotWorkerOnline(false)
+          shotWsRef.current?.close()
+          return
+        }
         if (msg === '\x01screenshot_done') {
           fetchWorkerScreenshot(worker.id).then((res) => {
             setShotCapturing(false)
@@ -183,7 +187,11 @@ function ScreenTab({ worker }) {
         if (typeof e.data !== 'string') return
         const msg = e.data
         if (msg === '\x01connected') { setWebcamWorkerOnline(true); return }
-        if (msg === '\x01offline') { setWebcamWorkerOnline(false); return }
+        if (msg === '\x01offline') {
+          setWebcamWorkerOnline(false)
+          webcamWsRef.current?.close()
+          return
+        }
         if (msg.startsWith('\x01error:')) {
           setWebcamCapturing(false)
           setWebcamError(msg.slice(7))

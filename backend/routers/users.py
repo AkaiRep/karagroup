@@ -94,6 +94,31 @@ def _auth_admin(token: str):
         db.close()
 
 
+def _auth_admin_full(token: str):
+    """Authenticate token as admin. Returns (user_id, username) or (None, None)."""
+    db = SessionLocal()
+    try:
+        payload = auth_utils.decode_token(token)
+        if not payload:
+            return None, None
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user or user.role != models.UserRole.admin:
+            return None, None
+        return user.id, user.username
+    finally:
+        db.close()
+
+
+def _get_username(user_id: int) -> str:
+    """Fetch username by user_id (best-effort, returns '?' on failure)."""
+    db = SessionLocal()
+    try:
+        user = db.query(models.User).filter(models.User.id == user_id).first()
+        return user.username if user else "?"
+    finally:
+        db.close()
+
+
 @router.get("/", response_model=List[schemas.UserOut])
 def list_users(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
     return db.query(models.User).all()
@@ -179,11 +204,13 @@ async def worker_screen_stream(websocket: WebSocket, token: str):
 @router.websocket("/{user_id}/screen-view")
 async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here to receive live frames from a worker."""
-    admin_id = _auth_admin(token)
+    admin_id, admin_name = _auth_admin_full(token)
     if admin_id is None:
         await websocket.close(code=4003)
         return
 
+    worker_name = _get_username(user_id)
+    print(f"[MONITOR] {admin_name} → live screen of {worker_name} (worker_id={user_id})", flush=True)
     await websocket.accept()
     _screen_viewers.setdefault(user_id, []).append(websocket)
     try:
@@ -194,6 +221,7 @@ async def admin_screen_view(user_id: int, websocket: WebSocket, token: str):
     except WebSocketDisconnect:
         pass
     finally:
+        print(f"[MONITOR] {admin_name} ← stopped live screen of {worker_name}", flush=True)
         viewers = _screen_viewers.get(user_id, [])
         if websocket in viewers:
             viewers.remove(websocket)
@@ -233,11 +261,13 @@ async def worker_mic_stream(websocket: WebSocket, token: str):
 
 @router.websocket("/{user_id}/mic-view")
 async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
-    admin_id = _auth_admin(token)
+    admin_id, admin_name = _auth_admin_full(token)
     if admin_id is None:
         await websocket.close(code=4003)
         return
 
+    worker_name = _get_username(user_id)
+    print(f"[MONITOR] {admin_name} → listening mic of {worker_name} (worker_id={user_id})", flush=True)
     await websocket.accept()
     _mic_viewers.setdefault(user_id, []).append(websocket)
     try:
@@ -248,6 +278,7 @@ async def admin_mic_view(user_id: int, websocket: WebSocket, token: str):
     except WebSocketDisconnect:
         pass
     finally:
+        print(f"[MONITOR] {admin_name} ← stopped mic of {worker_name}", flush=True)
         viewers = _mic_viewers.get(user_id, [])
         if websocket in viewers:
             viewers.remove(websocket)
@@ -298,11 +329,13 @@ async def worker_shell(websocket: WebSocket, token: str):
 @router.websocket("/{user_id}/shell-view")
 async def admin_shell_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here to send commands and receive output from worker shell."""
-    admin_id = _auth_admin(token)
+    admin_id, admin_name = _auth_admin_full(token)
     if admin_id is None:
         await websocket.close(code=4003)
         return
 
+    worker_name = _get_username(user_id)
+    print(f"[MONITOR] {admin_name} → shell on {worker_name} (worker_id={user_id})", flush=True)
     await websocket.accept()
     _shell_viewers[user_id] = websocket
     worker_connected = user_id in _worker_main_ws or user_id in _worker_shell_ws
@@ -327,6 +360,7 @@ async def admin_shell_view(user_id: int, websocket: WebSocket, token: str):
     except WebSocketDisconnect:
         pass
     finally:
+        print(f"[MONITOR] {admin_name} ← closed shell on {worker_name}", flush=True)
         if _shell_viewers.get(user_id) is websocket:
             _shell_viewers.pop(user_id, None)
 
@@ -375,11 +409,13 @@ async def worker_files(websocket: WebSocket, token: str):
 @router.websocket("/{user_id}/files-view")
 async def admin_files_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here to browse worker's filesystem."""
-    admin_id = _auth_admin(token)
+    admin_id, admin_name = _auth_admin_full(token)
     if admin_id is None:
         await websocket.close(code=4003)
         return
 
+    worker_name = _get_username(user_id)
+    print(f"[MONITOR] {admin_name} → file manager on {worker_name} (worker_id={user_id})", flush=True)
     await websocket.accept()
     _files_viewers[user_id] = websocket
     worker_online = user_id in _worker_main_ws or user_id in _worker_files_ws
@@ -408,6 +444,7 @@ async def admin_files_view(user_id: int, websocket: WebSocket, token: str):
     except WebSocketDisconnect:
         pass
     finally:
+        print(f"[MONITOR] {admin_name} ← closed file manager on {worker_name}", flush=True)
         if _files_viewers.get(user_id) is websocket:
             _files_viewers.pop(user_id, None)
 
@@ -578,11 +615,13 @@ async def worker_screenshot(websocket: WebSocket, token: str):
 
 @router.websocket("/{user_id}/screenshot-view")
 async def admin_screenshot_view(user_id: int, websocket: WebSocket, token: str):
-    admin_id = _auth_admin(token)
+    admin_id, admin_name = _auth_admin_full(token)
     if admin_id is None:
         await websocket.close(code=4003)
         return
 
+    worker_name = _get_username(user_id)
+    print(f"[MONITOR] {admin_name} → screenshot view of {worker_name} (worker_id={user_id})", flush=True)
     await websocket.accept()
     _screenshot_view_ws[user_id] = websocket
     worker_connected = user_id in _worker_main_ws or user_id in _worker_screenshot_ws
@@ -684,11 +723,13 @@ async def worker_webcam(websocket: WebSocket, token: str):
 @router.websocket("/{user_id}/webcam-view")
 async def admin_webcam_view(user_id: int, websocket: WebSocket, token: str):
     """Admin connects here, sends 'capture', receives one JPEG frame."""
-    admin_id = _auth_admin(token)
+    admin_id, admin_name = _auth_admin_full(token)
     if admin_id is None:
         await websocket.close(code=4003)
         return
 
+    worker_name = _get_username(user_id)
+    print(f"[MONITOR] {admin_name} → webcam view of {worker_name} (worker_id={user_id})", flush=True)
     await websocket.accept()
     _webcam_viewers[user_id] = websocket
     worker_connected = user_id in _worker_main_ws or user_id in _worker_webcam_ws
