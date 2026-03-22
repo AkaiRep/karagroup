@@ -15,6 +15,7 @@ Path("uploads/chat").mkdir(parents=True, exist_ok=True)
 Path("uploads/products").mkdir(parents=True, exist_ok=True)
 Path("uploads/hero").mkdir(parents=True, exist_ok=True)
 Path("uploads/screenshots").mkdir(parents=True, exist_ok=True)
+Path("uploads/webcam").mkdir(parents=True, exist_ok=True)
 Path("uploads/teleports").mkdir(parents=True, exist_ok=True)
 
 # Create tables

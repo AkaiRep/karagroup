@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   createScreenViewWs, createMicViewWs, createWebcamViewWs, createScreenshotViewWs,
-  fetchWorkerProcesses, killWorkerProcess,
+  fetchWorkerProcesses, killWorkerProcess, fetchWorkerScreenshot, fetchWorkerWebcamPhoto,
   sendWorkerCommand, sendWorkerClick, createShellViewWs, createFilesViewWs,
 } from '../api'
 
@@ -152,16 +152,21 @@ function ScreenTab({ worker }) {
     const connectShot = () => {
       if (destroyed) return
       const ws = createScreenshotViewWs(worker.id)
-      ws.binaryType = 'arraybuffer'
       ws.onmessage = (e) => {
-        if (typeof e.data === 'string') { setShotWorkerOnline(e.data.slice(1) === 'connected'); return }
-        setShotCapturing(false)
-        const blob = new Blob([e.data], { type: 'image/jpeg' })
-        const url = URL.createObjectURL(blob)
-        if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
-        prevShotUrlRef.current = url
-        setShotUrl(url)
-        setShotAt(new Date())
+        if (typeof e.data !== 'string') return
+        const msg = e.data
+        if (msg === '\x01connected') { setShotWorkerOnline(true); return }
+        if (msg === '\x01offline') { setShotWorkerOnline(false); return }
+        if (msg === '\x01screenshot_done') {
+          fetchWorkerScreenshot(worker.id).then((res) => {
+            setShotCapturing(false)
+            const url = URL.createObjectURL(res.data)
+            if (prevShotUrlRef.current) URL.revokeObjectURL(prevShotUrlRef.current)
+            prevShotUrlRef.current = url
+            setShotUrl(url)
+            setShotAt(new Date())
+          }).catch(() => setShotCapturing(false))
+        }
       }
       ws.onclose = () => {
         shotWsRef.current = null
@@ -174,25 +179,26 @@ function ScreenTab({ worker }) {
     const connectCam = () => {
       if (destroyed) return
       const ws = createWebcamViewWs(worker.id)
-      ws.binaryType = 'arraybuffer'
       ws.onmessage = (e) => {
-        if (typeof e.data === 'string') {
-          const msg = e.data
-          if (msg.startsWith('\x01error:')) {
-            setWebcamCapturing(false)
-            setWebcamError(msg.slice(7))
-            return
-          }
-          setWebcamWorkerOnline(msg.slice(1) === 'connected')
+        if (typeof e.data !== 'string') return
+        const msg = e.data
+        if (msg === '\x01connected') { setWebcamWorkerOnline(true); return }
+        if (msg === '\x01offline') { setWebcamWorkerOnline(false); return }
+        if (msg.startsWith('\x01error:')) {
+          setWebcamCapturing(false)
+          setWebcamError(msg.slice(7))
           return
         }
-        setWebcamCapturing(false)
-        setWebcamError(null)
-        const blob = new Blob([e.data], { type: 'image/jpeg' })
-        const url = URL.createObjectURL(blob)
-        if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
-        prevWebcamUrlRef.current = url
-        setWebcamUrl(url)
+        if (msg === '\x01webcam_done') {
+          fetchWorkerWebcamPhoto(worker.id).then((res) => {
+            setWebcamCapturing(false)
+            setWebcamError(null)
+            const url = URL.createObjectURL(res.data)
+            if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
+            prevWebcamUrlRef.current = url
+            setWebcamUrl(url)
+          }).catch(() => setWebcamCapturing(false))
+        }
       }
       ws.onclose = () => {
         webcamWsRef.current = null

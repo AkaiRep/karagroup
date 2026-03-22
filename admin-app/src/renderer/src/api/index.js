@@ -131,6 +131,9 @@ export const uploadWorkerScreenshot = (base64) => {
 export const fetchWorkerScreenshot = (workerId) =>
   api.get(`/users/${workerId}/screenshot`, { responseType: 'blob' })
 
+export const fetchWorkerWebcamPhoto = (workerId) =>
+  api.get(`/users/${workerId}/webcam-photo`, { responseType: 'blob' })
+
 export const requestWorkerScreenshot = (workerId) =>
   api.post(`/users/${workerId}/screenshot/request`)
 

