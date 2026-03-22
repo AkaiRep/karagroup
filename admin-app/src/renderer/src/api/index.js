@@ -225,3 +225,16 @@ export const payTransaction = (id) =>
   api.patch(`/financial/transactions/${id}/pay`).then((r) => r.data)
 export const unpayTransaction = (id) =>
   api.patch(`/financial/transactions/${id}/unpay`).then((r) => r.data)
+
+// ── Teleports ──────────────────────────────────────────────────────────────
+export const getTeleportGroups = () => api.get('/teleports/groups').then(r => r.data)
+export const createTeleportGroup = (name) => api.post('/teleports/groups', { name }).then(r => r.data)
+export const updateTeleportGroup = (id, name) => api.patch(`/teleports/groups/${id}`, { name }).then(r => r.data)
+export const deleteTeleportGroup = (id) => api.delete(`/teleports/groups/${id}`)
+export const getTeleportPresets = (groupId) => api.get(`/teleports/groups/${groupId}/presets`).then(r => r.data)
+export const uploadTeleportPreset = (groupId, name, file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post(`/teleports/groups/${groupId}/presets`, form, { params: { name } }).then(r => r.data)
+}
+export const deleteTeleportPreset = (id) => api.delete(`/teleports/presets/${id}`)

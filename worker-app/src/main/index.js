@@ -255,6 +255,96 @@ ipcMain.handle('get-hidden-state', () => isHidden)
 
 ipcMain.handle('get-version', () => app.getVersion())
 
+ipcMain.handle('run-teleport', (_, buffer) => new Promise((resolve) => {
+  if (process.platform !== 'win32') { resolve({ success: false, error: 'Windows only' }); return }
+  const { tmpdir } = require('os')
+  const { writeFileSync } = require('fs')
+  const tmp = tmpdir()
+  const jsonPath = `${tmp}\\gw_waypoints_tmp.json`
+  const ps1Path = `${tmp}\\gw_macro.ps1`
+
+  try {
+    writeFileSync(`${tmp}\\gw_waypoints_tmp.json`, Buffer.from(buffer))
+  } catch (e) {
+    resolve({ success: false, error: e.message }); return
+  }
+
+  const script = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class WinApi {
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, int dx, int dy, uint cButtons, uint dwExtraInfo);
+    [DllImport("gdi32.dll")] public static extern int GetPixel(IntPtr hdc, int x, int y);
+    [DllImport("user32.dll")] public static extern IntPtr GetDC(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hdc);
+}
+"@
+
+function Click($x, $y) {
+    [WinApi]::SetCursorPos($x, $y) | Out-Null
+    Start-Sleep -Milliseconds 100
+    [WinApi]::mouse_event(2, 0, 0, 0, 0) | Out-Null
+    [WinApi]::mouse_event(4, 0, 0, 0, 0) | Out-Null
+    Start-Sleep -Milliseconds 400
+}
+
+$proc = Get-Process "GenshinImpact" -ErrorAction SilentlyContinue
+if (!$proc) { Write-Error "GenshinImpact not found"; exit 1 }
+$hwnd = $proc.MainWindowHandle
+
+[WinApi]::ShowWindow($hwnd, 9) | Out-Null
+Start-Sleep -Milliseconds 500
+[WinApi]::SetForegroundWindow($hwnd) | Out-Null
+Start-Sleep -Milliseconds 500
+
+$hdc = [WinApi]::GetDC([IntPtr]::Zero)
+$pixel = [WinApi]::GetPixel($hdc, 983, 541)
+[WinApi]::ReleaseDC([IntPtr]::Zero, $hdc) | Out-Null
+$r = $pixel -band 0xFF
+
+if ($r -lt 180 -or $r -gt 195) {
+    [WinApi]::keybd_event(0x09, 0, 0, 0) | Out-Null
+    [WinApi]::keybd_event(0x09, 0, 2, 0) | Out-Null
+    Start-Sleep -Milliseconds 1500
+}
+
+Click 566 509
+Click 1142 265
+
+$null = New-Item -ItemType Directory -Force -Path "C:\\uni"
+Copy-Item -Path "${jsonPath}" -Destination "C:\\uni\\waypoints.json" -Force
+Start-Sleep -Milliseconds 200
+
+Click 857 841
+Start-Sleep -Milliseconds 500
+
+Remove-Item "C:\\uni\\waypoints.json" -Force -ErrorAction SilentlyContinue
+Remove-Item "${jsonPath}" -Force -ErrorAction SilentlyContinue
+
+$ep = Get-Process "electron","Update Service" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($ep) { [WinApi]::SetForegroundWindow($ep.MainWindowHandle) | Out-Null }
+`
+
+  try {
+    writeFileSync(ps1Path, script, 'utf8')
+  } catch (e) {
+    resolve({ success: false, error: e.message }); return
+  }
+
+  exec(
+    `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${ps1Path}"`,
+    { timeout: 30_000 },
+    (err) => {
+      resolve(err ? { success: false, error: err.message } : { success: true })
+    }
+  )
+}))
+
 // ── App lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {

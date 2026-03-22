@@ -8,6 +8,7 @@ const nav = [
   { to: '/available', label: 'Доступные заказы', icon: '📋' },
   { to: '/my-orders', label: 'Мои заказы', icon: '⚡' },
   { to: '/earnings', label: 'Мои заработки', icon: '💵' },
+  { to: '/teleports', label: 'Телепорты', icon: '🗺️' },
 ]
 
 export default function Layout() {

@@ -308,3 +308,25 @@ class Review(Base):
     date_str = Column(String, nullable=True)
     source = Column(String, default="funpay")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class TeleportGroup(Base):
+    __tablename__ = "teleport_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    presets = relationship("TeleportPreset", back_populates="group", cascade="all, delete-orphan")
+
+
+class TeleportPreset(Base):
+    __tablename__ = "teleport_presets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("teleport_groups.id"), nullable=False)
+    name = Column(String(256), nullable=False)
+    filename = Column(String(256), nullable=False)  # stored filename on disk
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    group = relationship("TeleportGroup", back_populates="presets")

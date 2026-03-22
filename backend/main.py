@@ -8,13 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import engine, Base
 import models  # noqa: F401
-from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews, site_settings, health, faq, blog
+from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews, site_settings, health, faq, blog, teleports
 
 # Ensure uploads directory exists
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
 Path("uploads/products").mkdir(parents=True, exist_ok=True)
 Path("uploads/hero").mkdir(parents=True, exist_ok=True)
 Path("uploads/screenshots").mkdir(parents=True, exist_ok=True)
+Path("uploads/teleports").mkdir(parents=True, exist_ok=True)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -146,6 +147,26 @@ def run_migrations():
             """))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_blog_view_log ON blog_view_log (post_id, ip_hash, viewed_date)"))
             conn.commit()
+        if "teleport_groups" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE teleport_groups (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(128) NOT NULL,
+                    created_at DATETIME
+                )
+            """))
+            conn.commit()
+        if "teleport_presets" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE teleport_presets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    group_id INTEGER NOT NULL REFERENCES teleport_groups(id),
+                    name VARCHAR(256) NOT NULL,
+                    filename VARCHAR(256) NOT NULL,
+                    created_at DATETIME
+                )
+            """))
+            conn.commit()
 
 
 run_migrations()
@@ -179,6 +200,7 @@ app.include_router(site_settings.router)
 app.include_router(health.router)
 app.include_router(faq.router)
 app.include_router(blog.router)
+app.include_router(teleports.router)
 
 
 @app.get("/")

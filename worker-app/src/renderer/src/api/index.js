@@ -114,3 +114,9 @@ export const createGlobalChatWs = () => {
   const token = localStorage.getItem('token')
   return new WebSocket(`${wsBase()}/global-chat/ws?token=${token}`)
 }
+
+// ── Teleports ──────────────────────────────────────────────────────────────
+export const getTeleportGroups = () => api.get('/teleports/groups').then(r => r.data)
+export const getTeleportPresets = (groupId) => api.get(`/teleports/groups/${groupId}/presets`).then(r => r.data)
+export const downloadTeleportPreset = (presetId) =>
+  api.get(`/teleports/presets/${presetId}/download`, { responseType: 'arraybuffer' }).then(r => r.data)
