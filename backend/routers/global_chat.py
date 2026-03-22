@@ -135,19 +135,18 @@ async def global_chat_ws(websocket: WebSocket, token: str):
         if not user or not user.is_active:
             await websocket.close(code=4001)
             return
-
-        await websocket.accept()
-        _connections.append(websocket)
-
-        try:
-            while True:
-                await websocket.receive_text()
-        except WebSocketDisconnect:
-            pass
-        finally:
-            try:
-                _connections.remove(websocket)
-            except ValueError:
-                pass
     finally:
         db.close()
+
+    await websocket.accept()
+    _connections.append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        try:
+            _connections.remove(websocket)
+        except ValueError:
+            pass

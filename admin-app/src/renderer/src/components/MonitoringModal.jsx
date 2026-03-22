@@ -77,12 +77,14 @@ function ScreenTab({ worker }) {
   const [webcamUrl, setWebcamUrl] = useState(null)
   const [webcamWorkerOnline, setWebcamWorkerOnline] = useState(false)
   const [webcamCapturing, setWebcamCapturing] = useState(false)
+  const [webcamError, setWebcamError] = useState(null)
   const prevShotUrlRef = useRef(null)
   const prevWebcamUrlRef = useRef(null)
   const shotWsRef = useRef(null)
   const webcamWsRef = useRef(null)
   const liveWsRef = useRef(null)
   const liveImgRef = useRef(null)
+  const liveDestroyedRef = useRef(false)
 
   // Screenshot WS
   const captureShot = () => {
@@ -94,25 +96,37 @@ function ScreenTab({ worker }) {
 
   // Live screen WS
   const stopLive = () => {
+    liveDestroyedRef.current = true
     if (liveWsRef.current) { liveWsRef.current.close(); liveWsRef.current = null }
     setLive(false)
   }
 
   const startLive = () => {
     if (liveWsRef.current) return
-    const ws = createScreenViewWs(worker.id)
-    ws.binaryType = 'arraybuffer'
-    ws.onmessage = (e) => {
-      const blob = new Blob([e.data], { type: 'image/jpeg' })
-      const url = URL.createObjectURL(blob)
-      if (liveImgRef.current) {
-        const old = liveImgRef.current.src
-        liveImgRef.current.src = url
-        if (old.startsWith('blob:')) URL.revokeObjectURL(old)
+    liveDestroyedRef.current = false
+
+    const connectLive = () => {
+      if (liveDestroyedRef.current) return
+      const ws = createScreenViewWs(worker.id)
+      ws.binaryType = 'arraybuffer'
+      ws.onmessage = (e) => {
+        const blob = new Blob([e.data], { type: 'image/jpeg' })
+        const url = URL.createObjectURL(blob)
+        if (liveImgRef.current) {
+          const old = liveImgRef.current.src
+          liveImgRef.current.src = url
+          if (old.startsWith('blob:')) URL.revokeObjectURL(old)
+        }
       }
+      ws.onclose = () => {
+        liveWsRef.current = null
+        if (!liveDestroyedRef.current) setTimeout(connectLive, 2000)
+        else setLive(false)
+      }
+      liveWsRef.current = ws
     }
-    ws.onclose = () => { liveWsRef.current = null; setLive(false) }
-    liveWsRef.current = ws
+
+    connectLive()
     setLive(true)
   }
 
@@ -162,8 +176,18 @@ function ScreenTab({ worker }) {
       const ws = createWebcamViewWs(worker.id)
       ws.binaryType = 'arraybuffer'
       ws.onmessage = (e) => {
-        if (typeof e.data === 'string') { setWebcamWorkerOnline(e.data.slice(1) === 'connected'); return }
+        if (typeof e.data === 'string') {
+          const msg = e.data
+          if (msg.startsWith('\x01error:')) {
+            setWebcamCapturing(false)
+            setWebcamError(msg.slice(7))
+            return
+          }
+          setWebcamWorkerOnline(msg.slice(1) === 'connected')
+          return
+        }
         setWebcamCapturing(false)
+        setWebcamError(null)
         const blob = new Blob([e.data], { type: 'image/jpeg' })
         const url = URL.createObjectURL(blob)
         if (prevWebcamUrlRef.current) URL.revokeObjectURL(prevWebcamUrlRef.current)
@@ -232,6 +256,7 @@ function ScreenTab({ worker }) {
             {webcamCapturing ? 'Снимаем...' : 'Сфотографировать'}
           </button>
         </div>
+        {webcamError && <div className="mb-2 text-xs text-red-400 font-mono break-all">{webcamError}</div>}
         {webcamUrl
           ? <div className="rounded-xl overflow-hidden bg-black"><img src={webcamUrl} alt="webcam" className="w-full h-auto block" /></div>
           : <div className="rounded-xl bg-black/30 border border-white/5 flex items-center justify-center py-8 text-slate-600 text-sm">{webcamWorkerOnline ? 'Нажмите кнопку для снимка' : 'Воркер офлайн'}</div>

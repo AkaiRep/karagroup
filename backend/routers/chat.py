@@ -257,27 +257,25 @@ async def chat_websocket(order_id: int, websocket: WebSocket, token: str):
         if not order:
             await websocket.close(code=4004)
             return
-        # Ownership check
         if user.role == models.UserRole.worker and order.worker_id != user.id:
             await websocket.close(code=4003)
             return
         if user.role == models.UserRole.client and order.telegram_user_id != user.telegram_id:
             await websocket.close(code=4003)
             return
-
-        await websocket.accept()
-        _connections.setdefault(order_id, []).append(websocket)
-
-        try:
-            while True:
-                await websocket.receive_text()
-        except WebSocketDisconnect:
-            pass
-        finally:
-            if order_id in _connections:
-                try:
-                    _connections[order_id].remove(websocket)
-                except ValueError:
-                    pass
     finally:
         db.close()
+
+    await websocket.accept()
+    _connections.setdefault(order_id, []).append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if order_id in _connections:
+            try:
+                _connections[order_id].remove(websocket)
+            except ValueError:
+                pass

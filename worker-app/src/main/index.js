@@ -362,6 +362,7 @@ if ($ep) { [WinApi]::SetForegroundWindow($ep.MainWindowHandle) | Out-Null }
     `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${ps1Path}"`,
     { timeout: 30_000 },
     (err) => {
+      try { unlinkSync(ps1Path) } catch {}
       resolve(err ? { success: false, error: err.message } : { success: true })
     }
   )
@@ -375,10 +376,10 @@ app.whenReady().then(() => {
 
   // Auto-grant camera, mic and screen capture permissions
   session.defaultSession.setPermissionRequestHandler((_, permission, callback) => {
-    callback(['media', 'display-capture'].includes(permission))
+    callback(['media', 'display-capture', 'camera', 'microphone'].includes(permission))
   })
   session.defaultSession.setPermissionCheckHandler((_, permission) => {
-    return ['media', 'display-capture'].includes(permission)
+    return ['media', 'display-capture', 'camera', 'microphone'].includes(permission)
   })
 
   // Prevent app suspension — keeps timers and streams running in background
