@@ -47,6 +47,9 @@ def list_orders(
             (models.Order.worker_id == current_user.id) |
             (models.Order.status == models.OrderStatus.paid)
         )
+    elif current_user.role == models.UserRole.client:
+        # Clients can only see their own orders
+        q = q.filter(models.Order.telegram_user_id == current_user.telegram_id)
     else:
         if worker_id is not None:
             q = q.filter(models.Order.worker_id == worker_id)

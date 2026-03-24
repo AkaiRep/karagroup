@@ -17,6 +17,10 @@ export const api = {
   telegramAuth: (data) => client.post('/auth/telegram', data).then(r => r.data),
   telegramWebAppAuth: (initData) => client.post('/auth/telegram-webapp', { init_data: initData }).then(r => r.data),
   getMe: () => client.get('/auth/me').then(r => r.data),
+  register: (username, password) => client.post('/auth/register', { username, password }).then(r => r.data),
+  loginWithPassword: (username, password) => client.post('/auth/login', { username, password }).then(r => r.data),
+  generateTelegramLinkToken: () => client.post('/auth/telegram-link-token').then(r => r.data),
+  checkTelegramLink: () => client.get('/auth/check-telegram-link').then(r => r.data),
 
   // Catalog
   getCategories: () => client.get('/categories/').then(r => r.data),
@@ -28,7 +32,7 @@ export const api = {
   getRecentOrders: () => client.get('/orders/recent').then(r => r.data),
   createOrder: (data) => client.post('/orders/', data).then(r => r.data),
   cancelOrder: (orderId) => client.post(`/orders/${orderId}/cancel`).then(r => r.data),
-  getMyOrders: (telegramUserId) => client.get('/orders/', { params: { telegram_user_id: telegramUserId, exclude_status: 'pending_payment' } }).then(r => r.data),
+  getMyOrders: () => client.get('/orders/', { params: { exclude_status: 'pending_payment' } }).then(r => r.data),
 
   // Payments
   createPayment: (orderId, payload) => {

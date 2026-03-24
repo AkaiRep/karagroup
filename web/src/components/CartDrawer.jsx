@@ -398,7 +398,34 @@ export default function CartDrawer({ open, onClose }) {
                 <p className="text-red-400 text-sm">{errorMsg}</p>
               )}
 
-              {user ? (
+              {!user ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-400 text-center">Войдите для оформления заказа</p>
+                  <div className="flex justify-center">
+                    <TelegramLoginButton />
+                  </div>
+                  <a
+                    href="/login"
+                    className="block text-center text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    Войти с паролем →
+                  </a>
+                </div>
+              ) : !user.telegram_id ? (
+                <div className="space-y-3">
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
+                    <p className="text-yellow-400 text-sm font-medium mb-1">Необходима привязка Telegram</p>
+                    <p className="text-slate-400 text-xs">Для получения уведомлений о заказе нужно привязать Telegram аккаунт</p>
+                  </div>
+                  <a
+                    href="/profile"
+                    onClick={onClose}
+                    className="block w-full py-3 text-center bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl font-semibold transition-colors text-sm"
+                  >
+                    Привязать Telegram
+                  </a>
+                </div>
+              ) : (
                 <button
                   onClick={handleCheckout}
                   disabled={checkoutState === 'loading'}
@@ -406,13 +433,6 @@ export default function CartDrawer({ open, onClose }) {
                 >
                   {checkoutState === 'loading' ? 'Создаём заказ...' : 'Оформить заказ'}
                 </button>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-slate-400 text-center">Войдите для оформления заказа</p>
-                  <div className="flex justify-center">
-                    <TelegramLoginButton />
-                  </div>
-                </div>
               )}
             </div>
           </>

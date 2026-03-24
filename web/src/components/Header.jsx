@@ -59,7 +59,15 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-2">
               {user ? (
                 <>
-                  <span className="text-sm text-slate-400">{user.username}</span>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    {!user.telegram_id && (
+                      <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" title="Привяжите Telegram" />
+                    )}
+                    {user.username}
+                  </Link>
                   {!isTMA && (
                     <button onClick={logout} className="text-sm text-slate-500 hover:text-white transition-colors">
                       Выйти
@@ -111,7 +119,16 @@ export default function Header() {
             <div className="pt-2 border-t border-white/5">
               {user ? (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">{user.username}</span>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white transition-colors"
+                  >
+                    {!user.telegram_id && (
+                      <span className="w-2 h-2 rounded-full bg-yellow-400 flex-shrink-0" />
+                    )}
+                    {user.username}
+                  </Link>
                   {!isTMA && (
                     <button onClick={() => { logout(); setMenuOpen(false) }} className="text-sm text-red-400 hover:text-red-300 transition-colors">
                       Выйти
@@ -119,15 +136,24 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                <button
-                  onClick={() => { setAuthOpen(true); setMenuOpen(false) }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1e2130] hover:bg-green-500/10 border border-white/10 hover:border-green-500/40 text-slate-300 hover:text-white text-sm rounded-xl transition-all font-medium"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.903.614z" />
-                  </svg>
-                  Войти через Telegram
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => { setAuthOpen(true); setMenuOpen(false) }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1e2130] hover:bg-green-500/10 border border-white/10 hover:border-green-500/40 text-slate-300 hover:text-white text-sm rounded-xl transition-all font-medium"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.903.614z" />
+                    </svg>
+                    Войти через Telegram
+                  </button>
+                  <Link
+                    href="/login"
+                    onClick={() => setMenuOpen(false)}
+                    className="block text-center text-sm text-slate-500 hover:text-slate-300 transition-colors py-1"
+                  >
+                    Войти с паролем →
+                  </Link>
+                </div>
               )}
             </div>
           </div>
@@ -156,9 +182,18 @@ export default function Header() {
             <div className="flex justify-center">
               <TelegramLoginButton onSuccess={() => setAuthOpen(false)} />
             </div>
+            <div className="mt-4 border-t border-white/5 pt-4">
+              <Link
+                href="/login"
+                onClick={() => setAuthOpen(false)}
+                className="block text-center text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                Войти с паролем →
+              </Link>
+            </div>
             <button
               onClick={() => setAuthOpen(false)}
-              className="mt-4 text-sm text-slate-500 hover:text-slate-300 transition-colors"
+              className="mt-3 text-sm text-slate-500 hover:text-slate-300 transition-colors"
             >
               Отмена
             </button>

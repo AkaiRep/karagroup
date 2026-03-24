@@ -103,6 +103,13 @@ class BackendAPI:
             pass
         return {}
 
+    async def link_telegram_account(self, token: str, telegram_id: int, telegram_username: str | None) -> dict:
+        return await self._request("post", "/auth/link-telegram", json={
+            "token": token,
+            "telegram_id": telegram_id,
+            "telegram_username": telegram_username,
+        })
+
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     async def close(self):

@@ -330,3 +330,13 @@ class TeleportPreset(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     group = relationship("TeleportGroup", back_populates="presets")
+
+
+class TelegramLinkToken(Base):
+    __tablename__ = "telegram_link_tokens"
+
+    token = Column(String(64), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+
+    user = relationship("User")

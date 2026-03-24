@@ -43,13 +43,27 @@ export function AuthProvider({ children }) {
     return res.user
   }
 
+  const loginWithPassword = async (username, password) => {
+    const res = await api.loginWithPassword(username, password)
+    localStorage.setItem('token', res.access_token)
+    setUser(res.user)
+    return res.user
+  }
+
+  const register = async (username, password) => {
+    const res = await api.register(username, password)
+    localStorage.setItem('token', res.access_token)
+    setUser(res.user)
+    return res.user
+  }
+
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithTelegram, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, loginWithTelegram, loginWithPassword, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
