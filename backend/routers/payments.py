@@ -237,7 +237,6 @@ async def check_lava_payments(
     if not shop_id or not secret_key:
         raise HTTPException(status_code=503, detail="LAVA не настроена")
 
-    # Find user's pending orders with a Lava invoice
     pending = db.query(models.Order).filter(
         models.Order.telegram_user_id == current_user.telegram_id,
         models.Order.status == models.OrderStatus.pending_payment,
@@ -249,19 +248,23 @@ async def check_lava_payments(
         for order in pending:
             invoice_id = order.external_id[5:]  # strip "lava:"
             payload = {"shopId": shop_id, "invoiceId": invoice_id}
+            sorted_payload = dict(sorted(payload.items()))
+            json_body = json.dumps(sorted_payload, ensure_ascii=False, separators=(",", ":"))
             try:
                 resp = await client.post(
                     f"{LAVA_BASE}/business/invoice/status",
-                    content=__import__("json").dumps(dict(sorted(payload.items())), ensure_ascii=False, separators=(",", ":")),
+                    content=json_body,
                     headers=_lava_headers(payload, secret_key),
                     timeout=10,
                 )
+                data = resp.json()
+                log.info("LAVA check: order=%s invoice=%s http=%s body=%s", order.id, invoice_id, resp.status_code, data)
                 if resp.status_code != 200:
                     continue
-                data = resp.json()
-                status = data.get("data", {}).get("status")
-                log.info("LAVA check: order=%s invoice=%s status=%s", order.id, invoice_id, status)
-                if status == "success":
+                # Lava returns status inside data.status or data.data.status
+                invoice_data = data.get("data", data)
+                status = invoice_data.get("status", "")
+                if status in ("success", "paid", "completed"):
                     order.status = models.OrderStatus.paid
                     db.commit()
                     updated.append(order.id)

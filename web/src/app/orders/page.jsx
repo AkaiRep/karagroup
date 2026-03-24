@@ -36,9 +36,13 @@ export default function OrdersPage() {
       const res = await api.checkLavaPayments()
       setCheckResult(res.updated?.length ?? 0)
       if (res.updated?.length > 0) await loadOrders()
-    } catch {}
-    finally { setChecking(false) }
-    setTimeout(() => setCheckResult(null), 4000)
+    } catch (e) {
+      const msg = e?.response?.data?.detail || 'Ошибка проверки'
+      setCheckResult(`err:${msg}`)
+    } finally {
+      setChecking(false)
+    }
+    setTimeout(() => setCheckResult(null), 5000)
   }
 
   if (!loading && user && !user.telegram_id) {
@@ -95,9 +99,11 @@ export default function OrdersPage() {
           </svg>
           {checkResult === null
             ? 'Проверить оплату'
-            : checkResult > 0
-              ? `Обновлено: ${checkResult}`
-              : 'Новых оплат нет'}
+            : typeof checkResult === 'string' && checkResult.startsWith('err:')
+              ? checkResult.slice(4)
+              : checkResult > 0
+                ? `Обновлено: ${checkResult}`
+                : 'Новых оплат нет'}
         </button>
       </div>
 
