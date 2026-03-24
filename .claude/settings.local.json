@@ -42,7 +42,9 @@
       "WebFetch(domain:core.telegram.org)",
       "WebFetch(domain:community.cloudflare.com)",
       "WebFetch(domain:www.linux.org.ru)",
-      "WebFetch(domain:blog.abolfazlmohajeri.ir)"
+      "WebFetch(domain:blog.abolfazlmohajeri.ir)",
+      "Bash(ls -la \"/Users/daniilsnajder/Documents/karagroup/\" | grep -E \"\\\\.sh$|Dockerfile|docker-compose|\\\\.service\")",
+      "Bash(chmod +x /Users/daniilsnajder/Documents/karagroup/deploy-regru.sh)"
     ]
   }
 }
