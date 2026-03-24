@@ -145,7 +145,7 @@ async def _create_lava_payment(order: models.Order, db: Session) -> dict:
         "sum": str(round(order.price, 2)),
         "orderId": f"{order.id}-{int(time.time())}",
         "hookUrl": hook_url,
-        "successUrl": f"{site_url}/orders",
+        "successUrl": f"{site_url}/orders?lava={order.id}",
         "failUrl": f"{site_url}/orders",
         "comment": f"Заказ #{order.id}",
     }
@@ -224,6 +224,59 @@ async def create_payment(
         raise HTTPException(status_code=503, detail="Platega временно недоступна")
     payment_method = body.payment_method or int(os.getenv("PLATEGA_PAYMENT_METHOD", "2"))
     return await _create_platega_payment(order, payment_method, db)
+
+
+@router.post("/check-lava/{order_id}")
+async def check_single_lava_payment(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    """Check Lava status for a specific order and mark paid if confirmed."""
+    shop_id = _cfg(db, "pay_lava_shop_id", "LAVA_SHOP_ID")
+    secret_key = _cfg(db, "pay_lava_secret_key", "LAVA_SECRET_KEY")
+    if not shop_id or not secret_key:
+        raise HTTPException(status_code=503, detail="LAVA не настроена")
+
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if current_user.role != models.UserRole.admin:
+        if order.telegram_user_id != current_user.telegram_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    if order.status != models.OrderStatus.pending_payment:
+        return {"status": order.status.value, "updated": False}
+
+    if not order.external_id or not order.external_id.startswith("lava:"):
+        return {"status": order.status.value, "updated": False, "detail": "No Lava invoice stored"}
+
+    invoice_id = order.external_id[5:]
+    payload = {"shopId": shop_id, "invoiceId": invoice_id}
+    sorted_payload = dict(sorted(payload.items()))
+    json_body = json.dumps(sorted_payload, ensure_ascii=False, separators=(",", ":"))
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{LAVA_BASE}/business/invoice/status",
+                content=json_body,
+                headers=_lava_headers(payload, secret_key),
+                timeout=10,
+            )
+        data = resp.json()
+        log.info("LAVA single check: order=%s invoice=%s http=%s body=%s", order.id, invoice_id, resp.status_code, data)
+        invoice_data = data.get("data", data)
+        status = invoice_data.get("status", "")
+        if status in ("success", "paid", "completed"):
+            order.status = models.OrderStatus.paid
+            db.commit()
+            await _notify_user_payment(order)
+            return {"status": "paid", "updated": True}
+        return {"status": status or order.status.value, "updated": False}
+    except Exception as e:
+        log.warning("LAVA single check error order=%s: %s", order.id, e)
+        raise HTTPException(status_code=502, detail="Ошибка при запросе к LAVA")
 
 
 @router.post("/check-lava")

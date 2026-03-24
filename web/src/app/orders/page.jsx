@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import OrderCard from '@/components/OrderCard'
@@ -8,20 +8,20 @@ import OrderCard from '@/components/OrderCard'
 export default function OrdersPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [orders, setOrders] = useState([])
   const [fetching, setFetching] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [checking, setChecking] = useState(false)
-  const [checkResult, setCheckResult] = useState(null) // null | number (updated count)
+  const [checkResult, setCheckResult] = useState(null)
+  const autoChecked = useRef(false)
 
   const loadOrders = useCallback(() => {
-    return api.getMyOrders()
-      .then(setOrders)
-      .catch((err) => {
-        const status = err?.response?.status
-        if (status === 401 || status === 403) router.push('/')
-        else setFetchError(true)
-      })
+    return api.getMyOrders().then(setOrders).catch((err) => {
+      const s = err?.response?.status
+      if (s === 401 || s === 403) router.push('/')
+      else setFetchError(true)
+    })
   }, [])
 
   useEffect(() => {
@@ -29,20 +29,48 @@ export default function OrdersPage() {
     if (user) loadOrders().finally(() => setFetching(false))
   }, [user, loading])
 
+  // Auto-check when coming back from Lava (?lava=ORDER_ID)
+  useEffect(() => {
+    const lavaOrderId = searchParams.get('lava')
+    if (!lavaOrderId || autoChecked.current || !user || loading) return
+    autoChecked.current = true
+    setChecking(true)
+    api.checkSingleLavaPayment(lavaOrderId)
+      .then(async (res) => {
+        if (res.updated) {
+          await loadOrders()
+          setCheckResult('paid')
+        } else {
+          setCheckResult('none')
+        }
+      })
+      .catch(() => setCheckResult('none'))
+      .finally(() => setChecking(false))
+    // Clean up URL
+    router.replace('/orders', { scroll: false })
+  }, [searchParams, user, loading])
+
   const handleCheckLava = async () => {
     setChecking(true)
     setCheckResult(null)
     try {
       const res = await api.checkLavaPayments()
-      setCheckResult(res.updated?.length ?? 0)
+      setCheckResult(res.updated?.length > 0 ? 'paid_multi' : 'none')
       if (res.updated?.length > 0) await loadOrders()
     } catch (e) {
-      const msg = e?.response?.data?.detail || 'Ошибка проверки'
-      setCheckResult(`err:${msg}`)
+      setCheckResult('error')
     } finally {
       setChecking(false)
     }
     setTimeout(() => setCheckResult(null), 5000)
+  }
+
+  const resultLabel = () => {
+    if (checkResult === 'paid') return '✓ Оплата подтверждена!'
+    if (checkResult === 'paid_multi') return '✓ Оплата подтверждена!'
+    if (checkResult === 'none') return 'Новых оплат нет'
+    if (checkResult === 'error') return 'Ошибка проверки'
+    return 'Проверить оплату'
   }
 
   if (!loading && user && !user.telegram_id) {
@@ -87,25 +115,30 @@ export default function OrdersPage() {
         <button
           onClick={handleCheckLava}
           disabled={checking}
-          title="Проверить оплату LAVA"
-          className="flex items-center gap-2 px-3 py-2 bg-[#111318] border border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400 rounded-xl text-sm transition-all disabled:opacity-50"
+          className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-sm transition-all disabled:opacity-50 ${
+            checkResult === 'paid' || checkResult === 'paid_multi'
+              ? 'bg-green-500/10 border-green-500/30 text-green-400'
+              : checkResult === 'error'
+              ? 'bg-red-500/10 border-red-500/30 text-red-400'
+              : 'bg-[#111318] border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400'
+          }`}
         >
           <svg
-            className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`}
+            className={`w-4 h-4 flex-shrink-0 ${checking ? 'animate-spin' : ''}`}
             fill="none" stroke="currentColor" viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {checkResult === null
-            ? 'Проверить оплату'
-            : typeof checkResult === 'string' && checkResult.startsWith('err:')
-              ? checkResult.slice(4)
-              : checkResult > 0
-                ? `Обновлено: ${checkResult}`
-                : 'Новых оплат нет'}
+          {checking ? 'Проверяем...' : resultLabel()}
         </button>
       </div>
+
+      {checkResult === 'paid' && (
+        <div className="mb-4 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-green-400">
+          Оплата найдена, заказ переведён в работу!
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <div className="text-center py-20">
