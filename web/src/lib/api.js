@@ -33,6 +33,7 @@ export const api = {
   createOrder: (data) => client.post('/orders/', data).then(r => r.data),
   cancelOrder: (orderId) => client.post(`/orders/${orderId}/cancel`).then(r => r.data),
   getMyOrders: () => client.get('/orders/', { params: { exclude_status: 'pending_payment' } }).then(r => r.data),
+  checkLavaPayments: () => client.post('/payments/check-lava').then(r => r.data),
 
   // Payments
   createPayment: (orderId, payload) => {

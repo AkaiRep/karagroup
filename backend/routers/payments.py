@@ -174,6 +174,11 @@ async def _create_lava_payment(order: models.Order, db: Session) -> dict:
         log.error("LAVA no url: %s", data)
         raise HTTPException(status_code=502, detail="Ошибка платёжной системы")
 
+    # Store invoice_id so we can poll status later
+    if invoice_id and not order.external_id:
+        order.external_id = f"lava:{invoice_id}"
+        db.commit()
+
     log.info("LAVA payment created: order=%s invoice=%s", order.id, invoice_id)
     return {"payment_url": payment_url, "payment_id": invoice_id}
 
@@ -219,6 +224,52 @@ async def create_payment(
         raise HTTPException(status_code=503, detail="Platega временно недоступна")
     payment_method = body.payment_method or int(os.getenv("PLATEGA_PAYMENT_METHOD", "2"))
     return await _create_platega_payment(order, payment_method, db)
+
+
+@router.post("/check-lava")
+async def check_lava_payments(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    """Check Lava invoice status for user's pending orders and mark paid if confirmed."""
+    shop_id = _cfg(db, "pay_lava_shop_id", "LAVA_SHOP_ID")
+    secret_key = _cfg(db, "pay_lava_secret_key", "LAVA_SECRET_KEY")
+    if not shop_id or not secret_key:
+        raise HTTPException(status_code=503, detail="LAVA не настроена")
+
+    # Find user's pending orders with a Lava invoice
+    pending = db.query(models.Order).filter(
+        models.Order.telegram_user_id == current_user.telegram_id,
+        models.Order.status == models.OrderStatus.pending_payment,
+        models.Order.external_id.like("lava:%"),
+    ).all()
+
+    updated = []
+    async with httpx.AsyncClient() as client:
+        for order in pending:
+            invoice_id = order.external_id[5:]  # strip "lava:"
+            payload = {"shopId": shop_id, "invoiceId": invoice_id}
+            try:
+                resp = await client.post(
+                    f"{LAVA_BASE}/business/invoice/status",
+                    content=__import__("json").dumps(dict(sorted(payload.items())), ensure_ascii=False, separators=(",", ":")),
+                    headers=_lava_headers(payload, secret_key),
+                    timeout=10,
+                )
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                status = data.get("data", {}).get("status")
+                log.info("LAVA check: order=%s invoice=%s status=%s", order.id, invoice_id, status)
+                if status == "success":
+                    order.status = models.OrderStatus.paid
+                    db.commit()
+                    updated.append(order.id)
+                    await _notify_user_payment(order)
+            except Exception as e:
+                log.warning("LAVA check error order=%s: %s", order.id, e)
+
+    return {"checked": len(pending), "updated": updated}
 
 
 @router.post("/webhook")

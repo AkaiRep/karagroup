@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
@@ -11,26 +11,35 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([])
   const [fetching, setFetching] = useState(true)
   const [fetchError, setFetchError] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [checkResult, setCheckResult] = useState(null) // null | number (updated count)
+
+  const loadOrders = useCallback(() => {
+    return api.getMyOrders()
+      .then(setOrders)
+      .catch((err) => {
+        const status = err?.response?.status
+        if (status === 401 || status === 403) router.push('/')
+        else setFetchError(true)
+      })
+  }, [])
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/')
-      return
-    }
-    if (user) {
-      api.getMyOrders()
-        .then(setOrders)
-        .catch((err) => {
-          const status = err?.response?.status
-          if (status === 401 || status === 403) {
-            router.push('/')
-          } else {
-            setFetchError(true)
-          }
-        })
-        .finally(() => setFetching(false))
-    }
+    if (!loading && !user) { router.push('/'); return }
+    if (user) loadOrders().finally(() => setFetching(false))
   }, [user, loading])
+
+  const handleCheckLava = async () => {
+    setChecking(true)
+    setCheckResult(null)
+    try {
+      const res = await api.checkLavaPayments()
+      setCheckResult(res.updated?.length ?? 0)
+      if (res.updated?.length > 0) await loadOrders()
+    } catch {}
+    finally { setChecking(false) }
+    setTimeout(() => setCheckResult(null), 4000)
+  }
 
   if (!loading && user && !user.telegram_id) {
     return (
@@ -41,7 +50,7 @@ export default function OrdersPage() {
           </svg>
         </div>
         <h2 className="text-xl font-semibold mb-2">Telegram не привязан</h2>
-        <p className="text-slate-400 text-sm mb-6">Для просмотра заказов и оформления новых необходимо привязать Telegram аккаунт</p>
+        <p className="text-slate-400 text-sm mb-6">Для просмотра заказов необходимо привязать Telegram аккаунт</p>
         <a href="/profile" className="inline-block px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl font-semibold transition-colors text-sm">
           Привязать Telegram
         </a>
@@ -69,7 +78,28 @@ export default function OrdersPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Мои заказы</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Мои заказы</h1>
+        <button
+          onClick={handleCheckLava}
+          disabled={checking}
+          title="Проверить оплату LAVA"
+          className="flex items-center gap-2 px-3 py-2 bg-[#111318] border border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400 rounded-xl text-sm transition-all disabled:opacity-50"
+        >
+          <svg
+            className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {checkResult === null
+            ? 'Проверить оплату'
+            : checkResult > 0
+              ? `Обновлено: ${checkResult}`
+              : 'Новых оплат нет'}
+        </button>
+      </div>
 
       {orders.length === 0 ? (
         <div className="text-center py-20">
