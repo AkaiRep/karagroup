@@ -4,13 +4,11 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import CartDrawer from '@/components/CartDrawer'
-import TelegramLoginButton from '@/components/TelegramLoginButton'
 
 export default function Header() {
   const { user, logout } = useAuth()
   const { count } = useCart()
   const [cartOpen, setCartOpen] = useState(false)
-  const [authOpen, setAuthOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const isTMA = typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData
   const menuRef = useRef(null)
@@ -75,15 +73,16 @@ export default function Header() {
                   )}
                 </>
               ) : (
-                <button
-                  onClick={() => setAuthOpen(true)}
+                <Link
+                  href="/login"
                   className="flex items-center gap-2 px-3 py-1.5 bg-[#1e2130] hover:bg-green-500/10 border border-white/10 hover:border-green-500/40 text-slate-300 hover:text-white text-sm rounded-lg transition-all font-medium"
                 >
-                  <svg className="w-4 h-4 text-green-400" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.903.614z" />
+                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                   Войти
-                </button>
+                </Link>
               )}
             </div>
 
@@ -136,24 +135,13 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => { setAuthOpen(true); setMenuOpen(false) }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1e2130] hover:bg-green-500/10 border border-white/10 hover:border-green-500/40 text-slate-300 hover:text-white text-sm rounded-xl transition-all font-medium"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.903.614z" />
-                    </svg>
-                    Войти через Telegram
-                  </button>
-                  <Link
-                    href="/login"
-                    onClick={() => setMenuOpen(false)}
-                    className="block text-center text-sm text-slate-500 hover:text-slate-300 transition-colors py-1"
-                  >
-                    Войти с паролем →
-                  </Link>
-                </div>
+                <Link
+                  href="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1e2130] hover:bg-green-500/10 border border-white/10 hover:border-green-500/40 text-slate-300 hover:text-white text-sm rounded-xl transition-all font-medium"
+                >
+                  Войти / Регистрация
+                </Link>
               )}
             </div>
           </div>
@@ -161,45 +149,6 @@ export default function Header() {
       </header>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
-
-      {authOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setAuthOpen(false)}
-        >
-          <div
-            className="bg-[#111318] border border-white/10 rounded-2xl p-6 md:p-8 max-w-sm w-full mx-4 text-center"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="w-14 h-14 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Вход в аккаунт</h2>
-            <p className="text-slate-400 text-sm mb-6">Войдите через Telegram для оформления заказа</p>
-            <div className="flex justify-center">
-              <TelegramLoginButton onSuccess={() => setAuthOpen(false)} />
-            </div>
-            <div className="mt-4 border-t border-white/5 pt-4">
-              <Link
-                href="/login"
-                onClick={() => setAuthOpen(false)}
-                className="block text-center text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                Войти с паролем →
-              </Link>
-            </div>
-            <button
-              onClick={() => setAuthOpen(false)}
-              className="mt-3 text-sm text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Отмена
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }

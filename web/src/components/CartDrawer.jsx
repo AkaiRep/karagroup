@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
-import TelegramLoginButton from '@/components/TelegramLoginButton'
 
 export default function CartDrawer({ open, onClose }) {
   const { cart, promo, setPromo, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount, hasPinnedItems } = useCart()
@@ -401,14 +400,11 @@ export default function CartDrawer({ open, onClose }) {
               {!user ? (
                 <div className="space-y-3">
                   <p className="text-sm text-slate-400 text-center">Войдите для оформления заказа</p>
-                  <div className="flex justify-center">
-                    <TelegramLoginButton />
-                  </div>
                   <a
                     href="/login"
-                    className="block text-center text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                    className="block w-full py-3 text-center bg-green-600 hover:bg-green-500 text-white rounded-xl font-semibold transition-colors text-sm"
                   >
-                    Войти с паролем →
+                    Войти / Регистрация
                   </a>
                 </div>
               ) : !user.telegram_id ? (

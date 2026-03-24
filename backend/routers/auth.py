@@ -193,20 +193,81 @@ def link_telegram(
         db.delete(link_token)
         db.commit()
         raise HTTPException(status_code=400, detail="Token expired")
-    # Check TG not already linked to another account
-    existing = db.query(models.User).filter(models.User.telegram_id == data.telegram_id).first()
-    if existing:
-        db.delete(link_token)
-        db.commit()
-        raise HTTPException(status_code=409, detail="Telegram уже привязан к другому аккаунту")
-    user = db.query(models.User).filter(models.User.id == link_token.user_id).first()
-    if not user:
+
+    new_user = db.query(models.User).filter(models.User.id == link_token.user_id).first()
+    if not new_user:
         raise HTTPException(status_code=404, detail="User not found")
-    user.telegram_id = data.telegram_id
-    user.telegram_username = data.telegram_username
+
+    # If this telegram_id already belongs to another account — merge
+    old_user = db.query(models.User).filter(
+        models.User.telegram_id == data.telegram_id,
+        models.User.id != new_user.id,
+    ).first()
+
+    if old_user:
+        _merge_accounts(db, old_user=old_user, new_user=new_user)
+
+    new_user.telegram_id = data.telegram_id
+    new_user.telegram_username = data.telegram_username
     db.delete(link_token)
     db.commit()
-    return {"success": True, "username": user.username}
+    return {"success": True, "username": new_user.username, "merged": old_user is not None}
+
+
+def _merge_accounts(db: Session, old_user: models.User, new_user: models.User):
+    """Transfer all data from old_user to new_user, then deactivate old_user."""
+    from sqlalchemy import text
+
+    # Orders where old_user was the worker
+    db.query(models.Order).filter(models.Order.worker_id == old_user.id).update(
+        {"worker_id": new_user.id}, synchronize_session=False
+    )
+    # Chat messages
+    db.query(models.ChatMessage).filter(models.ChatMessage.sender_id == old_user.id).update(
+        {"sender_id": new_user.id}, synchronize_session=False
+    )
+    # Global chat messages
+    db.query(models.GlobalChatMessage).filter(models.GlobalChatMessage.sender_id == old_user.id).update(
+        {"sender_id": new_user.id}, synchronize_session=False
+    )
+    # Transactions
+    db.query(models.Transaction).filter(models.Transaction.worker_id == old_user.id).update(
+        {"worker_id": new_user.id}, synchronize_session=False
+    )
+    # Work sessions
+    db.query(models.WorkSession).filter(models.WorkSession.user_id == old_user.id).update(
+        {"user_id": new_user.id}, synchronize_session=False
+    )
+    # Chat read receipts — delete if new_user already has receipt for same order
+    existing_receipts = {r.order_id for r in db.query(models.ChatReadReceipt).filter(
+        models.ChatReadReceipt.user_id == new_user.id
+    ).all()}
+    db.query(models.ChatReadReceipt).filter(
+        models.ChatReadReceipt.user_id == old_user.id,
+        models.ChatReadReceipt.order_id.in_(existing_receipts),
+    ).delete(synchronize_session=False)
+    db.query(models.ChatReadReceipt).filter(models.ChatReadReceipt.user_id == old_user.id).update(
+        {"user_id": new_user.id}, synchronize_session=False
+    )
+    # Blog likes — skip posts new_user already liked to avoid unique constraint violation
+    existing_likes = {lk.post_id for lk in db.query(models.BlogLike).filter(
+        models.BlogLike.user_id == new_user.id
+    ).all()}
+    db.query(models.BlogLike).filter(
+        models.BlogLike.user_id == old_user.id,
+        models.BlogLike.post_id.in_(existing_likes),
+    ).delete(synchronize_session=False)
+    db.query(models.BlogLike).filter(models.BlogLike.user_id == old_user.id).update(
+        {"user_id": new_user.id}, synchronize_session=False
+    )
+    # Blog comments
+    db.query(models.BlogComment).filter(models.BlogComment.user_id == old_user.id).update(
+        {"user_id": new_user.id}, synchronize_session=False
+    )
+    # Deactivate old account and clear its telegram_id to avoid FK/unique conflicts
+    old_user.telegram_id = None
+    old_user.is_active = False
+    db.flush()
 
 
 @router.get("/me", response_model=schemas.UserOut)

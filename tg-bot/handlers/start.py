@@ -38,9 +38,7 @@ async def cmd_start(message: Message, state: FSMContext, command: CommandObject)
             return
         except Exception as e:
             err = str(e)
-            if "409" in err or "уже привязан" in err.lower():
-                await message.answer("⚠️ Этот Telegram уже привязан к другому аккаунту.")
-            elif "404" in err or "Token not found" in err:
+            if "404" in err or "Token not found" in err:
                 await message.answer("⚠️ Ссылка недействительна или уже использована.")
             elif "400" in err or "expired" in err.lower():
                 await message.answer("⚠️ Ссылка устарела. Сгенерируйте новую на сайте в профиле.")
