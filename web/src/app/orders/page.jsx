@@ -1,11 +1,19 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { api } from '@/lib/api'
 import OrderCard from '@/components/OrderCard'
 
 export default function OrdersPage() {
+  return (
+    <Suspense>
+      <OrdersContent />
+    </Suspense>
+  )
+}
+
+function OrdersContent() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
