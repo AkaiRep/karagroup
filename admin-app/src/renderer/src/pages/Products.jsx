@@ -13,7 +13,7 @@ export default function Products() {
 
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState(null)
-  const [form, setForm] = useState({ name: '', description: '', price: '', discount_percent: '0', category_id: '' })
+  const [form, setForm] = useState({ name: '', description: '', price: '', price_usd: '', price_eur: '', discount_percent: '0', category_id: '' })
 
   const [showCatForm, setShowCatForm] = useState(false)
   const [editCatId, setEditCatId] = useState(null)
@@ -55,13 +55,13 @@ export default function Products() {
   // ── Product CRUD ─────────────────────────────────────────────────────────────
 
   const resetForm = () => {
-    setForm({ name: '', description: '', price: '', discount_percent: '0', category_id: '' })
+    setForm({ name: '', description: '', price: '', price_usd: '', price_eur: '', discount_percent: '0', category_id: '' })
     setEditId(null)
     setShowForm(false)
   }
 
   const handleEdit = (p) => {
-    setForm({ name: p.name, description: p.description || '', price: p.price, discount_percent: p.discount_percent ?? 0, category_id: p.category_id ?? '' })
+    setForm({ name: p.name, description: p.description || '', price: p.price, price_usd: p.price_usd ?? '', price_eur: p.price_eur ?? '', discount_percent: p.discount_percent ?? 0, category_id: p.category_id ?? '' })
     setEditId(p.id)
     setShowForm(true)
   }
@@ -72,6 +72,8 @@ export default function Products() {
       name: form.name,
       description: form.description,
       price: Number(form.price),
+      price_usd: form.price_usd !== '' ? Number(form.price_usd) : null,
+      price_eur: form.price_eur !== '' ? Number(form.price_eur) : null,
       discount_percent: Number(form.discount_percent) || 0,
       category_id: form.category_id !== '' ? Number(form.category_id) : null,
     }
@@ -320,7 +322,7 @@ export default function Products() {
           <div className="text-sm font-medium text-slate-300 mb-4">
             {editId ? 'Редактировать услугу' : 'Новая услуга'}
           </div>
-          <form onSubmit={handleSubmit} className="grid grid-cols-5 gap-4">
+          <form onSubmit={handleSubmit} className="grid grid-cols-7 gap-4">
             <div className="col-span-2">
               <label className="block text-xs text-slate-500 mb-1">Название *</label>
               <input
@@ -342,6 +344,30 @@ export default function Products() {
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                 placeholder="1500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Цена ($) <span className="text-slate-600">необяз.</span></label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                value={form.price_usd}
+                onChange={(e) => setForm({ ...form, price_usd: e.target.value })}
+                placeholder="16.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1">Цена (€) <span className="text-slate-600">необяз.</span></label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                value={form.price_eur}
+                onChange={(e) => setForm({ ...form, price_eur: e.target.value })}
+                placeholder="15.00"
               />
             </div>
             <div>
@@ -370,7 +396,7 @@ export default function Products() {
                 ))}
               </select>
             </div>
-            <div className="col-span-4">
+            <div className="col-span-5">
               <label className="block text-xs text-slate-500 mb-1">Описание</label>
               <input
                 className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
@@ -379,7 +405,7 @@ export default function Products() {
                 placeholder="Необязательно"
               />
             </div>
-            <div className="col-span-5 flex justify-end gap-3">
+            <div className="col-span-7 flex justify-end gap-3">
               <button type="button" onClick={resetForm} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
                 Отмена
               </button>
@@ -443,6 +469,12 @@ export default function Products() {
                   </>
                 ) : (
                   <div className="text-lg font-bold text-green-400">{p.price} ₽</div>
+                )}
+                {(p.price_usd || p.price_eur) && (
+                  <div className="text-xs text-slate-500 mt-0.5 space-x-2">
+                    {p.price_usd && <span>${p.price_usd}</span>}
+                    {p.price_eur && <span>€{p.price_eur}</span>}
+                  </div>
                 )}
               </div>
             </div>

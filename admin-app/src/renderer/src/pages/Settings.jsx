@@ -18,6 +18,16 @@ const DEFAULTS = {
   stat_3_num: '<2ч',  stat_3_label: 'Время отклика',       stat_3_desc: 'Начинаем работу быстро',
 }
 
+// Keys that support translation (will get _en suffix when editing English)
+const TRANSLATABLE_KEYS = new Set([
+  'hero_badge', 'hero_title', 'hero_subtitle', 'hero_button',
+  'about_text', 'guarantees',
+  'stats_title', 'stats_subtitle',
+  'stat_1_label', 'stat_1_desc',
+  'stat_2_label', 'stat_2_desc',
+  'stat_3_label', 'stat_3_desc',
+])
+
 const ALL_FIELDS = [
   { tab: 'banner', key: 'dev_banner_enabled', label: 'Показывать баннер', type: 'toggle' },
   { tab: 'banner', key: 'dev_banner_text',    label: 'Текст баннера', type: 'text' },
@@ -288,7 +298,7 @@ function HeroCharUploader({ side, label, currentUrl, onUploaded }) {
   )
 }
 
-function HeroTab({ settings, onSave, get, set, dirty, saved, saveField }) {
+function HeroTab({ settings, onSave, get, set, dirty, saved, saveField, isDirty, isSaved, editLang }) {
   const heroFields = ALL_FIELDS.filter(f => f.tab === 'hero')
 
   const saveChar = async (side, url) => {
@@ -307,17 +317,22 @@ function HeroTab({ settings, onSave, get, set, dirty, saved, saveField }) {
               <label className="text-sm font-medium text-slate-200">{field.label}</label>
               {field.hint && <p className="text-xs text-slate-500 mt-0.5">{field.hint}</p>}
             </div>
-            <button
-              onClick={() => saveField(field.key)}
-              disabled={!dirty[field.key]}
-              className={`ml-3 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
-                saved[field.key] ? 'bg-green-500/20 text-green-400' :
-                dirty[field.key] ? 'bg-green-600 hover:bg-green-500 text-white' :
-                'bg-slate-700/40 text-slate-500 cursor-default'
-              }`}
-            >
-              {saved[field.key] ? 'Сохранено!' : 'Сохранить'}
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+              {editLang === 'en' && TRANSLATABLE_KEYS.has(field.key) && (
+                <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">EN</span>
+              )}
+              <button
+                onClick={() => saveField(field.key)}
+                disabled={!(isDirty || dirty)[field.key]}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  (isSaved || saved)[field.key] ? 'bg-green-500/20 text-green-400' :
+                  (isDirty || dirty)[field.key] ? 'bg-green-600 hover:bg-green-500 text-white' :
+                  'bg-slate-700/40 text-slate-500 cursor-default'
+                }`}
+              >
+                {(isSaved || saved)[field.key] ? 'Сохранено!' : 'Сохранить'}
+              </button>
+            </div>
           </div>
           {field.type === 'textarea' ? (
             <textarea value={get(field.key)} onChange={e => set(field.key, e.target.value)} rows={field.rows || 3} className="w-full bg-base border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500/50 transition-colors resize-y" />
@@ -411,16 +426,27 @@ export default function Settings() {
   const [saved, setSaved] = useState({})
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
+  const [editLang, setEditLang] = useState('ru') // 'ru' | 'en'
 
   useEffect(() => {
     getSiteSettings().then(setSettings).finally(() => setLoading(false))
   }, [])
 
-  const get = (key) => key in settings ? settings[key] : (DEFAULTS[key] ?? '')
+  // When editLang='en', translatable fields use key_en
+  const resolveKey = (key) => editLang === 'en' && TRANSLATABLE_KEYS.has(key) ? `${key}_en` : key
+
+  const get = (key) => {
+    const rk = resolveKey(key)
+    if (rk in settings) return settings[rk]
+    // For _en keys show empty (not fallback) so admin knows what to fill
+    if (rk.endsWith('_en')) return ''
+    return DEFAULTS[key] ?? ''
+  }
 
   const set = (key, value) => {
-    setSettings(s => ({ ...s, [key]: value }))
-    setDirty(d => ({ ...d, [key]: true }))
+    const rk = resolveKey(key)
+    setSettings(s => ({ ...s, [rk]: value }))
+    setDirty(d => ({ ...d, [rk]: true }))
   }
 
   const toggle = async (key) => {
@@ -430,11 +456,15 @@ export default function Settings() {
   }
 
   const save = async (key) => {
-    await updateSiteSetting(key, get(key))
-    setDirty(d => { const n = { ...d }; delete n[key]; return n })
-    setSaved(s => ({ ...s, [key]: true }))
-    setTimeout(() => setSaved(s => { const n = { ...s }; delete n[key]; return n }), 2000)
+    const rk = resolveKey(key)
+    await updateSiteSetting(rk, get(key))
+    setDirty(d => { const n = { ...d }; delete n[rk]; return n })
+    setSaved(s => ({ ...s, [rk]: true }))
+    setTimeout(() => setSaved(s => { const n = { ...s }; delete n[rk]; return n }), 2000)
   }
+
+  const isDirty = (key) => dirty[resolveKey(key)]
+  const isSaved = (key) => saved[resolveKey(key)]
 
   const visibleFields = useMemo(() => {
     const q = search.toLowerCase()
@@ -449,7 +479,29 @@ export default function Settings() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Настройки сайта</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Настройки сайта</h1>
+        <div className="flex items-center gap-1 bg-surface border border-border/50 rounded-xl p-1">
+          <button
+            onClick={() => setEditLang('ru')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${editLang === 'ru' ? 'bg-green-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            🇷🇺 RU
+          </button>
+          <button
+            onClick={() => setEditLang('en')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${editLang === 'en' ? 'bg-green-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            🇬🇧 EN
+          </button>
+        </div>
+      </div>
+      {editLang === 'en' && (
+        <div className="mb-4 px-4 py-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
+          Редактируете <b>английскую</b> версию текстов. Поля без перевода будут показывать русский текст.
+          Нетекстовые настройки (цифры, изображения, SEO) не переводятся.
+        </div>
+      )}
 
       {/* Search — скрываем на вкладках без полей */}
       {activeTab !== 'faq' && activeTab !== 'design' && activeTab !== 'hero' && (
@@ -498,7 +550,8 @@ export default function Settings() {
           settings={settings}
           onSave={(key, val) => setSettings(s => ({ ...s, [key]: val }))}
           get={get} set={set} dirty={dirty} saved={saved}
-          saveField={save}
+          saveField={save} isDirty={isDirty} isSaved={isSaved}
+          editLang={editLang}
         />
       ) : (
         <>
@@ -529,17 +582,22 @@ export default function Settings() {
                           {search && <span className="ml-2 text-xs text-slate-500">{TABS.find(t => t.id === field.tab)?.label}</span>}
                           {field.hint && <p className="text-xs text-slate-500 mt-0.5">{field.hint}</p>}
                         </div>
-                        <button
-                          onClick={() => save(field.key)}
-                          disabled={!dirty[field.key]}
-                          className={`ml-3 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
-                            saved[field.key] ? 'bg-green-500/20 text-green-400' :
-                            dirty[field.key] ? 'bg-green-600 hover:bg-green-500 text-white' :
-                            'bg-slate-700/40 text-slate-500 cursor-default'
-                          }`}
-                        >
-                          {saved[field.key] ? 'Сохранено!' : 'Сохранить'}
-                        </button>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          {editLang === 'en' && TRANSLATABLE_KEYS.has(field.key) && (
+                            <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">EN</span>
+                          )}
+                          <button
+                            onClick={() => save(field.key)}
+                            disabled={!isDirty(field.key)}
+                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              isSaved(field.key) ? 'bg-green-500/20 text-green-400' :
+                              isDirty(field.key) ? 'bg-green-600 hover:bg-green-500 text-white' :
+                              'bg-slate-700/40 text-slate-500 cursor-default'
+                            }`}
+                          >
+                            {isSaved(field.key) ? 'Сохранено!' : 'Сохранить'}
+                          </button>
+                        </div>
                       </div>
                       {field.type === 'color' ? (
                         <div className="flex items-center gap-3">

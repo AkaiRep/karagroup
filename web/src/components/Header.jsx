@@ -51,7 +51,7 @@ function LocaleSwitcher() {
 }
 
 function CurrencySwitcher() {
-  const { currency, setCurrency, currencies } = useCurrency()
+  const { currency, setCurrency, currencies, isStaff } = useCurrency()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -73,7 +73,7 @@ function CurrencySwitcher() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && (
+      {open && !isStaff && (
         <div className="absolute right-0 top-full mt-1 bg-[#111318] border border-white/10 rounded-xl overflow-hidden shadow-xl z-50 min-w-[100px]">
           {currencies.map(c => (
             <button
@@ -128,7 +128,7 @@ export default function Header() {
             {/* Locale + Currency switchers (desktop) */}
             <div className="hidden md:flex items-center gap-1.5">
               <LocaleSwitcher />
-              <CurrencySwitcher />
+              {!isStaff && <CurrencySwitcher />}
             </div>
 
             {/* Cart */}
@@ -214,7 +214,7 @@ export default function Header() {
             {/* Language + Currency on mobile */}
             <div className="flex gap-2 pt-1">
               <LocaleSwitcher />
-              <CurrencySwitcher />
+              {!isStaff && <CurrencySwitcher />}
             </div>
 
             <div className="pt-2 border-t border-white/5">

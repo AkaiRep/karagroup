@@ -29,8 +29,8 @@ export default function Providers({ children }) {
 
   return (
     <LocaleProvider>
-      <CurrencyProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <CurrencyProvider>
           <CartProvider>
             <NoCopy />
             <Header />
@@ -42,8 +42,8 @@ export default function Providers({ children }) {
               <Footer />
             </div>
           </CartProvider>
-        </AuthProvider>
-      </CurrencyProvider>
+        </CurrencyProvider>
+      </AuthProvider>
     </LocaleProvider>
   )
 }

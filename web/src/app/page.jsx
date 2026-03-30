@@ -5,6 +5,16 @@ import ProductCard from '@/components/ProductCard'
 import ReviewsCarousel from '@/components/ReviewsCarousel'
 import { useLocale } from '@/context/LocaleContext'
 
+// Keys from site settings that support EN translation
+const TRANSLATABLE_SETTING_KEYS = new Set([
+  'hero_badge', 'hero_title', 'hero_subtitle', 'hero_button',
+  'about_text', 'guarantees',
+  'stats_title', 'stats_subtitle',
+  'stat_1_label', 'stat_1_desc',
+  'stat_2_label', 'stat_2_desc',
+  'stat_3_label', 'stat_3_desc',
+])
+
 const DEFAULT_GUARANTEES = [
   'Безопасность аккаунта — работаем с использованием VPN',
   'Гарантия результата или возврат средств',
@@ -19,7 +29,7 @@ const DEFAULT_STATS = [
 ]
 
 export default function CatalogPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
@@ -128,18 +138,27 @@ export default function CatalogPage() {
   )
 
   const s = siteSettings
-  const heroBadge = s.hero_badge || 'Принимаем заказы'
-  const heroTitle = s.hero_title || 'Профессиональный игровой буст'
-  const heroSubtitle = s.hero_subtitle || 'Поднимем ваш ранг быстро и безопасно. Работаем с топовыми игроками, гарантируем результат.'
-  const heroButton = s.hero_button || 'Смотреть услуги'
-  const aboutText = s.about_text || 'KaraShop — профессиональный сервис буста игровых аккаунтов. Мы работаем с опытными игроками, которые помогут вам достичь желаемого ранга быстро и безопасно.'
-  const guarantees = s.guarantees ? s.guarantees.split('\n').filter(Boolean) : DEFAULT_GUARANTEES
-  const statsTitle = s.stats_title || 'Почему выбирают нас'
-  const statsSubtitle = s.stats_subtitle || 'Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.'
+  // Returns locale-aware setting value: prefers key_en when locale=en, falls back to key
+  const ts = (key) => {
+    if (locale === 'en' && TRANSLATABLE_SETTING_KEYS.has(key)) {
+      return s[`${key}_en`] || s[key]
+    }
+    return s[key]
+  }
+
+  const heroBadge = ts('hero_badge') || 'Принимаем заказы'
+  const heroTitle = ts('hero_title') || 'Профессиональный игровой буст'
+  const heroSubtitle = ts('hero_subtitle') || 'Поднимем ваш ранг быстро и безопасно. Работаем с топовыми игроками, гарантируем результат.'
+  const heroButton = ts('hero_button') || 'Смотреть услуги'
+  const aboutText = ts('about_text') || 'KaraShop — профессиональный сервис буста игровых аккаунтов. Мы работаем с опытными игроками, которые помогут вам достичь желаемого ранга быстро и безопасно.'
+  const guaranteesRaw = ts('guarantees')
+  const guarantees = guaranteesRaw ? guaranteesRaw.split('\n').filter(Boolean) : DEFAULT_GUARANTEES
+  const statsTitle = ts('stats_title') || 'Почему выбирают нас'
+  const statsSubtitle = ts('stats_subtitle') || 'Мы — команда профессиональных игроков с многолетним опытом. Ценим доверие каждого клиента.'
   const stats = [
-    { num: s.stat_1_num || DEFAULT_STATS[0].num, label: s.stat_1_label || DEFAULT_STATS[0].label, desc: s.stat_1_desc || DEFAULT_STATS[0].desc },
-    { num: s.stat_2_num || DEFAULT_STATS[1].num, label: s.stat_2_label || DEFAULT_STATS[1].label, desc: s.stat_2_desc || DEFAULT_STATS[1].desc },
-    { num: s.stat_3_num || DEFAULT_STATS[2].num, label: s.stat_3_label || DEFAULT_STATS[2].label, desc: s.stat_3_desc || DEFAULT_STATS[2].desc },
+    { num: s.stat_1_num || DEFAULT_STATS[0].num, label: ts('stat_1_label') || DEFAULT_STATS[0].label, desc: ts('stat_1_desc') || DEFAULT_STATS[0].desc },
+    { num: s.stat_2_num || DEFAULT_STATS[1].num, label: ts('stat_2_label') || DEFAULT_STATS[1].label, desc: ts('stat_2_desc') || DEFAULT_STATS[1].desc },
+    { num: s.stat_3_num || DEFAULT_STATS[2].num, label: ts('stat_3_label') || DEFAULT_STATS[2].label, desc: ts('stat_3_desc') || DEFAULT_STATS[2].desc },
   ]
 
   const heroCharLeft  = s.hero_char_left  || null
