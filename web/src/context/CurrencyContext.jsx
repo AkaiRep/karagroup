@@ -11,7 +11,7 @@ export const CURRENCIES = {
 const CurrencyContext = createContext(null)
 
 export function CurrencyProvider({ children }) {
-  const { user } = useAuth()
+  const { user } = useAuth() || {}
   const [currency, setCurrencyState] = useState('RUB')
 
   // Workers and admins always see RUB
