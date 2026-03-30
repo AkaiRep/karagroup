@@ -1,59 +1,62 @@
 #!/usr/bin/env python3
 """Quick stats script for KaraGroup DB."""
-import sys
+import sqlite3
 import os
-sys.path.insert(0, os.path.dirname(__file__))
-
-from database import SessionLocal
-from models import User, UserRole, Order, OrderStatus
-from sqlalchemy import func
 from datetime import datetime, timezone, timedelta
 
-db = SessionLocal()
+DB_PATH = os.path.join(os.path.dirname(__file__), "karagroup.db")
+db = sqlite3.connect(DB_PATH)
+db.row_factory = sqlite3.Row
 
-try:
-    total = db.query(func.count(User.id)).filter(User.is_active == True).scalar()
-    clients = db.query(func.count(User.id)).filter(User.role == UserRole.client, User.is_active == True).scalar()
-    workers = db.query(func.count(User.id)).filter(User.role == UserRole.worker, User.is_active == True).scalar()
-    admins = db.query(func.count(User.id)).filter(User.role == UserRole.admin, User.is_active == True).scalar()
+week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
 
-    with_tg = db.query(func.count(User.id)).filter(User.telegram_id != None, User.is_active == True).scalar()
-    without_tg = db.query(func.count(User.id)).filter(User.telegram_id == None, User.role == UserRole.client, User.is_active == True).scalar()
+def q(sql, *args):
+    return db.execute(sql, args).fetchone()[0]
 
-    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    new_this_week = db.query(func.count(User.id)).filter(User.created_at >= week_ago, User.role == UserRole.client).scalar()
+def rows(sql, *args):
+    return db.execute(sql, args).fetchall()
 
-    total_orders = db.query(func.count(Order.id)).scalar()
-    orders_by_status = db.query(Order.status, func.count(Order.id)).group_by(Order.status).all()
+total    = q("SELECT COUNT(*) FROM users WHERE is_active=1")
+clients  = q("SELECT COUNT(*) FROM users WHERE role='client' AND is_active=1")
+workers  = q("SELECT COUNT(*) FROM users WHERE role='worker' AND is_active=1")
+admins   = q("SELECT COUNT(*) FROM users WHERE role='admin'  AND is_active=1")
+with_tg  = q("SELECT COUNT(*) FROM users WHERE telegram_id IS NOT NULL AND is_active=1")
+no_tg    = q("SELECT COUNT(*) FROM users WHERE telegram_id IS NULL AND role='client' AND is_active=1")
+new_week = q("SELECT COUNT(*) FROM users WHERE role='client' AND created_at >= ?", week_ago)
 
-    print("=" * 40)
-    print("       KARAGROUP STATS")
-    print("=" * 40)
-    print(f"  Всего пользователей:  {total}")
-    print(f"  ├─ Клиенты:           {clients}")
-    print(f"  ├─ Воркеры:           {workers}")
-    print(f"  └─ Админы:            {admins}")
-    print()
-    print(f"  С Telegram:           {with_tg}")
-    print(f"  Без Telegram (клиенты): {without_tg}")
-    print(f"  Новых за 7 дней:      {new_this_week}")
-    print()
-    print(f"  Всего заказов:        {total_orders}")
-    for status, count in sorted(orders_by_status, key=lambda x: x[1], reverse=True):
-        print(f"  ├─ {status.value:<20} {count}")
-    print("=" * 40)
+total_orders  = q("SELECT COUNT(*) FROM orders")
+order_statuses = rows("SELECT status, COUNT(*) as cnt FROM orders GROUP BY status ORDER BY cnt DESC")
 
-    print("\nПоследние 10 клиентов:")
-    recent = (
-        db.query(User)
-        .filter(User.role == UserRole.client, User.is_active == True)
-        .order_by(User.created_at.desc())
-        .limit(10)
-        .all()
-    )
-    for u in recent:
-        tg = f"@{u.telegram_username}" if u.telegram_username else ("tg_id:" + str(u.telegram_id) if u.telegram_id else "no tg")
-        print(f"  {u.id:>4}  {u.username:<24} {tg}")
+print("=" * 42)
+print("         KARAGROUP STATS")
+print("=" * 42)
+print(f"  Всего пользователей:     {total}")
+print(f"  ├─ Клиенты:              {clients}")
+print(f"  ├─ Воркеры:              {workers}")
+print(f"  └─ Админы:               {admins}")
+print()
+print(f"  С Telegram:              {with_tg}")
+print(f"  Без Telegram (клиенты):  {no_tg}")
+print(f"  Новых за 7 дней:         {new_week}")
+print()
+print(f"  Всего заказов:           {total_orders}")
+for row in order_statuses:
+    print(f"  ├─ {row['status']:<22} {row['cnt']}")
+print("=" * 42)
 
-finally:
-    db.close()
+print("\nПоследние 10 клиентов:")
+recent = rows(
+    "SELECT id, username, telegram_id, telegram_username, created_at "
+    "FROM users WHERE role='client' AND is_active=1 "
+    "ORDER BY created_at DESC LIMIT 10"
+)
+for u in recent:
+    if u["telegram_username"]:
+        tg = f"@{u['telegram_username']}"
+    elif u["telegram_id"]:
+        tg = f"tg:{u['telegram_id']}"
+    else:
+        tg = "no tg"
+    print(f"  {u['id']:>4}  {u['username']:<24} {tg:<24} {u['created_at'][:16]}")
+
+db.close()
