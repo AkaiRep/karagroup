@@ -51,7 +51,7 @@ function LocaleSwitcher() {
 }
 
 function CurrencySwitcher() {
-  const { currency, setCurrency, currencies, isStaff } = useCurrency()
+  const { currency, setCurrency, currencies } = useCurrency()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -73,7 +73,7 @@ function CurrencySwitcher() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && !isStaff && (
+      {open && (
         <div className="absolute right-0 top-full mt-1 bg-[#111318] border border-white/10 rounded-xl overflow-hidden shadow-xl z-50 min-w-[100px]">
           {currencies.map(c => (
             <button
@@ -96,6 +96,7 @@ export default function Header() {
   const { user, logout } = useAuth()
   const { count } = useCart()
   const { t } = useLocale()
+  const isStaff = user?.role === 'worker' || user?.role === 'admin'
   const [cartOpen, setCartOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const isTMA = typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData

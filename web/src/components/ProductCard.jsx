@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useCart } from '@/context/CartContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useCurrency } from '@/context/CurrencyContext'
+import { useAuth } from '@/context/AuthContext'
 import { BASE } from '@/lib/api'
 
 const DESC_THRESHOLD = 110
@@ -10,6 +11,8 @@ const DESC_THRESHOLD = 110
 export default function ProductCard({ product, globalDiscount = 0, isTop = false, animationDelay = 0 }) {
   const { cart, addItem, setQty } = useCart()
   const { t } = useLocale()
+  const { user } = useAuth()
+  const isStaff = user?.role === 'worker' || user?.role === 'admin'
   const { getProductPrice, getProductCurrency, formatAmount } = useCurrency()
   const [descExpanded, setDescExpanded] = useState(false)
   const [clamped, setClamped] = useState(true)
@@ -28,8 +31,8 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
   }, [])
 
   const effectiveDiscount = Math.max(product.discount_percent || 0, globalDiscount)
-  const basePrice = getProductPrice(product)
-  const productCurrency = getProductCurrency(product)
+  const basePrice = isStaff ? product.price : getProductPrice(product)
+  const productCurrency = isStaff ? 'RUB' : getProductCurrency(product)
   const discountedPrice = effectiveDiscount > 0 ? basePrice * (1 - effectiveDiscount / 100) : null
   const displayPrice = discountedPrice ?? basePrice
 

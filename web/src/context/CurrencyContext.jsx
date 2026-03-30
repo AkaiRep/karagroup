@@ -1,6 +1,5 @@
 'use client'
 import { createContext, useContext, useState, useEffect } from 'react'
-import { useAuth } from '@/context/AuthContext'
 
 export const CURRENCIES = {
   RUB: { symbol: '₽', code: 'RUB', label: '₽ RUB' },
@@ -11,12 +10,7 @@ export const CURRENCIES = {
 const CurrencyContext = createContext(null)
 
 export function CurrencyProvider({ children }) {
-  const { user } = useAuth() || {}
   const [currency, setCurrencyState] = useState('RUB')
-
-  // Workers and admins always see RUB
-  const isStaff = user?.role === 'worker' || user?.role === 'admin'
-  const activeCurrency = isStaff ? 'RUB' : currency
 
   useEffect(() => {
     const saved = localStorage.getItem('currency')
@@ -24,22 +18,22 @@ export function CurrencyProvider({ children }) {
   }, [])
 
   const setCurrency = (c) => {
-    if (!CURRENCIES[c] || isStaff) return
+    if (!CURRENCIES[c]) return
     setCurrencyState(c)
     localStorage.setItem('currency', c)
   }
 
   // Returns the base price of a product in the current currency
   const getProductPrice = (product) => {
-    if (activeCurrency === 'USD' && product.price_usd != null) return product.price_usd
-    if (activeCurrency === 'EUR' && product.price_eur != null) return product.price_eur
+    if (currency === 'USD' && product.price_usd != null) return product.price_usd
+    if (currency === 'EUR' && product.price_eur != null) return product.price_eur
     return product.price
   }
 
   // Returns the currency that will actually be shown for this product
   const getProductCurrency = (product) => {
-    if (activeCurrency === 'USD' && product.price_usd != null) return 'USD'
-    if (activeCurrency === 'EUR' && product.price_eur != null) return 'EUR'
+    if (currency === 'USD' && product.price_usd != null) return 'USD'
+    if (currency === 'EUR' && product.price_eur != null) return 'EUR'
     return 'RUB'
   }
 
@@ -54,14 +48,13 @@ export function CurrencyProvider({ children }) {
 
   return (
     <CurrencyContext.Provider value={{
-      currency: activeCurrency,
+      currency,
       setCurrency,
       currencies: Object.values(CURRENCIES),
       getProductPrice,
       getProductCurrency,
       formatAmount,
-      symbol: CURRENCIES[activeCurrency].symbol,
-      isStaff,
+      symbol: CURRENCIES[currency].symbol,
     }}>
       {children}
     </CurrencyContext.Provider>
