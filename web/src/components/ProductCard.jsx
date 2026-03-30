@@ -1,12 +1,16 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useCart } from '@/context/CartContext'
+import { useLocale } from '@/context/LocaleContext'
+import { useCurrency } from '@/context/CurrencyContext'
 import { BASE } from '@/lib/api'
 
 const DESC_THRESHOLD = 110
 
 export default function ProductCard({ product, globalDiscount = 0, isTop = false, animationDelay = 0 }) {
   const { cart, addItem, setQty } = useCart()
+  const { t } = useLocale()
+  const { getProductPrice, getProductCurrency, formatAmount } = useCurrency()
   const [descExpanded, setDescExpanded] = useState(false)
   const [clamped, setClamped] = useState(true)
   const [collapsedHeight, setCollapsedHeight] = useState(null)
@@ -24,11 +28,10 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
   }, [])
 
   const effectiveDiscount = Math.max(product.discount_percent || 0, globalDiscount)
-  const discountedPrice = effectiveDiscount > 0
-    ? product.price * (1 - effectiveDiscount / 100)
-    : null
-
-  const displayPrice = discountedPrice ?? product.price
+  const basePrice = getProductPrice(product)
+  const productCurrency = getProductCurrency(product)
+  const discountedPrice = effectiveDiscount > 0 ? basePrice * (1 - effectiveDiscount / 100) : null
+  const displayPrice = discountedPrice ?? basePrice
 
   return (
     <div
@@ -51,12 +54,12 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
       })()}
       <div className="absolute inset-0 bg-gradient-to-t from-[#111318] via-[#111318]/40 to-transparent" />
 
-      {/* Хит badge — absolute top-right */}
+      {/* Top badge */}
       {isTop && (
         <div className="absolute top-3 right-3 z-20">
           <span className="flex items-center gap-0.5 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
             <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-            Хит
+            {t('product.top')}
           </span>
         </div>
       )}
@@ -99,7 +102,7 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
                   }}
                   className="text-[11px] text-green-400/80 hover:text-green-400 mt-1 transition-colors"
                 >
-                  {descExpanded ? 'Скрыть ↑' : 'Подробнее ↓'}
+                  {descExpanded ? t('product.showLess') : t('product.showMore')}
                 </button>
               )}
             </div>
@@ -109,12 +112,12 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <span className="text-base md:text-xl font-bold text-white">
-              {displayPrice.toLocaleString('ru-RU')} ₽
+              {formatAmount(displayPrice, productCurrency)}
             </span>
             {effectiveDiscount > 0 && (
               <>
                 <span className="text-xs text-slate-500 line-through">
-                  {product.price.toLocaleString('ru-RU')} ₽
+                  {formatAmount(basePrice, productCurrency)}
                 </span>
                 <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-medium">
                   -{effectiveDiscount}%
@@ -140,7 +143,7 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
               onClick={() => addItem(product)}
               className="w-full py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs md:text-sm font-medium transition-colors"
             >
-              В корзину
+              {t('product.addToCart')}
             </button>
           )}
         </div>

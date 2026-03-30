@@ -73,6 +73,8 @@ class Product(Base):
     name = Column(String(256), nullable=False)
     description = Column(Text, nullable=True)
     price = Column(Float, nullable=False)
+    price_usd = Column(Float, nullable=True)
+    price_eur = Column(Float, nullable=True)
     is_active = Column(Boolean, default=True)
     discount_percent = Column(Float, default=0.0, nullable=False)
     image_url = Column(String(512), nullable=True)

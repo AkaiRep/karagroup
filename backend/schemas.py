@@ -96,6 +96,8 @@ class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=256)
     description: Optional[str] = None
     price: float = Field(..., gt=0)
+    price_usd: Optional[float] = Field(None, gt=0)
+    price_eur: Optional[float] = Field(None, gt=0)
     discount_percent: float = Field(0.0, ge=0, le=100)
     category_id: Optional[int] = None
 
@@ -104,6 +106,8 @@ class ProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[float] = Field(None, gt=0)
+    price_usd: Optional[float] = Field(None, gt=0)
+    price_eur: Optional[float] = Field(None, gt=0)
     is_active: Optional[bool] = None
     discount_percent: Optional[float] = Field(None, ge=0, le=100)
     category_id: Optional[int] = None
@@ -115,6 +119,8 @@ class ProductOut(BaseModel):
     name: str
     description: Optional[str]
     price: float
+    price_usd: Optional[float] = None
+    price_eur: Optional[float] = None
     discount_percent: float
     is_active: bool
     category_id: Optional[int]

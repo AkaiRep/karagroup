@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api, BASE } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 import ReviewsCarousel from '@/components/ReviewsCarousel'
+import { useLocale } from '@/context/LocaleContext'
 
 const DEFAULT_GUARANTEES = [
   'Безопасность аккаунта — работаем с использованием VPN',
@@ -18,6 +19,7 @@ const DEFAULT_STATS = [
 ]
 
 export default function CatalogPage() {
+  const { t } = useLocale()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [activeCategory, setActiveCategory] = useState(null)
@@ -226,7 +228,7 @@ export default function CatalogPage() {
 
       {recentOrders.length > 0 && (
         <div className="w-full py-4 px-4">
-          <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">Последние заказы</p>
+          <p className="text-xs text-slate-400 uppercase tracking-widest mb-3 text-center">{t('home.recentOrders')}</p>
           <div className="flex gap-3 overflow-x-auto no-scrollbar">
             {recentOrders.map(order => (
               <div
@@ -240,7 +242,7 @@ export default function CatalogPage() {
                 <div className="absolute inset-0 bg-[#07080d]/70" />
                 <div className="relative z-10 px-4 py-3 flex flex-col gap-1">
                   <span className="text-slate-400 font-mono text-xs whitespace-nowrap">
-                    {order.client || 'Клиент'}
+                    {order.client || t('home.client')}
                   </span>
                   <span className="text-white font-medium text-sm whitespace-nowrap">
                     {order.product}
@@ -260,14 +262,14 @@ export default function CatalogPage() {
       <section className="max-w-4xl mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold mb-3 text-green-400">Кто мы</h2>
+            <h2 className="text-lg font-semibold mb-3 text-green-400">{t('home.whoWeAre')}</h2>
             <p className="text-slate-400 leading-relaxed whitespace-pre-line">
               {aboutText}
             </p>
           </div>
 
           <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold mb-4 text-green-400">Наши гарантии</h2>
+            <h2 className="text-lg font-semibold mb-4 text-green-400">{t('home.guarantees')}</h2>
             <ul className="space-y-3">
               {guarantees.map((item, i) => (
                 <li key={i} className="flex items-start gap-3 text-slate-300 text-sm">
@@ -286,8 +288,8 @@ export default function CatalogPage() {
       {/* Catalog */}
       <section id="catalog" className="max-w-6xl mx-auto pb-16">
         <div className="px-4 mb-6">
-          <h2 className="text-2xl md:text-3xl font-bold">Каталог услуг</h2>
-          <p className="text-slate-400 mt-1 text-sm md:text-base">Выберите нужную услугу и добавьте в корзину</p>
+          <h2 className="text-2xl md:text-3xl font-bold">{t('catalog.title')}</h2>
+          <p className="text-slate-400 mt-1 text-sm md:text-base">{t('catalog.subtitle')}</p>
         </div>
 
         {sortedCategoriesFinal.length > 0 && (
@@ -300,7 +302,7 @@ export default function CatalogPage() {
                   : 'bg-[#111318] text-slate-400 hover:text-white border border-white/5'
               }`}
             >
-              Все
+              {t('catalog.all')}
             </button>
             {sortedCategoriesFinal.map(cat => (
               <button
@@ -328,7 +330,7 @@ export default function CatalogPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-slate-500">Услуги не найдены</div>
+          <div className="text-center py-20 text-slate-500">{t('catalog.empty')}</div>
         ) : activeCategory !== null ? (
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4">
             {filtered.map(product => (
@@ -353,7 +355,7 @@ export default function CatalogPage() {
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                         <span className="text-sm font-semibold text-green-400 uppercase tracking-widest px-2">
                           {cat.name}
-                          {isPinned && <span className="ml-2 text-xs text-yellow-400/80 normal-case tracking-normal">⭐ закреп</span>}
+                          {isPinned && <span className="ml-2 text-xs text-yellow-400/80 normal-case tracking-normal">{t('catalog.pinned')}</span>}
                         </span>
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
                       </div>
@@ -373,7 +375,7 @@ export default function CatalogPage() {
                         onClick={() => showMore(cat.id)}
                         className="mt-4 w-full py-2.5 border border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400 rounded-xl text-sm font-medium transition-colors"
                       >
-                        Загрузить ещё ({catProducts.length - visible})
+                        {t('catalog.loadMore')} ({catProducts.length - visible})
                       </button>
                     )}
                   </div>
@@ -389,7 +391,7 @@ export default function CatalogPage() {
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                    <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest px-2">Другое</span>
+                    <span className="text-sm font-semibold text-slate-500 uppercase tracking-widest px-2">{t('catalog.other')}</span>
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -402,7 +404,7 @@ export default function CatalogPage() {
                       onClick={() => showMore('uncategorized')}
                       className="mt-4 w-full py-2.5 border border-white/10 hover:border-green-500/30 text-slate-400 hover:text-green-400 rounded-xl text-sm font-medium transition-colors"
                     >
-                      Загрузить ещё ({uncatProducts.length - visible})
+                      {t('catalog.loadMore')} ({uncatProducts.length - visible})
                     </button>
                   )}
                 </div>
@@ -418,11 +420,11 @@ export default function CatalogPage() {
         <section className="max-w-6xl mx-auto px-4 pb-16">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <p className="text-xs text-green-400 uppercase tracking-widest font-semibold mb-1">Блог</p>
-              <h2 className="text-2xl md:text-3xl font-bold">Полезные статьи</h2>
+              <p className="text-xs text-green-400 uppercase tracking-widest font-semibold mb-1">{t('home.blog')}</p>
+              <h2 className="text-2xl md:text-3xl font-bold">{t('home.articles')}</h2>
             </div>
             <a href="/blog" className="hidden md:inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-green-400 transition-colors border border-white/8 hover:border-green-500/30 px-4 py-2 rounded-xl">
-              Все статьи
+              {t('home.allArticles')}
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
             </a>
           </div>
@@ -450,7 +452,7 @@ export default function CatalogPage() {
                   <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">{blogPosts[0].excerpt}</p>
                 )}
                 <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-green-400 group-hover:gap-2.5 transition-all">
-                  Читать статью
+                  {t('home.readArticle')}
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
                 </span>
               </div>
@@ -483,7 +485,7 @@ export default function CatalogPage() {
           </div>
 
           <a href="/blog" className="md:hidden mt-4 flex items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-green-400 transition-colors border border-white/8 hover:border-green-500/30 py-2.5 rounded-xl w-full">
-            Все статьи
+            {t('home.allArticles')}
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
           </a>
         </section>
@@ -520,7 +522,7 @@ export default function CatalogPage() {
       {(channel || manager) && (
         <section className="max-w-4xl mx-auto px-4 pb-16">
           <div className="bg-[#111318] border border-white/5 rounded-2xl p-6">
-            <h2 className="text-lg font-semibold mb-4 text-green-400">Контакты</h2>
+            <h2 className="text-lg font-semibold mb-4 text-green-400">{t('home.contacts')}</h2>
             <div className="flex flex-wrap gap-4">
               {channel && (
                 <a href={channel} target="_blank" rel="noopener noreferrer"
@@ -528,7 +530,7 @@ export default function CatalogPage() {
                   <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.903.614z" />
                   </svg>
-                  Наш Telegram-канал
+                  {t('home.tgChannel')}
                 </a>
               )}
               {manager && (
@@ -538,7 +540,7 @@ export default function CatalogPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                       d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
                   </svg>
-                  Написать менеджеру: {manager}
+                  {t('home.manager')}: {manager}
                 </a>
               )}
             </div>

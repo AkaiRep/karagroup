@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
+import { LocaleProvider } from '@/context/LocaleContext'
+import { CurrencyProvider } from '@/context/CurrencyContext'
 import Header from '@/components/Header'
 import Snow from '@/components/Snow'
 import Footer from '@/components/Footer'
@@ -26,18 +28,22 @@ export default function Providers({ children }) {
   const pathname = usePathname()
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        <NoCopy />
-        <Header />
-        <div className="relative">
-        {pathname === '/' && <Snow />}
-        <main className="min-h-screen pt-16">
-          {children}
-        </main>
-        <Footer />
-        </div>
-      </CartProvider>
-    </AuthProvider>
+    <LocaleProvider>
+      <CurrencyProvider>
+        <AuthProvider>
+          <CartProvider>
+            <NoCopy />
+            <Header />
+            <div className="relative">
+              {pathname === '/' && <Snow />}
+              <main className="min-h-screen pt-16">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </CartProvider>
+        </AuthProvider>
+      </CurrencyProvider>
+    </LocaleProvider>
   )
 }

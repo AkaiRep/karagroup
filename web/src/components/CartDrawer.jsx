@@ -3,11 +3,15 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
+import { useLocale } from '@/context/LocaleContext'
+import { useCurrency } from '@/context/CurrencyContext'
 import { api } from '@/lib/api'
 
 export default function CartDrawer({ open, onClose }) {
   const { cart, promo, setPromo, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount, hasPinnedItems } = useCart()
   const { user } = useAuth()
+  const { t } = useLocale()
+  const { currency, getProductPrice, getProductCurrency, formatAmount } = useCurrency()
   const router = useRouter()
   const [promoInput, setPromoInput] = useState('')
   const [promoError, setPromoError] = useState('')
@@ -21,11 +25,21 @@ export default function CartDrawer({ open, onClose }) {
 
   const items = Object.values(cart)
 
+  // Compute display totals in the selected currency
+  const displayBaseTotal = items.reduce((sum, item) =>
+    sum + getProductPrice(item) * (item.quantity || 1), 0)
+  const displayTotal = items.reduce((sum, item) => {
+    const disc = effectiveDiscount(item)
+    return sum + getProductPrice(item) * (1 - disc / 100) * (item.quantity || 1)
+  }, 0)
+  const displayFinalTotal = (promo && !hasPinnedItems)
+    ? Math.round(displayTotal * (1 - promo.discount_percent / 100) * 100) / 100
+    : Math.round(displayTotal * 100) / 100
+
   useEffect(() => {
     api.getSiteSettings().then(setPaySettings).catch(() => {})
   }, [])
 
-  // Блокировка скролла страницы когда корзина открыта
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -35,7 +49,6 @@ export default function CartDrawer({ open, onClose }) {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-
   const applyPromo = async () => {
     if (!promoInput.trim()) return
     setPromoLoading(true)
@@ -44,7 +57,7 @@ export default function CartDrawer({ open, onClose }) {
       const data = await api.lookupPromo(promoInput.trim())
       setPromo(data)
     } catch {
-      setPromoError('Промокод не найден или неактивен')
+      setPromoError(t('cart.promoError'))
     } finally {
       setPromoLoading(false)
     }
@@ -67,7 +80,7 @@ export default function CartDrawer({ open, onClose }) {
       setCheckoutState('method')
     } catch (e) {
       console.error('Checkout error:', e?.response?.data || e?.message || e)
-      setErrorMsg(e?.response?.data?.detail || 'Ошибка при оформлении заказа')
+      setErrorMsg(e?.response?.data?.detail || t('cart.payErrorDefault'))
       setCheckoutState('error')
     }
   }
@@ -79,7 +92,7 @@ export default function CartDrawer({ open, onClose }) {
       setPaymentUrl(payment.payment_url)
       setCheckoutState('done')
     } catch (e) {
-      setErrorMsg('Ошибка при создании платежа')
+      setErrorMsg(t('cart.payErrorDefault'))
       setCheckoutState('error')
     }
   }
@@ -102,7 +115,7 @@ export default function CartDrawer({ open, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
           <h2 className="text-lg font-semibold">
-            Корзина {count > 0 && <span className="text-slate-400 font-normal text-base">({count})</span>}
+            {t('cart.title')} {count > 0 && <span className="text-slate-400 font-normal text-base">({count})</span>}
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors p-1">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +124,7 @@ export default function CartDrawer({ open, onClose }) {
           </button>
         </div>
 
-        {/* Error state (after order created but payment failed) */}
+        {/* Error state */}
         {checkoutState === 'error' && pendingOrderId && (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-5">
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
@@ -120,17 +133,17 @@ export default function CartDrawer({ open, onClose }) {
               </svg>
             </div>
             <div>
-              <h3 className="text-xl font-semibold mb-1">Ошибка оплаты</h3>
-              <p className="text-slate-400 text-sm">{errorMsg || 'Не удалось создать платёж'}</p>
+              <h3 className="text-xl font-semibold mb-1">{t('cart.payError')}</h3>
+              <p className="text-slate-400 text-sm">{errorMsg || t('cart.payErrorDefault')}</p>
             </div>
             <button
               onClick={() => setCheckoutState('method')}
               className="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition-colors"
             >
-              Попробовать снова
+              {t('cart.retry')}
             </button>
             <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
-              Закрыть
+              {t('cart.close')}
             </button>
           </div>
         )}
@@ -144,8 +157,8 @@ export default function CartDrawer({ open, onClose }) {
               </svg>
             </div>
             <div>
-              <h3 className="text-xl font-semibold mb-1">Заказ создан!</h3>
-              <p className="text-slate-400 text-sm">Выберите способ оплаты</p>
+              <h3 className="text-xl font-semibold mb-1">{t('cart.orderCreated')}</h3>
+              <p className="text-slate-400 text-sm">{t('cart.payMethod')}</p>
             </div>
             <div className="w-full space-y-3">
               {/* LAVA */}
@@ -157,7 +170,7 @@ export default function CartDrawer({ open, onClose }) {
                 >
                   <img src="/lava.png" alt="LAVA" className="h-5 object-contain flex-shrink-0" />
                   <span className="flex-1 text-left">LAVA</span>
-                  <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">Ниже комиссия</span>
+                  <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">{t('cart.lavaLow')}</span>
                 </button>
               )}
 
@@ -186,7 +199,7 @@ export default function CartDrawer({ open, onClose }) {
                         <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none">
                           <path d="M13 2L4.5 13.5H11L10 22L20 10H13.5L13 2Z" fill="#1DB954" stroke="#1DB954" strokeWidth="0.5" strokeLinejoin="round"/>
                         </svg>
-                        <span className="text-sm flex-1 text-left">СБП — Быстрые платежи</span>
+                        <span className="text-sm flex-1 text-left">{t('cart.sbp')}</span>
                         <span className="text-xs text-slate-500">+11%</span>
                       </button>
 
@@ -200,7 +213,7 @@ export default function CartDrawer({ open, onClose }) {
                           <path d="M2 10h20" strokeWidth="1.5"/>
                           <path d="M6 15h4" strokeWidth="1.5" strokeLinecap="round"/>
                         </svg>
-                        <span className="text-sm flex-1 text-left">Карта РФ</span>
+                        <span className="text-sm flex-1 text-left">{t('cart.cardRu')}</span>
                         <span className="text-xs text-slate-500">+12%</span>
                       </button>
 
@@ -213,7 +226,7 @@ export default function CartDrawer({ open, onClose }) {
                           <circle cx="12" cy="12" r="9" strokeWidth="1.5"/>
                           <path d="M12 3c-2.5 3-4 5.5-4 9s1.5 6 4 9M12 3c2.5 3 4 5.5 4 9s-1.5 6-4 9M3 12h18" strokeWidth="1.5"/>
                         </svg>
-                        <span className="text-sm flex-1 text-left">Международная карта</span>
+                        <span className="text-sm flex-1 text-left">{t('cart.cardIntl')}</span>
                         <span className="text-xs text-slate-500">+5%</span>
                       </button>
                     </div>
@@ -222,16 +235,16 @@ export default function CartDrawer({ open, onClose }) {
               )}
 
               {paySettings.pay_lava_enabled === 'false' && paySettings.pay_platega_enabled === 'false' && (
-                <p className="text-slate-500 text-sm text-center py-4">Оплата временно недоступна</p>
+                <p className="text-slate-500 text-sm text-center py-4">{t('cart.payUnavailable')}</p>
               )}
             </div>
-            {checkoutState === 'paying' && <p className="text-slate-500 text-sm">Создаём ссылку на оплату...</p>}
+            {checkoutState === 'paying' && <p className="text-slate-500 text-sm">{t('cart.creatingLink')}</p>}
             {checkoutState === 'method' && (
               <button
                 onClick={handleCancelOrder}
                 className="text-sm text-slate-500 hover:text-red-400 transition-colors"
               >
-                Отменить заказ
+                {t('cart.cancelOrder')}
               </button>
             )}
           </div>
@@ -246,8 +259,8 @@ export default function CartDrawer({ open, onClose }) {
               </svg>
             </div>
             <div>
-              <h3 className="text-xl font-semibold mb-2">Заказ создан!</h3>
-              <p className="text-slate-400 text-sm">Перейдите по ссылке для оплаты</p>
+              <h3 className="text-xl font-semibold mb-2">{t('cart.orderCreated')}</h3>
+              <p className="text-slate-400 text-sm">{t('cart.payLink')}</p>
             </div>
             {paymentUrl && (
               <a
@@ -257,20 +270,20 @@ export default function CartDrawer({ open, onClose }) {
                 onClick={() => { onClose(); router.push('/orders') }}
                 className="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium text-center transition-colors"
               >
-                Перейти к оплате
+                {t('cart.payLink')}
               </a>
             )}
             <button
               onClick={() => { onClose(); router.push('/orders') }}
               className="text-sm text-slate-400 hover:text-white transition-colors"
             >
-              Мои заказы
+              {t('cart.myOrders')}
             </button>
             <button
               onClick={handleCancelOrder}
               className="text-sm text-slate-500 hover:text-red-400 transition-colors"
             >
-              Отменить заказ
+              {t('cart.cancelOrder')}
             </button>
           </div>
         )}
@@ -282,7 +295,7 @@ export default function CartDrawer({ open, onClose }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
                 d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
             </svg>
-            <p className="text-slate-400">Корзина пуста</p>
+            <p className="text-slate-400">{t('cart.empty')}</p>
           </div>
         )}
 
@@ -292,7 +305,8 @@ export default function CartDrawer({ open, onClose }) {
             <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
               {items.map(item => {
                 const disc = effectiveDiscount(item)
-                const unitPrice = item.price * (1 - disc / 100)
+                const itemCurrency = getProductCurrency(item)
+                const unitPrice = getProductPrice(item) * (1 - disc / 100)
                 const qty = item.quantity || 1
                 return (
                   <div key={item.id} className="bg-[#111318] rounded-xl p-4">
@@ -300,10 +314,10 @@ export default function CartDrawer({ open, onClose }) {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm leading-snug">{item.name}</p>
                         <p className="text-green-400 text-sm font-semibold mt-1">
-                          {(unitPrice * qty).toLocaleString('ru-RU')} ₽
+                          {formatAmount(unitPrice * qty, itemCurrency)}
                           {qty > 1 && (
                             <span className="text-slate-500 font-normal ml-1 text-xs">
-                              ({unitPrice.toLocaleString('ru-RU')} ₽ × {qty})
+                              ({formatAmount(unitPrice, itemCurrency)} × {qty})
                             </span>
                           )}
                         </p>
@@ -336,12 +350,12 @@ export default function CartDrawer({ open, onClose }) {
             {/* Promo */}
             <div className="px-5 pb-3">
               {hasPinnedItems ? (
-                <p className="text-xs text-slate-500 text-center py-1">Промокод недоступен для товаров этой категории</p>
+                <p className="text-xs text-slate-500 text-center py-1">{t('cart.promoUnavailable')}</p>
               ) : promo ? (
                 <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
                   <div>
                     <p className="text-green-400 text-sm font-medium">{promo.code}</p>
-                    <p className="text-xs text-green-400/70">Скидка {promo.discount_percent}%</p>
+                    <p className="text-xs text-green-400/70">{t('cart.discount')} {promo.discount_percent}%</p>
                   </div>
                   <button onClick={() => { setPromo(null); setPromoInput('') }} className="text-slate-500 hover:text-red-400 transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -355,7 +369,7 @@ export default function CartDrawer({ open, onClose }) {
                     value={promoInput}
                     onChange={e => { setPromoInput(e.target.value); setPromoError('') }}
                     onKeyDown={e => e.key === 'Enter' && applyPromo()}
-                    placeholder="Промокод"
+                    placeholder={t('cart.promo')}
                     className="flex-1 bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm placeholder-slate-600 focus:outline-none focus:border-green-500/50 transition-colors"
                   />
                   <button
@@ -363,7 +377,7 @@ export default function CartDrawer({ open, onClose }) {
                     disabled={promoLoading}
                     className="px-4 py-2.5 bg-[#111318] border border-white/10 hover:border-green-500/30 rounded-xl text-sm transition-colors disabled:opacity-50"
                   >
-                    {promoLoading ? '...' : 'Применить'}
+                    {promoLoading ? '...' : t('cart.apply')}
                   </button>
                 </div>
               )}
@@ -373,25 +387,30 @@ export default function CartDrawer({ open, onClose }) {
             {/* Summary */}
             <div className="px-5 py-4 border-t border-white/5 space-y-2">
               <div className="flex justify-between text-sm text-slate-400">
-                <span>Сумма</span>
-                <span>{baseTotal.toLocaleString('ru-RU')} ₽</span>
+                <span>{t('cart.subtotal')}</span>
+                <span>{formatAmount(displayBaseTotal)}</span>
               </div>
-              {total < baseTotal && (
+              {displayTotal < displayBaseTotal && (
                 <div className="flex justify-between text-sm text-green-400">
-                  <span>Скидка</span>
-                  <span>-{(baseTotal - total).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
+                  <span>{t('cart.discount')}</span>
+                  <span>-{formatAmount(displayBaseTotal - displayTotal)}</span>
                 </div>
               )}
               {promo && (
                 <div className="flex justify-between text-sm text-green-400">
-                  <span>Промокод -{promo.discount_percent}%</span>
-                  <span>-{(total - finalTotal).toLocaleString('ru-RU', { maximumFractionDigits: 0 })} ₽</span>
+                  <span>{t('cart.discount')} -{promo.discount_percent}%</span>
+                  <span>-{formatAmount(displayTotal - displayFinalTotal)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg pt-1 border-t border-white/5">
-                <span>К оплате</span>
-                <span className="text-green-400">{finalTotal.toLocaleString('ru-RU')} ₽</span>
+                <span>{t('cart.total')}</span>
+                <span className="text-green-400">{formatAmount(displayFinalTotal)}</span>
               </div>
+
+              {/* Note when not in RUB */}
+              {currency !== 'RUB' && (
+                <p className="text-xs text-slate-500 text-center pt-1">{t('cart.payNote')}</p>
+              )}
 
               {checkoutState === 'error' && !pendingOrderId && (
                 <p className="text-red-400 text-sm">{errorMsg}</p>
@@ -399,26 +418,26 @@ export default function CartDrawer({ open, onClose }) {
 
               {!user ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-slate-400 text-center">Войдите для оформления заказа</p>
+                  <p className="text-sm text-slate-400 text-center">{t('cart.loginRequired')}</p>
                   <a
                     href="/login"
                     className="block w-full py-3 text-center bg-green-600 hover:bg-green-500 text-white rounded-xl font-semibold transition-colors text-sm"
                   >
-                    Войти / Регистрация
+                    {t('cart.loginBtn')}
                   </a>
                 </div>
               ) : !user.telegram_id ? (
                 <div className="space-y-3">
                   <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 text-center">
-                    <p className="text-yellow-400 text-sm font-medium mb-1">Необходима привязка Telegram</p>
-                    <p className="text-slate-400 text-xs">Для получения уведомлений о заказе нужно привязать Telegram аккаунт</p>
+                    <p className="text-yellow-400 text-sm font-medium mb-1">{t('cart.tgRequired')}</p>
+                    <p className="text-slate-400 text-xs">{t('cart.tgRequiredMsg')}</p>
                   </div>
                   <a
                     href="/profile"
                     onClick={onClose}
                     className="block w-full py-3 text-center bg-yellow-600 hover:bg-yellow-500 text-white rounded-xl font-semibold transition-colors text-sm"
                   >
-                    Привязать Telegram
+                    {t('cart.linkTg')}
                   </a>
                 </div>
               ) : (
@@ -427,7 +446,7 @@ export default function CartDrawer({ open, onClose }) {
                   disabled={checkoutState === 'loading'}
                   className="w-full py-3.5 bg-green-600 hover:bg-green-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
                 >
-                  {checkoutState === 'loading' ? 'Создаём заказ...' : 'Оформить заказ'}
+                  {checkoutState === 'loading' ? t('cart.creating') : t('cart.checkout')}
                 </button>
               )}
             </div>
