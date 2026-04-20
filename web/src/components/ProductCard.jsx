@@ -6,7 +6,7 @@ import { useCurrency } from '@/context/CurrencyContext'
 import { useAuth } from '@/context/AuthContext'
 import { BASE } from '@/lib/api'
 
-function SubregionSelector({ product, discount, onAdd }) {
+function SubregionModal({ product, discount, onAdd, onClose }) {
   const [selected, setSelected] = useState([])
   const subregions = product.subregions || []
 
@@ -19,67 +19,108 @@ function SubregionSelector({ product, discount, onAdd }) {
   const total = selectedSubs.reduce((sum, s) => sum + discounted(s.price), 0)
 
   const allSelected = subregions.length > 0 && subregions.every((s) => selected.includes(s.id))
-  const toggleAll = () => allSelected
-    ? setSelected([])
-    : setSelected(subregions.map((s) => s.id))
+  const toggleAll = () => allSelected ? setSelected([]) : setSelected(subregions.map((s) => s.id))
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between mb-0.5">
-        <span className="text-xs text-slate-500">Выберите регионы</span>
-        <button
-          type="button"
-          onClick={toggleAll}
-          className="text-xs text-green-400 hover:text-green-300 transition-colors"
-        >
-          {allSelected ? 'Снять все' : 'Выбрать все'}
-        </button>
-      </div>
-      <div className="space-y-1.5">
-        {subregions.map((s) => {
-          const finalPrice = discounted(s.price)
-          return (
-            <label key={s.id} className="flex items-center justify-between gap-2 cursor-pointer group">
-              <div className="flex items-center gap-2">
-                <div
-                  onClick={() => toggle(s.id)}
-                  className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all ${
-                    selected.includes(s.id)
-                      ? 'bg-green-500 border-green-500'
-                      : 'bg-transparent border-slate-600 group-hover:border-green-500/60'
-                  }`}
-                >
-                  {selected.includes(s.id) && (
-                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{s.name}</span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {discount > 0 && (
-                  <span className="text-xs text-slate-500 line-through">{s.price.toLocaleString('ru-RU')} ₽</span>
-                )}
-                <span className="text-sm font-medium text-white">{finalPrice.toLocaleString('ru-RU')} ₽</span>
-              </div>
-            </label>
-          )
-        })}
-      </div>
-      {total > 0 && (
-        <div className="flex items-center justify-between pt-1 border-t border-white/5">
-          <span className="text-xs text-slate-500">Итого{discount > 0 ? ` (-${discount}%)` : ''}</span>
-          <span className="text-sm font-bold text-green-400">{total.toLocaleString('ru-RU')} ₽</span>
-        </div>
-      )}
-      <button
-        disabled={selected.length === 0}
-        onClick={() => onAdd(selectedSubs, discount)}
-        className="w-full py-2 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs md:text-sm font-medium transition-colors"
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full md:max-w-md bg-[#0d0f15] border border-white/10 rounded-t-2xl md:rounded-2xl p-5 max-h-[80dvh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
       >
-        {selected.length === 0 ? 'Выберите регионы' : 'Добавить в корзину'}
-      </button>
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4 flex-shrink-0">
+          <div>
+            <h3 className="font-semibold text-white">{product.name}</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Выберите регионы для зачистки</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors ml-4 flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Select all */}
+        <button
+          onClick={toggleAll}
+          className="flex items-center gap-2 mb-3 flex-shrink-0 group w-fit"
+        >
+          <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all ${
+            allSelected ? 'bg-green-500 border-green-500' : 'border-slate-600 group-hover:border-green-500/60'
+          }`}>
+            {allSelected && (
+              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+          <span className="text-sm text-slate-400 group-hover:text-white transition-colors">
+            {allSelected ? 'Снять все' : 'Выбрать все'}
+          </span>
+        </button>
+
+        {/* List */}
+        <div className="overflow-y-auto flex-1 space-y-1.5 pr-1">
+          {subregions.map((s) => {
+            const finalPrice = discounted(s.price)
+            const isSelected = selected.includes(s.id)
+            return (
+              <label
+                key={s.id}
+                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+                  isSelected ? 'bg-green-500/10' : 'hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div
+                    onClick={() => toggle(s.id)}
+                    className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all ${
+                      isSelected ? 'bg-green-500 border-green-500' : 'border-slate-600'
+                    }`}
+                  >
+                    {isSelected && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className={`text-sm truncate transition-colors ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                    {s.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {discount > 0 && (
+                    <span className="text-xs text-slate-600 line-through">{s.price.toLocaleString('ru-RU')} ₽</span>
+                  )}
+                  <span className={`text-sm font-semibold ${isSelected ? 'text-green-400' : 'text-white'}`}>
+                    {finalPrice.toLocaleString('ru-RU')} ₽
+                  </span>
+                </div>
+              </label>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="pt-4 border-t border-white/5 flex-shrink-0 mt-3">
+          {total > 0 && (
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-slate-400">
+                Итого{discount > 0 ? <span className="text-green-400 ml-1">-{discount}%</span> : ''}
+              </span>
+              <span className="text-lg font-bold text-green-400">{total.toLocaleString('ru-RU')} ₽</span>
+            </div>
+          )}
+          <button
+            disabled={selected.length === 0}
+            onClick={() => { onAdd(selectedSubs, discount); onClose() }}
+            className="w-full py-3 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors"
+          >
+            {selected.length === 0 ? 'Выберите хотя бы один регион' : `Добавить в корзину (${selected.length})`}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -210,16 +251,15 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
 
           {product.is_clearance && !isStaff ? (
             <div className="space-y-2">
-              {showSubregions ? (
-                <SubregionSelector
+              {showSubregions && (
+                <SubregionModal
                   product={product}
                   discount={effectiveDiscount}
-                  onAdd={(subs, disc) => {
-                    addClearanceItem(product, subs, disc)
-                    setShowSubregions(false)
-                  }}
+                  onAdd={(subs, disc) => addClearanceItem(product, subs, disc)}
+                  onClose={() => setShowSubregions(false)}
                 />
-              ) : inCart ? (
+              )}
+              {inCart ? (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-slate-400 truncate">
                     {item.selectedSubregions?.map((s) => s.name).join(', ')}
