@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useCart } from '@/context/CartContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useCurrency } from '@/context/CurrencyContext'
@@ -21,7 +22,7 @@ function SubregionModal({ product, discount, onAdd, onClose }) {
   const allSelected = subregions.length > 0 && subregions.every((s) => selected.includes(s.id))
   const toggleAll = () => allSelected ? setSelected([]) : setSelected(subregions.map((s) => s.id))
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
@@ -121,7 +122,8 @@ function SubregionModal({ product, discount, onAdd, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
