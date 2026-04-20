@@ -6,43 +6,53 @@ import { useCurrency } from '@/context/CurrencyContext'
 import { useAuth } from '@/context/AuthContext'
 import { BASE } from '@/lib/api'
 
-function SubregionSelector({ product, onAdd }) {
+function SubregionSelector({ product, discount, onAdd }) {
   const [selected, setSelected] = useState([])
   const subregions = product.subregions || []
 
   const toggle = (id) =>
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
 
+  const discounted = (price) => discount > 0 ? Math.round(price * (1 - discount / 100) * 100) / 100 : price
+
   const selectedSubs = subregions.filter((s) => selected.includes(s.id))
-  const total = selectedSubs.reduce((sum, s) => sum + s.price, 0)
+  const total = selectedSubs.reduce((sum, s) => sum + discounted(s.price), 0)
 
   return (
     <div className="space-y-2">
       <div className="space-y-1.5">
-        {subregions.map((s) => (
-          <label key={s.id} className="flex items-center justify-between gap-2 cursor-pointer group">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={selected.includes(s.id)}
-                onChange={() => toggle(s.id)}
-                className="w-3.5 h-3.5 accent-green-500 flex-shrink-0"
-              />
-              <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{s.name}</span>
-            </div>
-            <span className="text-sm font-medium text-white flex-shrink-0">{s.price.toLocaleString('ru-RU')} ₽</span>
-          </label>
-        ))}
+        {subregions.map((s) => {
+          const finalPrice = discounted(s.price)
+          return (
+            <label key={s.id} className="flex items-center justify-between gap-2 cursor-pointer group">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(s.id)}
+                  onChange={() => toggle(s.id)}
+                  className="w-3.5 h-3.5 accent-green-500 flex-shrink-0"
+                />
+                <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{s.name}</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {discount > 0 && (
+                  <span className="text-xs text-slate-500 line-through">{s.price.toLocaleString('ru-RU')} ₽</span>
+                )}
+                <span className="text-sm font-medium text-white">{finalPrice.toLocaleString('ru-RU')} ₽</span>
+              </div>
+            </label>
+          )
+        })}
       </div>
       {total > 0 && (
         <div className="flex items-center justify-between pt-1 border-t border-white/5">
-          <span className="text-xs text-slate-500">Итого</span>
+          <span className="text-xs text-slate-500">Итого{discount > 0 ? ` (-${discount}%)` : ''}</span>
           <span className="text-sm font-bold text-green-400">{total.toLocaleString('ru-RU')} ₽</span>
         </div>
       )}
       <button
         disabled={selected.length === 0}
-        onClick={() => onAdd(selectedSubs)}
+        onClick={() => onAdd(selectedSubs, discount)}
         className="w-full py-2 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs md:text-sm font-medium transition-colors"
       >
         {selected.length === 0 ? 'Выберите регионы' : 'Добавить в корзину'}
@@ -180,8 +190,9 @@ export default function ProductCard({ product, globalDiscount = 0, isTop = false
               {showSubregions ? (
                 <SubregionSelector
                   product={product}
-                  onAdd={(subs) => {
-                    addClearanceItem(product, subs)
+                  discount={effectiveDiscount}
+                  onAdd={(subs, disc) => {
+                    addClearanceItem(product, subs, disc)
                     setShowSubregions(false)
                   }}
                 />

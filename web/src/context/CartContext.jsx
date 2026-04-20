@@ -31,14 +31,17 @@ export function CartProvider({ children }) {
     save({ ...cart, [product.id]: { ...product, quantity: existing ? existing.quantity + 1 : 1 } })
   }
 
-  // Для зачисток — добавляет товар с конкретными субрегионами (цена = сумма субрегионов)
-  const addClearanceItem = (product, selectedSubregions) => {
-    const price = selectedSubregions.reduce((sum, s) => sum + s.price, 0)
+  // Для зачисток — добавляет товар с конкретными субрегионами.
+  // Цена уже со скидкой (применена в селекторе), поэтому discount_percent = 0.
+  const addClearanceItem = (product, selectedSubregions, appliedDiscount = 0) => {
+    const disc = (p) => appliedDiscount > 0 ? Math.round(p * (1 - appliedDiscount / 100) * 100) / 100 : p
+    const price = selectedSubregions.reduce((sum, s) => sum + disc(s.price), 0)
     save({
       ...cart,
       [product.id]: {
         ...product,
         price,
+        discount_percent: 0,  // скидка уже включена в цену
         quantity: 1,
         selectedSubregions,
         is_clearance: true,
