@@ -18,8 +18,23 @@ function SubregionSelector({ product, discount, onAdd }) {
   const selectedSubs = subregions.filter((s) => selected.includes(s.id))
   const total = selectedSubs.reduce((sum, s) => sum + discounted(s.price), 0)
 
+  const allSelected = subregions.length > 0 && subregions.every((s) => selected.includes(s.id))
+  const toggleAll = () => allSelected
+    ? setSelected([])
+    : setSelected(subregions.map((s) => s.id))
+
   return (
     <div className="space-y-2">
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-xs text-slate-500">Выберите регионы</span>
+        <button
+          type="button"
+          onClick={toggleAll}
+          className="text-xs text-green-400 hover:text-green-300 transition-colors"
+        >
+          {allSelected ? 'Снять все' : 'Выбрать все'}
+        </button>
+      </div>
       <div className="space-y-1.5">
         {subregions.map((s) => {
           const finalPrice = discounted(s.price)
