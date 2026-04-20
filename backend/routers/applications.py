@@ -4,7 +4,13 @@ from typing import List
 from database import get_db
 import models, schemas, auth as auth_utils
 
-router = APIRouter(prefix="/applications", tags=["applications"])
+router = APIRouter(prefix="/applications", tags=["applications"], redirect_slashes=False)
+
+
+@router.get("", response_model=List[schemas.WorkerApplicationOut])
+@router.get("/", response_model=List[schemas.WorkerApplicationOut])
+def list_applications_no_slash(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
+    return db.query(models.WorkerApplication).order_by(models.WorkerApplication.id.desc()).all()
 
 
 @router.post("/", response_model=schemas.WorkerApplicationOut, status_code=201)
@@ -16,11 +22,6 @@ def create_application(data: schemas.WorkerApplicationCreate, db: Session = Depe
     db.commit()
     db.refresh(obj)
     return obj
-
-
-@router.get("/", response_model=List[schemas.WorkerApplicationOut])
-def list_applications(db: Session = Depends(get_db), _=Depends(auth_utils.require_admin)):
-    return db.query(models.WorkerApplication).order_by(models.WorkerApplication.id.desc()).all()
 
 
 @router.patch("/{app_id}", response_model=schemas.WorkerApplicationOut)
