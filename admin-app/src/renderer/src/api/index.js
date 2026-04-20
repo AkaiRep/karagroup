@@ -242,6 +242,12 @@ export const uploadTeleportPreset = (groupId, name, file) => {
 }
 export const deleteTeleportPreset = (id) => api.delete(`/teleports/presets/${id}`)
 
+// ── Subregions ────────────────────────────────────────────────────────────────
+export const getSubregions = (productId) => api.get(`/products/${productId}/subregions`).then((r) => r.data)
+export const createSubregion = (productId, data) => api.post(`/products/${productId}/subregions`, data).then((r) => r.data)
+export const updateSubregion = (productId, subId, data) => api.patch(`/products/${productId}/subregions/${subId}`, data).then((r) => r.data)
+export const deleteSubregion = (productId, subId) => api.delete(`/products/${productId}/subregions/${subId}`)
+
 // ── Worker Applications ───────────────────────────────────────────────────────
 export const getApplications = () => api.get('/applications/').then((r) => r.data)
 export const updateApplication = (id, data) => api.patch(`/applications/${id}`, data).then((r) => r.data)

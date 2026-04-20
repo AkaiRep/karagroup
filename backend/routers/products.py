@@ -126,3 +126,94 @@ def delete_product(product_id: int, db: Session = Depends(get_db), _=Depends(aut
         raise HTTPException(status_code=404, detail="Product not found")
     db.delete(product)
     db.commit()
+
+
+# ── Subregions ────────────────────────────────────────────────────────────────
+
+@router.get("/{product_id}/subregions", response_model=List[schemas.SubregionOut])
+def list_subregions(product_id: int, db: Session = Depends(get_db)):
+    return db.query(models.ProductSubregion).filter(
+        models.ProductSubregion.product_id == product_id
+    ).order_by(models.ProductSubregion.id).all()
+
+
+@router.post("/{product_id}/subregions", response_model=schemas.SubregionOut, status_code=201)
+def create_subregion(
+    product_id: int,
+    data: schemas.SubregionCreate,
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if data.auto_price:
+        count = db.query(models.ProductSubregion).filter(
+            models.ProductSubregion.product_id == product_id
+        ).count() + 1
+        price = round(product.price / count, 2)
+        # пересчитываем существующие авто-субрегионы
+        existing = db.query(models.ProductSubregion).filter(
+            models.ProductSubregion.product_id == product_id,
+            models.ProductSubregion.auto_price == True,
+        ).all()
+        for s in existing:
+            s.price = price
+        obj = models.ProductSubregion(product_id=product_id, name=data.name, price=price, auto_price=True)
+    else:
+        obj = models.ProductSubregion(product_id=product_id, name=data.name, price=data.price, auto_price=False)
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+@router.patch("/{product_id}/subregions/{sub_id}", response_model=schemas.SubregionOut)
+def update_subregion(
+    product_id: int,
+    sub_id: int,
+    data: schemas.SubregionUpdate,
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    obj = db.query(models.ProductSubregion).filter(
+        models.ProductSubregion.id == sub_id,
+        models.ProductSubregion.product_id == product_id,
+    ).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Subregion not found")
+    for k, v in data.model_dump(exclude_none=True).items():
+        setattr(obj, k, v)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+
+@router.delete("/{product_id}/subregions/{sub_id}")
+def delete_subregion(
+    product_id: int,
+    sub_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(auth_utils.require_admin),
+):
+    obj = db.query(models.ProductSubregion).filter(
+        models.ProductSubregion.id == sub_id,
+        models.ProductSubregion.product_id == product_id,
+    ).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Subregion not found")
+    db.delete(obj)
+    db.commit()
+    # пересчитываем авто-цены после удаления
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if product:
+        remaining = db.query(models.ProductSubregion).filter(
+            models.ProductSubregion.product_id == product_id,
+            models.ProductSubregion.auto_price == True,
+        ).all()
+        if remaining:
+            price = round(product.price / len(remaining), 2)
+            for s in remaining:
+                s.price = price
+            db.commit()
+    return {"ok": True}

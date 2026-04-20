@@ -4,6 +4,7 @@ import {
   getCategories, createCategory, updateCategory, deleteCategory,
   getGlobalDiscount, setGlobalDiscount,
   uploadProductImage, deleteProductImage, API_BASE,
+  getSubregions, createSubregion, updateSubregion, deleteSubregion,
 } from '../api'
 
 export default function Products() {
@@ -13,7 +14,7 @@ export default function Products() {
 
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState(null)
-  const [form, setForm] = useState({ name: '', description: '', price: '', price_usd: '', price_eur: '', discount_percent: '0', category_id: '' })
+  const [form, setForm] = useState({ name: '', description: '', price: '', price_usd: '', price_eur: '', discount_percent: '0', category_id: '', is_clearance: false })
 
   const [showCatForm, setShowCatForm] = useState(false)
   const [editCatId, setEditCatId] = useState(null)
@@ -24,6 +25,11 @@ export default function Products() {
   const [globalDiscountInput, setGlobalDiscountInput] = useState('0')
   const [savingGlobal, setSavingGlobal] = useState(false)
   const [uploadingImageFor, setUploadingImageFor] = useState(null)
+
+  const [subregionProduct, setSubregionProduct] = useState(null) // product object
+  const [subregions, setSubregions] = useState([])
+  const [subForm, setSubForm] = useState({ name: '', price: '', auto_price: true })
+  const [savingSub, setSavingSub] = useState(false)
 
   const [showRatePanel, setShowRatePanel] = useState(false)
   const [rates, setRates] = useState(null) // { USD: number, EUR: number, date: string }
@@ -63,13 +69,13 @@ export default function Products() {
   // ── Product CRUD ─────────────────────────────────────────────────────────────
 
   const resetForm = () => {
-    setForm({ name: '', description: '', price: '', price_usd: '', price_eur: '', discount_percent: '0', category_id: '' })
+    setForm({ name: '', description: '', price: '', price_usd: '', price_eur: '', discount_percent: '0', category_id: '', is_clearance: false })
     setEditId(null)
     setShowForm(false)
   }
 
   const handleEdit = (p) => {
-    setForm({ name: p.name, description: p.description || '', price: p.price, price_usd: p.price_usd ?? '', price_eur: p.price_eur ?? '', discount_percent: p.discount_percent ?? 0, category_id: p.category_id ?? '' })
+    setForm({ name: p.name, description: p.description || '', price: p.price, price_usd: p.price_usd ?? '', price_eur: p.price_eur ?? '', discount_percent: p.discount_percent ?? 0, category_id: p.category_id ?? '', is_clearance: p.is_clearance ?? false })
     setEditId(p.id)
     setShowForm(true)
   }
@@ -84,6 +90,7 @@ export default function Products() {
       price_eur: form.price_eur !== '' ? Number(form.price_eur) : null,
       discount_percent: Number(form.discount_percent) || 0,
       category_id: form.category_id !== '' ? Number(form.category_id) : null,
+      is_clearance: form.is_clearance,
     }
     if (editId) {
       await updateProduct(editId, data)
@@ -103,6 +110,62 @@ export default function Products() {
     if (!confirm('Удалить услугу?')) return
     await deleteProduct(id)
     load()
+  }
+
+  const openSubregions = async (product) => {
+    setSubregionProduct(product)
+    setSubForm({ name: '', price: '', auto_price: true })
+    const subs = await getSubregions(product.id).catch(() => [])
+    setSubregions(subs)
+  }
+
+  const closeSubregions = () => {
+    setSubregionProduct(null)
+    setSubregions([])
+  }
+
+  const handleSubSubmit = async (e) => {
+    e.preventDefault()
+    setSavingSub(true)
+    try {
+      const data = {
+        name: subForm.name,
+        auto_price: subForm.auto_price,
+        price: subForm.auto_price ? 0 : Number(subForm.price),
+      }
+      const created = await createSubregion(subregionProduct.id, data)
+      setSubregions((prev) => {
+        if (data.auto_price) {
+          // цены пересчитались — перезагрузим
+          getSubregions(subregionProduct.id).then(setSubregions)
+          return prev
+        }
+        return [...prev, created]
+      })
+      if (data.auto_price) {
+        const subs = await getSubregions(subregionProduct.id)
+        setSubregions(subs)
+      }
+      setSubForm({ name: '', price: '', auto_price: true })
+    } finally {
+      setSavingSub(false)
+    }
+  }
+
+  const handleSubDelete = async (subId) => {
+    await deleteSubregion(subregionProduct.id, subId)
+    const subs = await getSubregions(subregionProduct.id)
+    setSubregions(subs)
+  }
+
+  const handleSubToggleAuto = async (sub) => {
+    const updated = await updateSubregion(subregionProduct.id, sub.id, { auto_price: !sub.auto_price })
+    setSubregions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+  }
+
+  const handleSubPrice = async (sub, price) => {
+    const updated = await updateSubregion(subregionProduct.id, sub.id, { price: Number(price), auto_price: false })
+    setSubregions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
   }
 
   const handleImageClick = (id) => {
@@ -616,13 +679,24 @@ export default function Products() {
                 placeholder="Необязательно"
               />
             </div>
-            <div className="col-span-7 flex justify-end gap-3">
-              <button type="button" onClick={resetForm} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
-                Отмена
-              </button>
-              <button type="submit" className="bg-brand-500 hover:bg-brand-600 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors">
-                {editId ? 'Сохранить' : 'Создать'}
-              </button>
+            <div className="col-span-7 flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.is_clearance}
+                  onChange={(e) => setForm({ ...form, is_clearance: e.target.checked })}
+                  className="w-4 h-4 accent-brand-500"
+                />
+                <span className="text-sm text-slate-400">Зачистка регионов</span>
+              </label>
+              <div className="flex gap-3">
+                <button type="button" onClick={resetForm} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
+                  Отмена
+                </button>
+                <button type="submit" className="bg-brand-500 hover:bg-brand-600 text-white rounded-lg px-5 py-2 text-sm font-medium transition-colors">
+                  {editId ? 'Сохранить' : 'Создать'}
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -666,9 +740,14 @@ export default function Products() {
               </div>
             </div>
             <div className="p-5">
-            {p.category && (
-              <div className="text-xs text-brand-400 mb-1">{p.category.name}</div>
-            )}
+            <div className="flex items-center gap-2 mb-1">
+              {p.category && (
+                <div className="text-xs text-brand-400">{p.category.name}</div>
+              )}
+              {p.is_clearance && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/20">Зачистка</span>
+              )}
+            </div>
             <div className="flex items-start justify-between mb-2">
               <div className="font-medium text-white">{p.name}</div>
               <div className="text-right">
@@ -690,13 +769,18 @@ export default function Products() {
               </div>
             </div>
             {p.description && <div className="text-xs text-slate-500 mb-3">{p.description}</div>}
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <button onClick={() => handleToggle(p)} className={`text-xs px-2 py-1 rounded transition-colors ${p.is_active ? 'bg-green-400/10 text-green-400 hover:bg-green-400/20' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'}`}>
                 {p.is_active ? 'Активна' : 'Скрыта'}
               </button>
               <button onClick={() => handleEdit(p)} className="text-xs px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
                 Изменить
               </button>
+              {p.is_clearance && (
+                <button onClick={() => openSubregions(p)} className="text-xs px-2 py-1 rounded bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 transition-colors">
+                  Субрегионы {p.subregions?.length > 0 ? `(${p.subregions.length})` : ''}
+                </button>
+              )}
               <button onClick={() => handleDelete(p.id)} className="text-xs px-2 py-1 rounded text-red-400 hover:bg-red-400/10 transition-colors ml-auto">
                 Удалить
               </button>
@@ -708,6 +792,97 @@ export default function Products() {
           <div className="col-span-3 text-center text-slate-500 py-12">Услуг нет</div>
         )}
       </div>
+
+      {/* Subregions modal */}
+      {subregionProduct && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={closeSubregions}>
+          <div className="bg-surface border border-border/50 rounded-2xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold">Субрегионы</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{subregionProduct.name} · {subregionProduct.price} ₽</p>
+              </div>
+              <button onClick={closeSubregions} className="text-slate-500 hover:text-white transition-colors">✕</button>
+            </div>
+
+            {/* Existing subregions */}
+            {subregions.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {subregions.map((s) => (
+                  <div key={s.id} className="flex items-center gap-3 bg-base rounded-xl px-4 py-2.5">
+                    <span className="flex-1 text-sm text-white">{s.name}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={s.price}
+                      disabled={s.auto_price}
+                      onBlur={(e) => !s.auto_price && handleSubPrice(s, e.target.value)}
+                      onChange={(e) => setSubregions((prev) => prev.map((r) => r.id === s.id ? { ...r, price: e.target.value } : r))}
+                      className="w-24 bg-surface border border-border rounded-lg px-2 py-1 text-sm text-white disabled:opacity-50 focus:outline-none focus:border-brand-500"
+                    />
+                    <span className="text-xs text-slate-500">₽</span>
+                    <button
+                      onClick={() => handleSubToggleAuto(s)}
+                      className={`text-xs px-2 py-1 rounded transition-colors ${s.auto_price ? 'bg-brand-500/20 text-brand-400' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'}`}
+                      title={s.auto_price ? 'Авто (нажми для ручного)' : 'Ручная (нажми для авто)'}
+                    >
+                      {s.auto_price ? 'Авто' : 'Вручную'}
+                    </button>
+                    <button onClick={() => handleSubDelete(s.id)} className="text-slate-600 hover:text-red-400 transition-colors text-xs">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {subregions.length === 0 && (
+              <p className="text-slate-500 text-sm text-center py-4 mb-4">Субрегионов пока нет</p>
+            )}
+
+            {/* Add subregion */}
+            <form onSubmit={handleSubSubmit} className="border-t border-border/50 pt-4 space-y-3">
+              <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Добавить субрегион</div>
+              <div className="flex gap-2">
+                <input
+                  required
+                  placeholder="Название субрегиона"
+                  value={subForm.name}
+                  onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
+                  className="flex-1 bg-base border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Цена"
+                  value={subForm.price}
+                  disabled={subForm.auto_price}
+                  onChange={(e) => setSubForm({ ...subForm, price: e.target.value })}
+                  className="w-24 bg-base border border-border rounded-lg px-3 py-2 text-sm text-white disabled:opacity-40 focus:outline-none focus:border-brand-500"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={subForm.auto_price}
+                    onChange={(e) => setSubForm({ ...subForm, auto_price: e.target.checked })}
+                    className="w-4 h-4 accent-brand-500"
+                  />
+                  Авто-цена (разделить поровну)
+                </label>
+                <button
+                  type="submit"
+                  disabled={savingSub}
+                  className="bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  {savingSub ? '...' : 'Добавить'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

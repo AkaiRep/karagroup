@@ -151,6 +151,11 @@ function OrderCard({ order, onComplete, completing, onChat, chatOpen, unreadCoun
                 {item.quantity > 1 && <span className="text-brand-400 mr-1">{item.quantity}×</span>}
                 {item.product?.name}
                 {item.discount > 0 && <span className="ml-1 text-xs text-green-400">-{item.discount}%</span>}
+                {item.subregions?.length > 0 && (
+                  <span className="ml-1 text-xs text-purple-400">
+                    [{item.subregions.map((s) => `${s.name} (${s.price}₽)`).join(', ')}]
+                  </span>
+                )}
               </span>
             ))}
           </div>

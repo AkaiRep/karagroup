@@ -69,7 +69,12 @@ export default function CartDrawer({ open, onClose }) {
     setErrorMsg('')
     try {
       const orderData = {
-        items: items.map(i => ({ product_id: i.id, quantity: i.quantity || 1, discount: effectiveDiscount(i) })),
+        items: items.map(i => ({
+          product_id: i.id,
+          quantity: i.quantity || 1,
+          discount: effectiveDiscount(i),
+          subregion_ids: i.selectedSubregions?.map((s) => s.id) ?? null,
+        })),
         price: Math.round(total * 100) / 100,
         promo_code: promo?.code ?? null,
       }
@@ -313,6 +318,11 @@ export default function CartDrawer({ open, onClose }) {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm leading-snug">{item.name}</p>
+                        {item.selectedSubregions?.length > 0 && (
+                          <p className="text-xs text-purple-400 mt-0.5">
+                            {item.selectedSubregions.map((s) => s.name).join(', ')}
+                          </p>
+                        )}
                         <p className="text-green-400 text-sm font-semibold mt-1">
                           {formatAmount(unitPrice * qty, itemCurrency)}
                           {qty > 1 && (
@@ -331,17 +341,19 @@ export default function CartDrawer({ open, onClose }) {
                         </svg>
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <button
-                        onClick={() => setQty(item.id, qty - 1)}
-                        className="w-7 h-7 flex items-center justify-center bg-[#0d0f15] hover:bg-red-500/20 hover:text-red-400 text-slate-400 rounded-lg transition-colors"
-                      >−</button>
-                      <span className="w-8 text-center text-sm font-semibold text-green-400">{qty}</span>
-                      <button
-                        onClick={() => setQty(item.id, qty + 1)}
-                        className="w-7 h-7 flex items-center justify-center bg-[#0d0f15] hover:bg-green-500/20 hover:text-green-400 text-slate-400 rounded-lg transition-colors"
-                      >+</button>
-                    </div>
+                    {!item.is_clearance && (
+                      <div className="flex items-center gap-2 mt-3">
+                        <button
+                          onClick={() => setQty(item.id, qty - 1)}
+                          className="w-7 h-7 flex items-center justify-center bg-[#0d0f15] hover:bg-red-500/20 hover:text-red-400 text-slate-400 rounded-lg transition-colors"
+                        >−</button>
+                        <span className="w-8 text-center text-sm font-semibold text-green-400">{qty}</span>
+                        <button
+                          onClick={() => setQty(item.id, qty + 1)}
+                          className="w-7 h-7 flex items-center justify-center bg-[#0d0f15] hover:bg-green-500/20 hover:text-green-400 text-slate-400 rounded-lg transition-colors"
+                        >+</button>
+                      </div>
+                    )}
                   </div>
                 )
               })}

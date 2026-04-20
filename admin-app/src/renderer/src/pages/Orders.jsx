@@ -538,6 +538,9 @@ export default function Orders() {
                             {item.quantity > 1 && <span className="text-brand-400 mr-1">{item.quantity}×</span>}
                             {item.product?.name || '?'}
                             {item.discount > 0 && <span className="ml-1 text-green-400">-{item.discount}%</span>}
+                            {item.subregions?.length > 0 && (
+                              <span className="ml-1 text-purple-400">[{item.subregions.map((s) => s.name).join(', ')}]</span>
+                            )}
                           </span>
                         ))}
                       </div>

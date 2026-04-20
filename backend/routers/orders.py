@@ -14,6 +14,7 @@ MAX_WORKER_ACTIVE_ORDERS = 3
 def _order_options():
     return [
         joinedload(models.Order.items).joinedload(models.OrderItem.product),
+        joinedload(models.Order.items).joinedload(models.OrderItem.subregions),
         joinedload(models.Order.worker),
     ]
 
@@ -191,7 +192,20 @@ def create_order(
 
     for item in data.items:
         if db.query(models.Product).filter(models.Product.id == item.product_id).first():
-            db.add(models.OrderItem(order_id=order.id, product_id=item.product_id, quantity=item.quantity, discount=item.discount))
+            order_item = models.OrderItem(order_id=order.id, product_id=item.product_id, quantity=item.quantity, discount=item.discount)
+            db.add(order_item)
+            db.flush()
+            if item.subregion_ids:
+                subs = db.query(models.ProductSubregion).filter(
+                    models.ProductSubregion.id.in_(item.subregion_ids)
+                ).all()
+                for s in subs:
+                    db.add(models.OrderSubregion(
+                        order_item_id=order_item.id,
+                        subregion_id=s.id,
+                        name=s.name,
+                        price=s.price,
+                    ))
 
     db.commit()
     return _load_order(db, order.id)

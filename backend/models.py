@@ -79,10 +79,25 @@ class Product(Base):
     discount_percent = Column(Float, default=0.0, nullable=False)
     image_url = Column(String(512), nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    is_clearance = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     category = relationship("Category", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
+    subregions = relationship("ProductSubregion", back_populates="product", cascade="all, delete-orphan")
+
+
+class ProductSubregion(Base):
+    __tablename__ = "product_subregions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    name = Column(String(256), nullable=False)
+    price = Column(Float, nullable=False)
+    auto_price = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    product = relationship("Product", back_populates="subregions")
 
 
 class Order(Base):
@@ -133,6 +148,19 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+    subregions = relationship("OrderSubregion", back_populates="order_item", cascade="all, delete-orphan")
+
+
+class OrderSubregion(Base):
+    __tablename__ = "order_subregions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_item_id = Column(Integer, ForeignKey("order_items.id"), nullable=False)
+    subregion_id = Column(Integer, ForeignKey("product_subregions.id"), nullable=True)  # nullable — субрегион мог быть удалён
+    name = Column(String(256), nullable=False)   # снапшот названия
+    price = Column(Float, nullable=False)          # снапшот цены
+
+    order_item = relationship("OrderItem", back_populates="subregions")
 
 
 class ChatMessage(Base):

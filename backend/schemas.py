@@ -92,6 +92,28 @@ class CategoryOut(BaseModel):
 
 # ── Product ───────────────────────────────────────────────────────────────────
 
+class SubregionCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=256)
+    price: float = Field(..., ge=0)
+    auto_price: bool = True
+
+
+class SubregionUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = Field(None, ge=0)
+    auto_price: Optional[bool] = None
+
+
+class SubregionOut(BaseModel):
+    id: int
+    product_id: int
+    name: str
+    price: float
+    auto_price: bool
+
+    model_config = {"from_attributes": True}
+
+
 class ProductCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=256)
     description: Optional[str] = None
@@ -100,6 +122,7 @@ class ProductCreate(BaseModel):
     price_eur: Optional[float] = Field(None, gt=0)
     discount_percent: float = Field(0.0, ge=0, le=100)
     category_id: Optional[int] = None
+    is_clearance: bool = False
 
 
 class ProductUpdate(BaseModel):
@@ -112,6 +135,7 @@ class ProductUpdate(BaseModel):
     discount_percent: Optional[float] = Field(None, ge=0, le=100)
     category_id: Optional[int] = None
     image_url: Optional[str] = None
+    is_clearance: Optional[bool] = None
 
 
 class ProductOut(BaseModel):
@@ -123,10 +147,12 @@ class ProductOut(BaseModel):
     price_eur: Optional[float] = None
     discount_percent: float
     is_active: bool
+    is_clearance: bool = False
     category_id: Optional[int]
     image_url: Optional[str]
     order_count: int = 0
     category: Optional[CategoryOut]
+    subregions: List[SubregionOut] = []
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -138,10 +164,26 @@ class GlobalDiscountOut(BaseModel):
 
 # ── OrderItem ─────────────────────────────────────────────────────────────────
 
+class OrderSubregionCreate(BaseModel):
+    subregion_id: int
+    name: str
+    price: float
+
+
+class OrderSubregionOut(BaseModel):
+    id: int
+    subregion_id: Optional[int]
+    name: str
+    price: float
+
+    model_config = {"from_attributes": True}
+
+
 class OrderItemCreate(BaseModel):
     product_id: int
     quantity: int = Field(1, ge=1)
     discount: float = Field(0.0, ge=0, le=100)
+    subregion_ids: Optional[List[int]] = None  # для зачисток
 
 
 class OrderItemOut(BaseModel):
@@ -150,6 +192,7 @@ class OrderItemOut(BaseModel):
     quantity: int
     discount: float
     product: Optional[ProductOut]
+    subregions: List[OrderSubregionOut] = []
 
     model_config = {"from_attributes": True}
 

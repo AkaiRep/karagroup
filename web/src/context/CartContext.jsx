@@ -31,6 +31,21 @@ export function CartProvider({ children }) {
     save({ ...cart, [product.id]: { ...product, quantity: existing ? existing.quantity + 1 : 1 } })
   }
 
+  // Для зачисток — добавляет товар с конкретными субрегионами (цена = сумма субрегионов)
+  const addClearanceItem = (product, selectedSubregions) => {
+    const price = selectedSubregions.reduce((sum, s) => sum + s.price, 0)
+    save({
+      ...cart,
+      [product.id]: {
+        ...product,
+        price,
+        quantity: 1,
+        selectedSubregions,
+        is_clearance: true,
+      },
+    })
+  }
+
   const removeItem = (productId) => {
     const next = { ...cart }
     delete next[String(productId)]
@@ -78,7 +93,7 @@ export function CartProvider({ children }) {
   const count = Object.values(cart).reduce((sum, item) => sum + (item.quantity || 1), 0)
 
   return (
-    <CartContext.Provider value={{ cart, promo, setPromo, addItem, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount, hasPinnedItems }}>
+    <CartContext.Provider value={{ cart, promo, setPromo, addItem, addClearanceItem, removeItem, setQty, clearCart, baseTotal, total, finalTotal, count, globalDiscount, effectiveDiscount, hasPinnedItems }}>
       {children}
     </CartContext.Provider>
   )

@@ -168,6 +168,36 @@ def run_migrations():
                 )
             """))
             conn.commit()
+        # Add is_clearance to products if missing
+        product_cols = [c["name"] for c in inspector.get_columns("products")]
+        if "is_clearance" not in product_cols:
+            conn.execute(text("ALTER TABLE products ADD COLUMN is_clearance BOOLEAN NOT NULL DEFAULT 0"))
+            conn.commit()
+        # Create product_subregions table if missing
+        if "product_subregions" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE product_subregions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                    name VARCHAR(256) NOT NULL,
+                    price REAL NOT NULL,
+                    auto_price BOOLEAN NOT NULL DEFAULT 1,
+                    created_at DATETIME
+                )
+            """))
+            conn.commit()
+        # Create order_subregions table if missing
+        if "order_subregions" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE order_subregions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    order_item_id INTEGER NOT NULL REFERENCES order_items(id) ON DELETE CASCADE,
+                    subregion_id INTEGER REFERENCES product_subregions(id) ON DELETE SET NULL,
+                    name VARCHAR(256) NOT NULL,
+                    price REAL NOT NULL
+                )
+            """))
+            conn.commit()
         if "worker_applications" not in inspector.get_table_names():
             conn.execute(text("""
                 CREATE TABLE worker_applications (
