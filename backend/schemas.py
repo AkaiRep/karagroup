@@ -421,3 +421,34 @@ class DashboardStats(BaseModel):
 
 
 TokenResponse.model_rebuild()
+
+
+# ── Worker Applications ───────────────────────────────────────────────────────
+
+class WorkerApplicationCreate(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=256)
+    birth_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
+    phone: str = Field(..., min_length=5, max_length=32)
+    telegram_username: str = Field(..., min_length=1, max_length=128)
+    consent_data: bool
+    consent_documents: bool
+
+
+class WorkerApplicationUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class WorkerApplicationOut(BaseModel):
+    id: int
+    full_name: str
+    birth_date: str
+    phone: str
+    telegram_username: str
+    consent_data: bool
+    consent_documents: bool
+    status: str
+    notes: Optional[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

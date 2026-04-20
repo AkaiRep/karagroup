@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from database import engine, Base
 import models  # noqa: F401
-from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews, site_settings, health, faq, blog, teleports
+from routers import auth, users, orders, products, financial, chat, global_chat, media, categories, payments, reviews, site_settings, health, faq, blog, teleports, applications
 
 # Ensure uploads directory exists
 Path("uploads/chat").mkdir(parents=True, exist_ok=True)
@@ -168,6 +168,22 @@ def run_migrations():
                 )
             """))
             conn.commit()
+        if "worker_applications" not in inspector.get_table_names():
+            conn.execute(text("""
+                CREATE TABLE worker_applications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    full_name VARCHAR(256) NOT NULL,
+                    birth_date VARCHAR(10) NOT NULL,
+                    phone VARCHAR(32) NOT NULL,
+                    telegram_username VARCHAR(128) NOT NULL,
+                    consent_data BOOLEAN NOT NULL DEFAULT 0,
+                    consent_documents BOOLEAN NOT NULL DEFAULT 0,
+                    status VARCHAR(32) NOT NULL DEFAULT 'new',
+                    notes TEXT,
+                    created_at DATETIME
+                )
+            """))
+            conn.commit()
 
 
 run_migrations()
@@ -202,6 +218,7 @@ app.include_router(health.router)
 app.include_router(faq.router)
 app.include_router(blog.router)
 app.include_router(teleports.router)
+app.include_router(applications.router)
 
 
 @app.get("/")

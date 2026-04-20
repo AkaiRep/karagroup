@@ -19,6 +19,7 @@ import Blog from './pages/Blog'
 import Payments from './pages/Payments'
 import BotSettings from './pages/BotSettings'
 import Teleports from './pages/Teleports'
+import Applications from './pages/Applications'
 
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore()
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="payments" element={<Payments />} />
           <Route path="bot" element={<BotSettings />} />
           <Route path="teleports" element={<Teleports />} />
+          <Route path="applications" element={<Applications />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

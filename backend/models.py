@@ -342,3 +342,18 @@ class TelegramLinkToken(Base):
     expires_at = Column(DateTime, nullable=False)
 
     user = relationship("User")
+
+
+class WorkerApplication(Base):
+    __tablename__ = "worker_applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    full_name = Column(String(256), nullable=False)
+    birth_date = Column(String(10), nullable=False)   # YYYY-MM-DD
+    phone = Column(String(32), nullable=False)
+    telegram_username = Column(String(128), nullable=False)
+    consent_data = Column(Boolean, nullable=False, default=False)
+    consent_documents = Column(Boolean, nullable=False, default=False)
+    status = Column(String(32), nullable=False, default="new")  # new / reviewed / accepted / rejected
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
