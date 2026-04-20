@@ -26,12 +26,20 @@ function SubregionSelector({ product, discount, onAdd }) {
           return (
             <label key={s.id} className="flex items-center justify-between gap-2 cursor-pointer group">
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(s.id)}
-                  onChange={() => toggle(s.id)}
-                  className="w-3.5 h-3.5 accent-green-500 flex-shrink-0"
-                />
+                <div
+                  onClick={() => toggle(s.id)}
+                  className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-all ${
+                    selected.includes(s.id)
+                      ? 'bg-green-500 border-green-500'
+                      : 'bg-transparent border-slate-600 group-hover:border-green-500/60'
+                  }`}
+                >
+                  {selected.includes(s.id) && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
                 <span className="text-sm text-slate-300 group-hover:text-white transition-colors">{s.name}</span>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
