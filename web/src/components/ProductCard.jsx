@@ -8,8 +8,8 @@ import { useAuth } from '@/context/AuthContext'
 import { BASE } from '@/lib/api'
 
 function SubregionModal({ product, discount, onAdd, onClose }) {
-  const [selected, setSelected] = useState([])
   const subregions = product.subregions || []
+  const [selected, setSelected] = useState(subregions.map((s) => s.id))
 
   const toggle = (id) =>
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
