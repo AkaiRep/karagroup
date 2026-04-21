@@ -86,7 +86,14 @@ def list_orders(
     if price_max is not None:
         q = q.filter(models.Order.price <= price_max)
 
-    return q.order_by(models.Order.created_at.desc()).all()
+    orders = q.order_by(models.Order.created_at.desc()).all()
+    if current_user.role == models.UserRole.worker:
+        for o in orders:
+            o.client_info = None
+            o.client_url = None
+            o.telegram_user_id = None
+            o.telegram_username = None
+    return orders
 
 
 @router.get("/recent")
@@ -121,7 +128,7 @@ def recent_orders(db: Session = Depends(get_db)):
     return result
 
 
-@router.get("/available", response_model=List[schemas.OrderOut])
+@router.get("/available", response_model=List[schemas.OrderOutWorker])
 def list_available_orders(
     db: Session = Depends(get_db),
     _: models.User = Depends(auth_utils.require_worker),
@@ -312,7 +319,7 @@ def update_order(
     return _load_order(db, order_id)
 
 
-@router.post("/{order_id}/take", response_model=schemas.OrderOut)
+@router.post("/{order_id}/take", response_model=schemas.OrderOutWorker)
 def take_order(
     order_id: int,
     db: Session = Depends(get_db),

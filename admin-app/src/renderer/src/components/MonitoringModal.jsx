@@ -373,7 +373,11 @@ function ProcessesTab({ worker }) {
   const handleKill = async (name) => {
     if (!confirm(`Завершить процесс «${name}»?`)) return
     setKilling(name)
-    try { await killWorkerProcess(worker.id, name); setTimeout(load, 3000) }
+    try {
+      await killWorkerProcess(worker.id, name)
+      setProcesses((prev) => prev.filter((p) => p !== name))
+      setTimeout(load, 3000)
+    }
     catch {} finally { setKilling(null) }
   }
 

@@ -315,6 +315,13 @@ class OrderOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrderOutWorker(OrderOut):
+    client_info: None = None
+    client_url: None = None
+    telegram_user_id: None = None
+    telegram_username: None = None
+
+
 # ── Chat (order) ──────────────────────────────────────────────────────────────
 
 class MessageCreate(BaseModel):
