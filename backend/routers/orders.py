@@ -88,11 +88,7 @@ def list_orders(
 
     orders = q.order_by(models.Order.created_at.desc()).all()
     if current_user.role == models.UserRole.worker:
-        for o in orders:
-            o.client_info = None
-            o.client_url = None
-            o.telegram_user_id = None
-            o.telegram_username = None
+        return [schemas.OrderOutWorker.model_validate(o) for o in orders]
     return orders
 
 

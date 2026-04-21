@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from models import UserRole, OrderSource, OrderStatus, TransactionStatus
 
 
@@ -316,10 +316,13 @@ class OrderOut(BaseModel):
 
 
 class OrderOutWorker(OrderOut):
-    client_info: None = None
-    client_url: None = None
-    telegram_user_id: None = None
-    telegram_username: None = None
+    @model_validator(mode='after')
+    def mask_client(self):
+        self.client_info = '***'
+        self.client_url = None
+        self.telegram_user_id = None
+        self.telegram_username = None
+        return self
 
 
 # ── Chat (order) ──────────────────────────────────────────────────────────────
